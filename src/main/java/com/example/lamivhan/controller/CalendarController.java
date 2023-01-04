@@ -1,6 +1,8 @@
 package com.example.lamivhan.controller;
 
+import com.example.lamivhan.AccessToken;
 import com.example.lamivhan.LamivhanApplication;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
@@ -18,7 +20,10 @@ import com.google.api.services.calendar.model.CalendarList;
 import com.google.api.services.calendar.model.CalendarListEntry;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.*;
@@ -79,8 +84,9 @@ public class CalendarController {
         return credential;
     }
 
-    @GetMapping("/testlogin")
-    public String login() throws IOException, GeneralSecurityException {
+    @PostMapping(value = "/login",
+            consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public String login(@RequestBody AccessToken accessToken) throws IOException, GeneralSecurityException {
 
         StringBuilder tenEventsBuilder = new StringBuilder();
 
