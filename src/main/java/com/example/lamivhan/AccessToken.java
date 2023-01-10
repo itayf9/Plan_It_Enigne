@@ -7,6 +7,9 @@ public class AccessToken {
     @JsonProperty("access_token")
     private String accessToken;
 
+    public AccessToken() {
+    }
+
     public AccessToken(String accessToken) {
         this.accessToken = accessToken;
     }
