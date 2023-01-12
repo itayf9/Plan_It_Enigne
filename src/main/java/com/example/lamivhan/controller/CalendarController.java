@@ -54,8 +54,8 @@ public class CalendarController {
     @GetMapping(value = "/profile", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public void getUserPreferencesFromDB(@RequestBody AccessToken accessToken) {
 
-        // 1. UserPreferences / userProfile (Java Object) userPreferences / userProfile = userRepo.findByAccess_token??();
-        // 2. return UserPreferences / userProfile
+        // 1. User (Java Object) userPreferences / userProfile = userRepo.findByAccess_token??();
+        // 2. return User
     }
 
     @GetMapping(value = "/logout")
@@ -66,6 +66,15 @@ public class CalendarController {
 
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public String generateStudyEvents(@RequestBody AccessToken accessToken) throws IOException, GeneralSecurityException {
+        //
+
+
+
+        return "";
+    }
+
+
+    public String test (AccessToken accessToken) throws GeneralSecurityException, IOException {
 
         // 1. get access_token from DB / request body / need to think about it...
 
