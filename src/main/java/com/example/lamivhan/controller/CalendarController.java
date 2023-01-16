@@ -3,6 +3,7 @@ package com.example.lamivhan.controller;
 import com.example.lamivhan.AccessToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
@@ -12,6 +13,8 @@ import com.google.api.services.calendar.model.CalendarList;
 import com.google.api.services.calendar.model.CalendarListEntry;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +25,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -98,13 +102,17 @@ public class CalendarController {
         return calendars;
     }
 
-    private Calendar getCalendarService(AccessToken accessToken) throws GeneralSecurityException, IOException {
+    private Calendar getCalendarService(AccessToken access_token) throws GeneralSecurityException, IOException {
 
         // Build a new authorized API client service.
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        GoogleCredential credential = new GoogleCredential().setAccessToken(accessToken.getAccessToken());
+        Date expireDate = new Date(new Date().getTime() + 3600000);
 
-        return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+        com.google.auth.oauth2.AccessToken accessToken = new com.google.auth.oauth2.AccessToken(access_token.getAccessToken(), expireDate);
+        GoogleCredentials credential = new GoogleCredentials(accessToken);
+        HttpRequestInitializer httpRequestInitializer = new HttpCredentialsAdapter(credential);
+
+        return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, httpRequestInitializer)
                 .setApplicationName(APPLICATION_NAME)
                 .build();
 
