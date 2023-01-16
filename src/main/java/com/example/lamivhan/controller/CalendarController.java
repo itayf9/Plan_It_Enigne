@@ -18,8 +18,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.*;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -47,8 +49,8 @@ public class CalendarController {
     @GetMapping(value = "/courses")
     public void getCoursesNamesFromDB() {
 
-       // 1. List<CourseItem> courses = courseRepo.findAll();
-       // 2. return courses
+        // 1. List<CourseItem> courses = courseRepo.findAll();
+        // 2. return courses
     }
 
     @GetMapping(value = "/profile", consumes = {MediaType.APPLICATION_JSON_VALUE})
@@ -66,15 +68,49 @@ public class CalendarController {
 
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public String generateStudyEvents(@RequestBody AccessToken accessToken) throws IOException, GeneralSecurityException {
-        //
 
+        // get user's calendar service
+        Calendar calendarService = getCalendarService(accessToken);
+
+        // get user's calendar list
+
+        List<CalendarListEntry> calendarList = getCalendarList(calendarService);
 
 
         return "";
     }
 
+    private List<CalendarListEntry> getCalendarList(Calendar calendarService) {
+        String pageToken = null;
+        List<CalendarListEntry> calendars = new ArrayList<>();
+        do {
+            CalendarList calendarList = null;
+            try {
+                calendarList = calendarService.calendarList().list().setPageToken(pageToken).execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            calendars.addAll(calendarList.getItems());
 
-    public String test (AccessToken accessToken) throws GeneralSecurityException, IOException {
+            pageToken = calendarList.getNextPageToken();
+        } while (pageToken != null);
+
+        return calendars;
+    }
+
+    private Calendar getCalendarService(AccessToken accessToken) throws GeneralSecurityException, IOException {
+
+        // Build a new authorized API client service.
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        GoogleCredential credential = new GoogleCredential().setAccessToken(accessToken.getAccessToken());
+
+        return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+
+    }
+    
+    public String test(AccessToken accessToken) throws GeneralSecurityException, IOException {
 
         // 1. get access_token from DB / request body / need to think about it...
 
@@ -125,7 +161,7 @@ public class CalendarController {
                 }
 
                 System.out.printf("%s (%s) [%s]\n", event.getSummary(), start, end);
-                myWriter.write(""+ event.getSummary() +" (" + start+ ") ["+ end +"] \n");
+                myWriter.write("" + event.getSummary() + " (" + start + ") [" + end + "] \n");
                 tenEventsBuilder.append(event.getSummary()).append(" (").append(start).append(") [").append(end).append("] \n");
             }
             myWriter.close();
