@@ -1,6 +1,6 @@
 package com.example.lamivhan.controller;
 
-import com.example.lamivhan.AccessToken;
+import com.example.lamivhan.googleapis.AccessToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpRequestInitializer;

@@ -1,4 +1,4 @@
-package com.example.lamivhan;
+package com.example.lamivhan.googleapis;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
