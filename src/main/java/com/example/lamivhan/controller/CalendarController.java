@@ -103,7 +103,106 @@ public class CalendarController {
 
         }
 
-        return "";
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<List<Event>> generateStudyEvents(@RequestBody AccessToken accessToken, @RequestParam boolean scannedAlready) throws IOException, GeneralSecurityException {
+
+        //createEvents()
+
+
+        if (!scannedAlready) {
+
+            // get user's calendar service
+            Calendar calendarService = getCalendarService(accessToken);
+
+            // get user's calendar list
+
+            List<CalendarListEntry> calendarList = getCalendarList(calendarService);
+
+            // set up startDate & endDate
+            // ...
+            DateTime start = new DateTime(System.currentTimeMillis());
+            DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);
+
+            List<Event> fullDayEvents = new ArrayList<>();
+
+            // get List of user's events
+            List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
+
+            if (fullDayEvents.size() != 0) {
+                // return list of events... for client to decide
+            } else {
+
+                // get List of free time from list of events
+                // decide which test gets each free time
+                // create the events
+
+
+
+
+                /*
+
+                algorithm of #2
+                1. assume you have a list of Event (Google's Event)
+                2. go through list, find free slots
+                3. find total free time
+                4. each slot is inserted to a list of free slots
+
+
+                #4
+
+                separate the free time to slots:
+                4. determine on STUDY_TIME_DEFAULT, BREAK_DEFAULT
+                5. find the proportions of each course from 100% study time. need to think how to do that.
+                6. sum all recommended study hour
+                7. divide total free time / total recommended time
+                8. take the max of STUDY_TIME_DEFAULT , the result of divide (7)
+
+               embed the course in the time slot:
+                9. create events of courses depending on slots and proportions
+                10. go through the free list and put the events
+
+
+
+
+                 */
+
+
+            }
+        }
+
+        // create events
+
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+
+    private List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end, List<Event> fullDayEvents) {
+        List<Event> allEventsFromCalendars = new ArrayList<>();
+
+        for (CalendarListEntry calendar : calendarList) {
+            Events events = null;
+            try {
+                events = calendarService.events().list(calendar.getId())
+                        .setTimeMin(start)
+                        .setOrderBy("startTime")
+                        .setTimeMax(end)
+                        .setSingleEvents(true)
+                        .execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            allEventsFromCalendars.addAll(events.getItems());
+        }
+
+        for (Event event : allEventsFromCalendars) {
+            System.out.println(event.getStart().getDateTime() + " : " + event.getSummary());
+        }
+        allEventsFromCalendars.sort(new EventComparator());
+        return allEventsFromCalendars;
     }
 
     private List<CalendarListEntry> getCalendarList(Calendar calendarService) {
