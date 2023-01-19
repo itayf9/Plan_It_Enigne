@@ -1,6 +1,8 @@
 package com.example.lamivhan.controller;
 
 import com.example.lamivhan.googleapis.AccessToken;
+import com.example.lamivhan.utill.Constants;
+import com.example.lamivhan.utill.EventComparator;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpRequestInitializer;
@@ -70,16 +72,37 @@ public class CalendarController {
         // 1. ???
     }
 
-    @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public String generateStudyEvents(@RequestBody AccessToken accessToken) throws IOException, GeneralSecurityException {
+    @PostMapping(value = "/scan", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<List<Event>> scanUserEvents(@RequestBody AccessToken accessToken, @RequestParam boolean scannedAlready) throws IOException, GeneralSecurityException {
 
-        // get user's calendar service
-        Calendar calendarService = getCalendarService(accessToken);
+        if (!scannedAlready) {
+            // get user's calendar service
+            Calendar calendarService = getCalendarService(accessToken);
 
         // get user's calendar list
 
         List<CalendarListEntry> calendarList = getCalendarList(calendarService);
 
+            // set up startDate & endDate
+            // ...
+            DateTime start = new DateTime(System.currentTimeMillis());
+            DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);
+
+            List<Event> fullDayEvents = new ArrayList<>();
+
+            // get List of user's events
+            List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
+
+
+            if (fullDayEvents.size() != 0) {
+                // return list of events... for client to decide
+            } else {
+
+                //createEvents(accessToken, true, events);
+            }
+        } else {
+
+        }
 
         return "";
     }
@@ -117,7 +140,8 @@ public class CalendarController {
                 .build();
 
     }
-    
+
+
     public String test(AccessToken accessToken) throws GeneralSecurityException, IOException {
 
         // 1. get access_token from DB / request body / need to think about it...
