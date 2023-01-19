@@ -17,11 +17,10 @@ import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -79,9 +78,9 @@ public class CalendarController {
             // get user's calendar service
             Calendar calendarService = getCalendarService(accessToken);
 
-        // get user's calendar list
+            // get user's calendar list
 
-        List<CalendarListEntry> calendarList = getCalendarList(calendarService);
+            List<CalendarListEntry> calendarList = getCalendarList(calendarService);
 
             // set up startDate & endDate
             // ...
