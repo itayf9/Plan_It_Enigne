@@ -1,6 +1,8 @@
 package com.example.lamivhan.controller;
 
 import com.example.lamivhan.googleapis.AccessToken;
+import com.example.lamivhan.model.course.Course;
+import com.example.lamivhan.model.course.CoursesRepository;
 import com.example.lamivhan.utill.Constants;
 import com.example.lamivhan.utill.EventComparator;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
@@ -17,6 +19,7 @@ import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +34,10 @@ import java.util.List;
 
 @RestController
 public class CalendarController {
+
+    // check maybe syntax is not as it should be.
+    @Autowired
+    private CoursesRepository courseRepo;
 
     /**
      * Application name.
@@ -56,10 +63,9 @@ public class CalendarController {
      * @return a list of all courses in the DB
      */
     @GetMapping(value = "/courses")
-    public void getCoursesNamesFromDB() {
+    public List<Course> getCoursesNamesFromDB() {
 
-        // 1. List<CourseItem> courses = courseRepo.findAll();
-        // 2. return courses
+        return courseRepo.findAll();
     }
 
     @GetMapping(value = "/profile", consumes = {MediaType.APPLICATION_JSON_VALUE})
@@ -104,7 +110,7 @@ public class CalendarController {
                 //createEvents(accessToken, true, events);
             }
         } else {
-
+            // return full day events to client to get list of true-false in order to know which days he wants to study
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
@@ -125,6 +131,65 @@ public class CalendarController {
 
             List<CalendarListEntry> calendarList = getCalendarList(calendarService);
 
+            // set up startDate & endDate
+            // ...
+            DateTime start = new DateTime(System.currentTimeMillis());
+            DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);
+
+            List<Event> fullDayEvents = new ArrayList<>();
+
+            // get List of user's events
+            List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
+
+            if (fullDayEvents.size() != 0) {
+                // return list of events... for client to decide
+            } else {
+
+                // get List of free time from list of events
+                // decide which test gets each free time
+                // create the events
+
+
+
+
+                /*
+
+                algorithm of #2
+                1. assume you have a list of Event (Google's Event)
+                2. go through list, find free slots
+                3. find total free time
+                4. each slot is inserted to a list of free slots (slot is the gap between events)
+
+
+                #3
+
+                // Create a new calendar
+                 com.google.api.services.calendar.model.Calendar calendar = new Calendar();
+                   calendar.setSummary("calendarSummary");
+                    calendar.setTimeZone("America/Los_Angeles");
+
+        // Insert the new calendar
+                Calendar createdCalendar = service.calendars().insert(calendar).execute();
+
+
+                #4
+
+                separate each slot in the free time list, to a few study sessions:
+                4. determine on MINIMUM_STUDY_TIME, BREAK_DEFAULT
+                5. find the proportions of each course from 100% study time. need to think how to do that.
+                6. sum all recommended study time
+                7. divide total free time / total recommended time
+                8. take the max of MINIMUM_STUDY_TIME , the result of divide (7)
+
+               embed the courses in the time slots:
+                9. create events of courses depending on slots and proportions
+                10. go through the free list and put the events
+
+
+
+
+                 */
+
 
             }
         }
@@ -134,7 +199,6 @@ public class CalendarController {
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
-
 
     private List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end, List<Event> fullDayEvents) {
         List<Event> allEventsFromCalendars = new ArrayList<>();
@@ -276,5 +340,21 @@ public class CalendarController {
         }
 
         return tenEventsBuilder.toString();
+    }
+
+    /**
+     * creates the Plan-It calendar and adds it the user's calendar list
+     * @param calendarService a calendar service of the user
+     * @throws IOException in case of failure in "execute"
+     */
+    private void createPlanItCalendar(Calendar calendarService) throws IOException {
+
+        // Create a new calendar
+        com.google.api.services.calendar.model.Calendar calendar = new com.google.api.services.calendar.model.Calendar();
+        calendar.setSummary("PlanIt Calendar");
+        calendar.setTimeZone("Asia/Jerusalem");
+
+        // Insert the new calendar
+        com.google.api.services.calendar.model.Calendar createdCalendar = calendarService.calendars().insert(calendar).execute();
     }
 }
