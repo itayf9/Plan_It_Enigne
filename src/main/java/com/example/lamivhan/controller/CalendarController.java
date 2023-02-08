@@ -51,6 +51,10 @@ public class CalendarController {
         // 2. save user to DB with userRepo
     }
 
+    /**
+     *
+     * @return a list of all courses in the DB
+     */
     @GetMapping(value = "/courses")
     public void getCoursesNamesFromDB() {
 
