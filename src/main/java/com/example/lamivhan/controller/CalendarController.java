@@ -60,7 +60,6 @@ public class CalendarController {
     }
 
     /**
-     *
      * @return a list of all courses in the DB
      */
     @GetMapping(value = "/courses")
@@ -332,6 +331,7 @@ public class CalendarController {
 
     /**
      * creates the Plan-It calendar and adds it the user's calendar list
+     *
      * @param calendarService a calendar service of the user
      * @throws IOException in case of failure in "execute"
      */
