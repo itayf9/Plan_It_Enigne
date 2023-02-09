@@ -1,5 +1,6 @@
 package com.example.lamivhan.controller;
 
+import com.example.lamivhan.engine.Engine;
 import com.example.lamivhan.googleapis.AccessToken;
 import com.example.lamivhan.model.course.Course;
 import com.example.lamivhan.model.course.CoursesRepository;
@@ -160,18 +161,6 @@ public class CalendarController {
                 3. find total free time
                 4. each slot is inserted to a list of free slots (slot is the gap between events)
 
-
-                #3
-
-                // Create a new calendar
-                 com.google.api.services.calendar.model.Calendar calendar = new Calendar();
-                   calendar.setSummary("calendarSummary");
-                    calendar.setTimeZone("America/Los_Angeles");
-
-        // Insert the new calendar
-                Calendar createdCalendar = service.calendars().insert(calendar).execute();
-
-
                 #4
 
                 separate each slot in the free time list, to a few study sessions:
@@ -195,7 +184,6 @@ public class CalendarController {
         }
 
         // create events
-
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
