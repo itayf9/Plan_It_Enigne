@@ -4,6 +4,8 @@ import com.example.lamivhan.engine.Engine;
 import com.example.lamivhan.googleapis.AccessToken;
 import com.example.lamivhan.model.course.Course;
 import com.example.lamivhan.model.course.CoursesRepository;
+import com.example.lamivhan.model.exam.Exam;
+import com.example.lamivhan.model.user.UserRepository;
 import com.example.lamivhan.utill.Constants;
 import com.example.lamivhan.utill.EventComparator;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
@@ -31,6 +33,7 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
 @RestController
@@ -39,6 +42,9 @@ public class CalendarController {
     // check maybe syntax is not as it should be.
     @Autowired
     private CoursesRepository courseRepo;
+
+    @Autowired
+    private UserRepository userRepo;
 
     /**
      * Application name.
@@ -155,12 +161,20 @@ public class CalendarController {
                 /*
 
                 algorithm of #2
-                1. assume you have a list of Event (Google's Event)
-                2. go through list, find free slots
+                1. Create Slot object  - done
+                2. implement getFreeSlots(List<Event>); - in progress
+                1. assume you have a list of Event (Google's Event) - done
+                2. go through list, find free slots - in progress
                 3. find total free time
                 4. each slot is inserted to a list of free slots (slot is the gap between events)
 
                 #4
+                private List<StudySession> divideStudySessionsForExams(DTOfreetime dtoFreeTime, List<Course> exams);
+                private Map<String, Double> getExamsRatio(List<Course> exams);
+                User user = userRepo.findByEmail();
+                breakValue = user.getPreferences().getUserBreakValue();
+
+                int getSumOfRecommendedStudyTime(List<Course> exams);
 
                 separate each slot in the free time list, to a few study sessions:
                 4. determine on MINIMUM_STUDY_TIME, BREAK_DEFAULT
@@ -187,8 +201,10 @@ public class CalendarController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    private List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end, List<Event> fullDayEvents) {
+    private List<Event>
+    getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end, List<Event> fullDayEvents) {
         List<Event> allEventsFromCalendars = new ArrayList<>();
+        List<Exam> examsFound = new LinkedList<>();
 
         for (CalendarListEntry calendar : calendarList) {
             Events events = null;
@@ -201,6 +217,16 @@ public class CalendarController {
                         .execute();
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            }
+
+            if (calendar.getSummary().equals("יומן אישי מתחנת המידע")) {
+                for (Event event : events.getItems()) {
+                    if (event.getSummary().contains("מבחן")) {
+                        String courseName = Engine.extractCourseFromExam(event.getSummary());
+                        // Course course = courseRepo.findBy()
+                        // examsFound.add(new Exam(course, event.getStart().getDateTime()));
+                    }
+                }
             }
             allEventsFromCalendars.addAll(events.getItems());
         }
