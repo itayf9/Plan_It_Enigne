@@ -3,6 +3,7 @@ package com.example.lamivhan.model.user;
 import com.example.lamivhan.model.preferences.Preferences;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+
 @Document("users")
 public class User {
     @Field(name = "user_name")

@@ -59,14 +59,22 @@ public class Engine {
             long startOfCurrentSlot = userFreeTimeSlots.get(i).getStart().getValue();
             long endOfCurrentSlot = userFreeTimeSlots.get(i).getEnd().getValue();
 
-            // gets the day of the start and end time
-            int startOfCurrentSlotDayOfMonth = new Date(startOfCurrentSlot).getDate();
-            int endOfCurrentSlotDayOfMonth = new Date(endOfCurrentSlot).getDate();
+
+            // creates two "Instant"s that represent the day of the startOfCurrentSlot with different hours
+            // an Instant with user's study start time (e.g. instance of 08:00 at the same day)
+            // an Instant with user's study end time (e.g. instance of 22:00 at same day)
+            Instant insOfUserStudyStartTime = Instant.ofEpochMilli(startOfCurrentSlot);
+            insOfUserStudyStartTime.with(ChronoField.HOUR_OF_DAY, userStudyStartTime);
+
+            Instant insOfUserStudyEndTime = Instant.ofEpochMilli(startOfCurrentSlot);
+            insOfUserStudyEndTime.with(ChronoField.HOUR_OF_DAY, userStudyEndTime);
+
 
             // here we separate to a few cases
-            // case 1 when slot starts and ends at the same day
 
-            if (startOfCurrentSlotDayOfMonth == endOfCurrentSlotDayOfMonth) {
+            // case 1 when slot starts and ends at the same day
+            if (startOfCurrentSlot >= insOfUserStudyStartTime.toEpochMilli()
+                    && endOfCurrentSlot <= insOfUserStudyEndTime.toEpochMilli()) {
                 // nothing to adjust here
                 // adds the slot to the list
                 adjustedUserFreeSlots.add(new TimeSlot(new DateTime(startOfCurrentSlot), new DateTime(endOfCurrentSlot)));
@@ -124,9 +132,13 @@ public class Engine {
                 // (e.g. instance of 22:00 at same day)
                 insOfUserStudyEndTime = Instant.ofEpochMilli(startOfCurrentSlot);
                 insOfUserStudyEndTime.with(ChronoField.HOUR_OF_DAY, userStudyEndTime);
+
                 // (e.g. instance of 08:00 at the next day)
-                Instant insOfUserStudyStartTime = Instant.ofEpochMilli(endOfCurrentSlotDayOfMonth);
-                insOfUserStudyEndTime.with(ChronoField.HOUR_OF_DAY, userStudyEndTime);
+                insOfUserStudyStartTime = Instant.ofEpochMilli(endOfCurrentSlot);
+                insOfUserStudyStartTime.with(ChronoField.HOUR_OF_DAY, userStudyStartTime);
+
+                // finds the beginning of the first day
+                long beginningOfFirstDay = Math.max(startOfCurrentSlot, insOfUserStudyStartTime.toEpochMilli());
 
                 if ((insOfUserStudyEndTime.toEpochMilli() > beginningOfFirstDay)
                         && (((insOfUserStudyEndTime.toEpochMilli() - beginningOfFirstDay) / Constants.MILLIS_TO_HOUR) >= STUDY_SESSION_TIME)) {
@@ -135,7 +147,6 @@ public class Engine {
                     totalFreeTime += (insOfUserStudyEndTime.toEpochMilli() - beginningOfFirstDay) / Constants.MILLIS_TO_HOUR;
 
                 }
-                // need to get the number of days diff - 1
 
                 // add a day to the 22:00 instance
                 insOfUserStudyEndTime = insOfUserStudyEndTime.plus(1, ChronoUnit.DAYS);
@@ -158,7 +169,7 @@ public class Engine {
                 if (((endOfCurrentSlot - insOfUserStudyStartTime.toEpochMilli()) / Constants.MILLIS_TO_HOUR) >= STUDY_SESSION_TIME
                         && (insOfUserStudyStartTime.toEpochMilli() < endOfCurrentSlot)) {
 
-                    adjustedUserFreeSlots.add(new TimeSlot(new DateTime(insOfUserStudyStartTime.toEpochMilli()), new DateTime(endOfCurrentSlotDayOfMonth)));
+                    adjustedUserFreeSlots.add(new TimeSlot(new DateTime(insOfUserStudyStartTime.toEpochMilli()), new DateTime(endOfCurrentSlot)));
                     totalFreeTime += (endOfCurrentSlot - insOfUserStudyStartTime.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
                 }
             }
