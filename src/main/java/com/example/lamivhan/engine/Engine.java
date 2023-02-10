@@ -48,8 +48,8 @@ public class Engine {
         List<TimeSlot> adjustedUserFreeSlots = new ArrayList<>();
 
         // gets user's preferences
-        int userStudyStartTime = user.getPreferences().getUserStudyStartTime();
-        int userStudyEndTime = user.getPreferences().getUserStudyEndTime();
+        int userStudyStartTime = user.getUserPreferences().getUserStudyStartTime();
+        int userStudyEndTime = user.getUserPreferences().getUserStudyEndTime();
         int STUDY_SESSION_TIME = user.getUserPreferences().getStudySessionTime();
 
         // goes through the raw time slots
@@ -68,48 +68,71 @@ public class Engine {
 
             if (startOfCurrentSlotDayOfMonth == endOfCurrentSlotDayOfMonth) {
                 // nothing to adjust here
+                // adds the slot to the list
+                adjustedUserFreeSlots.add(new TimeSlot(new DateTime(startOfCurrentSlot), new DateTime(endOfCurrentSlot)));
+                totalFreeTime += (endOfCurrentSlot - startOfCurrentSlot) / Constants.MILLIS_TO_HOUR;
 
-                // case 2 when slot starts at a day and ends at the next day
-            } else if (endOfCurrentSlotDayOfMonth - startOfCurrentSlotDayOfMonth == 1) {
+            /*
+
+                      |--07:00--------13:00------22:00--|    |---------16:00--------19:00-----------|   |----16:00--22:00----08:00--13:00-|
+
+                      |------7:00--8:00-------22:00-23:00--|
+
+                           05/07           06/07
+
+                      v|---------START----X-----Y-----END----------| // first case
+                      v|-----X---START------Y---------END----------| // second case
+                      v|---------START------X---------END----Y-----| else case
+                      |---X-----START----------------END---Y--23:59----| // need to complete, now it adds the slot twice (thinks it's both the first interval and second interval)
+                      v|---------START----------------END----------|
+
+                       if (Y< END && X > START )
+                       else if (Y< END && X <= START)
+                       else (Y >= END)
+
+                       if (Y< END && X > START )
+                       else if (Y< END && X <= START)
+                       else if (Y >= END && X > START)
+                       else (Y>= END && X <= START)
+
+
+
+                       if (X,Y same day) {
+                        if (Y< END && X > START )
+                        else if (Y< END && X <= START)
+                        else (oshri's case)
+                      } else (X,Y not same day) {
+                        // general case
+                      }
+
+
+
+                       // check if the order of the conditions in the ifs is good
+
+             */
+
+            } else if (startOfCurrentSlot < insOfUserStudyStartTime.toEpochMilli()
+                    && endOfCurrentSlot <= insOfUserStudyEndTime.toEpochMilli()) {
+                // only trims the beginning of the slot
+                // adds the slot to the list
+                adjustedUserFreeSlots.add(new TimeSlot(new DateTime(insOfUserStudyStartTime.toEpochMilli()), new DateTime(endOfCurrentSlot)));
+                totalFreeTime += (endOfCurrentSlot - insOfUserStudyStartTime.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
+
+
+            } else { // case 2 when slot starts at a day and ends at some other day
 
                 // (e.g. instance of 22:00 at same day)
-                Instant insOfUserStudyEndTime = Instant.ofEpochMilli(startOfCurrentSlot);
+                insOfUserStudyEndTime = Instant.ofEpochMilli(startOfCurrentSlot);
                 insOfUserStudyEndTime.with(ChronoField.HOUR_OF_DAY, userStudyEndTime);
-
                 // (e.g. instance of 08:00 at the next day)
                 Instant insOfUserStudyStartTime = Instant.ofEpochMilli(endOfCurrentSlotDayOfMonth);
                 insOfUserStudyEndTime.with(ChronoField.HOUR_OF_DAY, userStudyEndTime);
 
+                if ((insOfUserStudyEndTime.toEpochMilli() > beginningOfFirstDay)
+                        && (((insOfUserStudyEndTime.toEpochMilli() - beginningOfFirstDay) / Constants.MILLIS_TO_HOUR) >= STUDY_SESSION_TIME)) {
 
-                if ((insOfUserStudyEndTime.toEpochMilli() > startOfCurrentSlot)
-                        && (((insOfUserStudyEndTime.toEpochMilli() - startOfCurrentSlot) / Constants.MILLIS_TO_HOUR) >= STUDY_SESSION_TIME)) {
-
-                    adjustedUserFreeSlots.add(new TimeSlot(new DateTime(startOfCurrentSlot), new DateTime(insOfUserStudyEndTime.toEpochMilli())));
-                    totalFreeTime += (insOfUserStudyEndTime.toEpochMilli() - startOfCurrentSlot) / Constants.MILLIS_TO_HOUR;
-
-                }
-                if (((endOfCurrentSlot - insOfUserStudyStartTime.toEpochMilli()) / Constants.MILLIS_TO_HOUR) >= STUDY_SESSION_TIME
-                        && (insOfUserStudyStartTime.toEpochMilli() < endOfCurrentSlot)) {
-
-                    adjustedUserFreeSlots.add(new TimeSlot(new DateTime(insOfUserStudyStartTime.toEpochMilli()), new DateTime(endOfCurrentSlotDayOfMonth)));
-                    totalFreeTime += (endOfCurrentSlot - insOfUserStudyStartTime.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
-                }
-
-                // case 3 when slot starts at a day and ends at some later day - more than one day
-            } else {
-
-                // (e.g. instance of 22:00 at same day)
-                Instant insOfUserStudyEndTime = Instant.ofEpochMilli(startOfCurrentSlot);
-                insOfUserStudyEndTime.with(ChronoField.HOUR_OF_DAY, userStudyEndTime);
-                // (e.g. instance of 08:00 at the next day)
-                Instant insOfUserStudyStartTime = Instant.ofEpochMilli(endOfCurrentSlotDayOfMonth);
-                insOfUserStudyEndTime.with(ChronoField.HOUR_OF_DAY, userStudyEndTime);
-
-                if ((insOfUserStudyEndTime.toEpochMilli() > startOfCurrentSlot)
-                        && (((insOfUserStudyEndTime.toEpochMilli() - startOfCurrentSlot) / Constants.MILLIS_TO_HOUR) >= STUDY_SESSION_TIME)) {
-
-                    adjustedUserFreeSlots.add(new TimeSlot(new DateTime(startOfCurrentSlot), new DateTime(insOfUserStudyEndTime.toEpochMilli())));
-                    totalFreeTime += (insOfUserStudyEndTime.toEpochMilli() - startOfCurrentSlot) / Constants.MILLIS_TO_HOUR;
+                    adjustedUserFreeSlots.add(new TimeSlot(new DateTime(beginningOfFirstDay), new DateTime(insOfUserStudyEndTime.toEpochMilli())));
+                    totalFreeTime += (insOfUserStudyEndTime.toEpochMilli() - beginningOfFirstDay) / Constants.MILLIS_TO_HOUR;
 
                 }
                 // need to get the number of days diff - 1
