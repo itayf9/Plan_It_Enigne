@@ -31,10 +31,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 @RestController
 public class CalendarController {
@@ -56,36 +53,6 @@ public class CalendarController {
      */
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
-    @PostMapping(value = "/login",
-            consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public void login(@RequestBody AccessToken accessToken) {
-
-        // 1. create Java user-object
-
-        // 2. save user to DB with userRepo
-    }
-
-    /**
-     * @return a list of all courses in the DB
-     */
-    @GetMapping(value = "/courses")
-    public List<Course> getCoursesNamesFromDB() {
-
-        return courseRepo.findAll();
-    }
-
-    @GetMapping(value = "/profile", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public void getUserPreferencesFromDB(@RequestBody AccessToken accessToken) {
-
-        // 1. User (Java Object) userPreferences / userProfile = userRepo.findByAccess_token??();
-        // 2. return User
-    }
-
-    @GetMapping(value = "/logout")
-    public void logout() {
-
-        // 1. ???
-    }
 
     @PostMapping(value = "/scan", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<List<Event>> scanUserEvents(@RequestBody AccessToken accessToken, @RequestParam boolean scannedAlready) throws IOException, GeneralSecurityException {
@@ -218,13 +185,18 @@ public class CalendarController {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
+            // check if calendar is the exams calendar
             if (calendar.getSummary().equals("יומן אישי מתחנת המידע")) {
+                // scan events to find exams
                 for (Event event : events.getItems()) {
+                    // check if event is an exam
                     if (event.getSummary().contains("מבחן")) {
+                        // get exam/course name
                         String courseName = Engine.extractCourseFromExam(event.getSummary());
-                        // Course course = courseRepo.findBy()
-                        // examsFound.add(new Exam(course, event.getStart().getDateTime()));
+                        // query course from DB check if exist
+                        Optional<Course> maybeFoundCourse = courseRepo.findCourseByCourseName(courseName);
+                        // add to list of found exams
+                        maybeFoundCourse.ifPresent(course -> examsFound.add(new Exam(course, event.getStart().getDateTime())));
                     }
                 }
             }

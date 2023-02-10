@@ -11,14 +11,25 @@ public class User {
     @Field(name = "is_day_learner")
     private boolean isDayLearner;
 
+    @Field(name = "email")
+    private String email;
+
     @Field(name = "user_preferences")
     private Preferences userPreferences;
 
-    public User(String userName, boolean isDayLearner, Preferences userPreferences) {
+    public User(String userName, boolean isDayLearner, Preferences userPreferences, String email) {
         this.userName = userName;
         this.isDayLearner = isDayLearner;
         this.userPreferences = userPreferences;
+        this.email = email;
     }
+
+    public User(String email) {
+        this.userPreferences = new Preferences();
+        this.email = email;
+    }
+
+
 
     public String getUserName() {
         return userName;

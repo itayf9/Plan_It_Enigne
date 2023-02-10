@@ -265,8 +265,10 @@ public class Engine {
 
                 }
 
-                // add a day to the 22:00 instance
-                insOfUserStudyEndTime = insOfUserStudyEndTime.plus(1, ChronoUnit.DAYS);
+                if (!Utility.isSameDay(insOfUserStudyStartTime, insOfUserStudyEndTime)) {
+                    // add a day to the 22:00 instance
+                    insOfUserStudyEndTime = insOfUserStudyEndTime.plus(1, ChronoUnit.DAYS);
+                }
 
                 // goes through full days and add the time slots
                 // (e.g. 08:00 to 22:00)
@@ -295,7 +297,7 @@ public class Engine {
         return new DTOfreetime(adjustedUserFreeSlots, totalFreeTime);
     }
 
-    public static String extractCourseFromExam(String summary) {
+    public static String extractCourseFromExam(String summary) { // TO DO
         String courseName = "";
 
         // find course name from the string of the exam
