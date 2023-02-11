@@ -8,6 +8,13 @@ import java.time.temporal.ChronoUnit;
 
 public class Utility {
 
+    /**
+     * checks if the instants are on the same date (Year, Month, Day)
+     *
+     * @param firstInstant  the first Instant
+     * @param secondInstant the second Instant
+     * @return true if both are on the same date, false otherwise
+     */
     public static boolean isSameDay(Instant firstInstant, Instant secondInstant) {
 
         // makes both of the instants with the same hour
@@ -17,8 +24,17 @@ public class Utility {
         return fixedFirstInstant.until(fixedSecondInstant, ChronoUnit.HOURS) == 0;
     }
 
-    public static DTOstartAndEndOfInterval getCurrentInterval(Instant currentDay,int userStudyStartTime ,int userStudyEndTime)
-    {
+    /**
+     * for a specific instant, finds the instants of the userStudyStartTime and userStudyEndTime,
+     * that appear on the same date of the specific instant.
+     * this represents the interval (e.g. 8:00 to 22:00) of the current day, for a specific instant
+     *
+     * @param currentDay         an {@link Instant} that we want to find its interval
+     * @param userStudyStartTime the study start time (int format, e.g. 800)
+     * @param userStudyEndTime   the study end time (int format, e.g. 2200)
+     * @return a {@link DTOstartAndEndOfInterval} represents the current userStudyStartTime and userStudyEndTime values
+     */
+    public static DTOstartAndEndOfInterval getCurrentInterval(Instant currentDay, int userStudyStartTime, int userStudyEndTime) {
         long startStudyHours = convertUserStudyTimeToHours(userStudyStartTime);
         long startStudyMinute = convertUserStudyTimeToMinute(userStudyStartTime);
         long endStudyHours = convertUserStudyTimeToHours(userStudyEndTime);
@@ -54,8 +70,13 @@ public class Utility {
         return hours;
     }
 
-    private static long convertUserStudyTimeToMinute(int userStudyTime)
-    {
+    /**
+     * extracts the minutes out of the userStudyTime
+     *
+     * @param userStudyTime is an int that represents user study time (e.g. 800 is 8:00).
+     * @return a long number that represents only the minutes from user study time.
+     */
+    private static long convertUserStudyTimeToMinute(int userStudyTime) {
         long minute;
 
         minute = userStudyTime % 100;

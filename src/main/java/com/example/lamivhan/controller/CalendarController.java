@@ -98,11 +98,11 @@ public class CalendarController {
         if (!scannedAlready) {
 
             // get user's calendar service
-            Calendar calendarService = getCalendarService(accessToken);
+            Calendar calendarService = Engine.getCalendarService(accessToken, JSON_FACTORY, Constants.APPLICATION_NAME);
 
             // get user's calendar list
 
-            List<CalendarListEntry> calendarList = getCalendarList(calendarService);
+            List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
 
             // set up startDate & endDate
             // ...
@@ -112,7 +112,7 @@ public class CalendarController {
             List<Event> fullDayEvents = new ArrayList<>();
 
             // get List of user's events
-            List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
+            List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
 
             if (fullDayEvents.size() != 0) {
                 // return list of events... for client to decide

@@ -1,23 +1,49 @@
 package com.example.lamivhan.engine;
 
+import com.example.lamivhan.googleapis.AccessToken;
+import com.example.lamivhan.model.course.Course;
+import com.example.lamivhan.model.course.CoursesRepository;
+import com.example.lamivhan.model.exam.Exam;
 import com.example.lamivhan.model.timeslot.TimeSlot;
 import com.example.lamivhan.model.user.User;
+import com.example.lamivhan.model.user.UserRepository;
 import com.example.lamivhan.utill.Constants;
+import com.example.lamivhan.utill.EventComparator;
 import com.example.lamivhan.utill.Utility;
 import com.example.lamivhan.utill.dto.DTOfreetime;
 import com.example.lamivhan.utill.dto.DTOstartAndEndOfInterval;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
 import com.google.api.client.util.DateTime;
+import com.google.api.services.calendar.Calendar;
+import com.google.api.services.calendar.model.CalendarList;
+import com.google.api.services.calendar.model.CalendarListEntry;
 import com.google.api.services.calendar.model.Event;
+import com.google.api.services.calendar.model.Events;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.time.Instant;
-import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 public class Engine {
-    // need to get user object
+
+    private static CoursesRepository courseRepo;
+
+    private static UserRepository userRepo;
+
+    /**
+     * Takes out all the free time slots that can be taken out of the user events.
+     *
+     * @param userEvents is an array with all the events the user had.
+     * @param user       is containing user preferences.
+     * @return DTOfreetime object the return from the function adjustFreeSlotsList.
+     */
     public static DTOfreetime getFreeSlots(List<Event> userEvents, User user) {
 
         List<TimeSlot> userFreeTimeSlots = new ArrayList<>();
@@ -45,6 +71,13 @@ public class Engine {
         return adjustFreeSlotsList(userFreeTimeSlots, user);
     }
 
+    /**
+     * adjusts the free slots to the user's preferences
+     *
+     * @param userFreeTimeSlots a list of {@link TimeSlot} that contains the free time slots without user's preferences
+     * @param user              a {@link User} that represents the user related to the slot list
+     * @return a {@link DTOfreetime} that represents an adjusted free time slots
+     */
     private static DTOfreetime adjustFreeSlotsList(List<TimeSlot> userFreeTimeSlots, User user) {
         int totalFreeTime = 0;
         List<TimeSlot> adjustedUserFreeSlots = new ArrayList<>();
@@ -113,185 +146,7 @@ public class Engine {
                 totalFreeTime += (endOfCurrentSlot.toEpochMilli() - userStudyStartNext.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
             }
 
-            /*// creates two "Instant"s that represent the day of the startOfCurrentSlot with different hours
-            // an Instant with user's study start time (e.g. instance of 08:00 at the same day)
-            // an Instant with user's study end time (e.g. instance of 22:00 at same day)
-            Instant insOfUserStudyStartTime = Instant.ofEpochMilli(startOfCurrentSlot);
-            insOfUserStudyStartTime.with(ChronoField.HOUR_OF_DAY, userStudyStartTime);
 
-            Instant insOfUserStudyEndTime = Instant.ofEpochMilli(startOfCurrentSlot);
-            insOfUserStudyEndTime.with(ChronoField.HOUR_OF_DAY, userStudyEndTime);
-
-
-            // here we separate to a few cases
-
-            // case 1 when slot starts and ends at the same day
-            if (startOfCurrentSlot >= insOfUserStudyStartTime.toEpochMilli()
-                    && endOfCurrentSlot <= insOfUserStudyEndTime.toEpochMilli()) {
-                // nothing to adjust here
-                // adds the slot to the list
-                adjustedUserFreeSlots.add(new TimeSlot(new DateTime(startOfCurrentSlot), new DateTime(endOfCurrentSlot)));
-                totalFreeTime += (endOfCurrentSlot - startOfCurrentSlot) / Constants.MILLIS_TO_HOUR;*/
-
-            /*
-
-            same day
-                 start                              end
-            V|----8:00---9:00------------12:00------22:00-----| need to get (9:00,12:00)
-                 start                   end
-            V|----8:00---9:00------------22:00------23:00-----| need to get (9:00,22:00)
-                       start                        end
-            V|----6:00---8:00------------12:00------22:00-----| need to get (8:00,12:00)
-                        start            end
-            V|----6:00---8:00------------22:00------23:00-----| need to get (8:00,22:00)
-
-            diffrent days
-                        start slot                    end slot
-            V|----8:00------9:00------22:00----8:00------12:00------22:00-----| need to get (9:00,22:00) and (8:00,12:00)
-                  7\7       7\7       7\7     8\7        8\7       8\7
-                         start slot                             end slot
-            V|----8:00-------9:00------22:00-----8:00----22:00------23:00-----| need to get (9:00,22:00) and (8:00,22:00)
-                  7\7        7\7       7\7      8\7      8\7       8\7
-                 start slot                           end slot
-            V|------6:00-------8:00----22:00----8:00----20:00------22:00------| need to get (8:00,22:00) and (8:00,20:00)
-                  7\7          7\7     7\7      8\7      8\7       8\7
-               start slot                                     end slot
-            V|------6:00-----8:00----22:00----8:00----22:00------23:00-------| need to get (8:00,22:00) and (8:00,22:00)
-                  7\7        7\7     7\7      8\7      8\7       8\7
-
-                      v|---------START----X-----Y-----END----------| // first case
-                      v|-----X---START------Y---------END----------| // second case
-                      v|---------START------X---------END-Y--23:59-| else case
-                       |--X------START----------------END-Y--23:59-| // need to complete, now it adds the slot twice (thinks it's both the first interval and second interval)
-
-                       if (Y< END && X > START )
-                       else if (Y< END && X <= START)
-                       else (Y >= END)
-
-                       if (Y< END && X > START )
-                       else if (Y< END && X <= START)
-                       else if (Y >= END && X > START)
-                       else (Y>= END && X <= START)
-
-
-
-                       if (X,Y same day) {
-                        if (Y< END && X > START )
-                        else if (Y< END && X <= START)
-                        else (oshri's case)
-                      } else (X,Y not same day) {
-                        // general case
-                      }
-
-
-
-
-
-
-                     |---------------------X-------------------------Y--------------------|
-
-
-
-                     START = find first place of START
-                     END = find first place of END
-
-
-                     if END > Y // the first 22:00 is after the end of slot  // we take the min(END,Y)
-                        RealEND = Y
-                     else
-                        RealEND = END
-
-                     if START < X // the first 08:00 is before the start of slot  // we take the max(START,X)
-                        RealSTART = X
-                     else
-                        RealSTART = START
-
-                     if RealEnd - RealStart >= SESSION_TIME
-                        take (RealStart, RealEnd)
-
-                     STARTnext = find next place of START
-                     ENDnext = find next place of END
-
-                     while (STARTnext > END && ENDnext < Y) {
-                        take (STARTnext, ENDnext)
-                        END = ENDnext
-                        STARTnext = find next place of START
-                        ENDnext = find next place of END
-                        }
-
-
-                     if STARTnext < Y && Y-STARTnext >= SESSION_TIME
-                         take (STARTnext, Y)
-
-
-
-
-
-
-
-
-
-
-                       // check if the order of the conditions in the ifs is good
-
-             */
-
-            /*} else if (startOfCurrentSlot < insOfUserStudyStartTime.toEpochMilli()
-                    && endOfCurrentSlot <= insOfUserStudyEndTime.toEpochMilli()) {
-                // only trims the beginning of the slot
-                // adds the slot to the list
-                adjustedUserFreeSlots.add(new TimeSlot(new DateTime(insOfUserStudyStartTime.toEpochMilli()), new DateTime(endOfCurrentSlot)));
-                totalFreeTime += (endOfCurrentSlot - insOfUserStudyStartTime.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
-
-
-            } else { // case 2 when slot starts at a day and ends at some other day
-
-                // (e.g. instance of 22:00 at same day)
-                insOfUserStudyEndTime = Instant.ofEpochMilli(startOfCurrentSlot);
-                insOfUserStudyEndTime.with(ChronoField.HOUR_OF_DAY, userStudyEndTime);
-
-                // (e.g. instance of 08:00 at the next day)
-                insOfUserStudyStartTime = Instant.ofEpochMilli(endOfCurrentSlot);
-                insOfUserStudyStartTime.with(ChronoField.HOUR_OF_DAY, userStudyStartTime);
-
-                // finds the beginning of the first day
-                long beginningOfFirstDay = Math.max(startOfCurrentSlot, insOfUserStudyStartTime.toEpochMilli());
-
-                if ((insOfUserStudyEndTime.toEpochMilli() > beginningOfFirstDay)
-                        && (((insOfUserStudyEndTime.toEpochMilli() - beginningOfFirstDay) / Constants.MILLIS_TO_HOUR) >= STUDY_SESSION_TIME)) {
-
-                    adjustedUserFreeSlots.add(new TimeSlot(new DateTime(beginningOfFirstDay), new DateTime(insOfUserStudyEndTime.toEpochMilli())));
-                    totalFreeTime += (insOfUserStudyEndTime.toEpochMilli() - beginningOfFirstDay) / Constants.MILLIS_TO_HOUR;
-
-                }
-
-                if (!Utility.isSameDay(insOfUserStudyStartTime, insOfUserStudyEndTime)) {
-                    // add a day to the 22:00 instance
-                    insOfUserStudyEndTime = insOfUserStudyEndTime.plus(1, ChronoUnit.DAYS);
-                }
-
-                // goes through full days and add the time slots
-                // (e.g. 08:00 to 22:00)
-                while (endOfCurrentSlot > insOfUserStudyEndTime.toEpochMilli()) {
-
-                    // add a "full day" time slot
-                    adjustedUserFreeSlots.add(new TimeSlot(new DateTime(insOfUserStudyStartTime.toEpochMilli()), new DateTime(insOfUserStudyEndTime.toEpochMilli())));
-                    totalFreeTime += (insOfUserStudyEndTime.toEpochMilli() - insOfUserStudyStartTime.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
-
-                    // add a day to the 08:00 instance
-                    insOfUserStudyStartTime = insOfUserStudyStartTime.plus(1, ChronoUnit.DAYS);
-                    // add a day to the 22:00 instance
-                    insOfUserStudyEndTime = insOfUserStudyEndTime.plus(1, ChronoUnit.DAYS);
-                }
-
-                // check for the last interval (e.g. 08:00-13:00)
-                if (((endOfCurrentSlot - insOfUserStudyStartTime.toEpochMilli()) / Constants.MILLIS_TO_HOUR) >= STUDY_SESSION_TIME
-                        && (insOfUserStudyStartTime.toEpochMilli() < endOfCurrentSlot)) {
-
-                    adjustedUserFreeSlots.add(new TimeSlot(new DateTime(insOfUserStudyStartTime.toEpochMilli()), new DateTime(endOfCurrentSlot)));
-                    totalFreeTime += (endOfCurrentSlot - insOfUserStudyStartTime.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
-                }*/
-            /*}*/
         }
 
         return new DTOfreetime(adjustedUserFreeSlots, totalFreeTime);
@@ -302,5 +157,214 @@ public class Engine {
 
         // find course name from the string of the exam
         return courseName;
+    }
+
+    /**
+     * @param calendarService Google Calendar service provider.
+     * @param calendarList    List of all the User Google Calendars
+     * @param start           the time to start scan of events
+     * @param end             the time to end scan of events
+     * @param fullDayEvents   list of full day events found
+     * @return List of all the event's user has
+     */
+    public static List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end, List<Event> fullDayEvents) {
+        List<Event> allEventsFromCalendars = new ArrayList<>();
+        List<Exam> examsFound = new LinkedList<>();
+
+        for (CalendarListEntry calendar : calendarList) {
+            Events events = null;
+            try {
+                events = calendarService.events().list(calendar.getId())
+                        .setTimeMin(start)
+                        .setOrderBy("startTime")
+                        .setTimeMax(end)
+                        .setSingleEvents(true)
+                        .execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            // check if calendar is the exams calendar
+            if (calendar.getSummary().equals("יומן אישי מתחנת המידע")) {
+                // scan events to find exams
+                for (Event event : events.getItems()) {
+                    // check if event is an exam
+                    if (event.getSummary().contains("מבחן")) {
+                        // get exam/course name
+                        String courseName = Engine.extractCourseFromExam(event.getSummary());
+                        // query course from DB check if exist
+                        Optional<Course> maybeFoundCourse = courseRepo.findCourseByCourseName(courseName);
+                        // add to list of found exams
+                        maybeFoundCourse.ifPresent(course -> examsFound.add(new Exam(course, event.getStart().getDateTime())));
+                    }
+                }
+            }
+            allEventsFromCalendars.addAll(events.getItems());
+        }
+
+        for (Event event : allEventsFromCalendars) {
+            System.out.println(event.getStart().getDateTime() + " : " + event.getSummary());
+        }
+        allEventsFromCalendars.sort(new EventComparator());
+        return allEventsFromCalendars;
+    }
+
+    // same function just without sort at the end - delete this
+    private static List<Event> getEventsFromCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end) {
+        List<Event> allEventsFromCalendars = new ArrayList<>();
+
+        for (CalendarListEntry calendar : calendarList) {
+            Events events = null;
+            try {
+                events = calendarService.events().list(calendar.getId())
+                        .setTimeMin(start)
+                        .setOrderBy("startTime")
+                        .setTimeMax(end)
+                        .setSingleEvents(true)
+                        .execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            allEventsFromCalendars.addAll(events.getItems());
+        }
+
+
+        return allEventsFromCalendars;
+    }
+
+    /**
+     * @param calendarService Google Calendar service provider.
+     * @return List of all the User Google Calendars
+     */
+    public static List<CalendarListEntry> getCalendarList(Calendar calendarService) {
+        String pageToken = null;
+        List<CalendarListEntry> calendars = new ArrayList<>();
+        do {
+            CalendarList calendarList = null;
+            try {
+                calendarList = calendarService.calendarList().list().setPageToken(pageToken).execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            calendars.addAll(calendarList.getItems());
+
+            pageToken = calendarList.getNextPageToken();
+        } while (pageToken != null);
+
+        return calendars;
+    }
+
+    /**
+     * @param access_token     User Google AccessToken
+     * @param JSON_FACTORY     Json Factory Instance
+     * @param APPLICATION_NAME The name of the Application - PlanIt
+     * @return Google Calendar service provider.
+     * @throws GeneralSecurityException
+     * @throws IOException
+     */
+    public static Calendar getCalendarService(AccessToken access_token, JsonFactory JSON_FACTORY, String APPLICATION_NAME) throws GeneralSecurityException, IOException {
+
+        // Build a new authorized API client service.
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        Date expireDate = new Date(new Date().getTime() + 3600000);
+
+        com.google.auth.oauth2.AccessToken accessToken = new com.google.auth.oauth2.AccessToken(access_token.getAccessToken(), expireDate);
+        GoogleCredentials credential = new GoogleCredentials(accessToken);
+        HttpRequestInitializer httpRequestInitializer = new HttpCredentialsAdapter(credential);
+
+        return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, httpRequestInitializer)
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+
+    }
+
+    /**
+     * get User from DB
+     *
+     * @param email unique email of username.
+     * @return with optional<User> if user exist return the User Java object else will return null.
+     */
+    public static Optional<User> findUserByEmail(String email) {
+        return userRepo.findUserByEmail(email);
+    }
+
+    public static void saveUserToDB(User user) {
+        userRepo.save(user);
+    }
+
+    /*public String test(AccessToken accessToken) throws GeneralSecurityException, IOException {
+
+        // 1. get access_token from DB / request body / need to think about it...
+
+
+        // 2. Build a new authorized API client service.
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        GoogleCredential credential = new GoogleCredential().setAccessToken(accessToken.getAccessToken());
+        Calendar service =
+                new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+                        .setApplicationName(Constants.APPLICATION_NAME)
+                        .build();
+        // Iterate through entries in calendar list
+        String pageToken = null;
+        do {
+            CalendarList calendarList = service.calendarList().list().setPageToken(pageToken).execute();
+            List<CalendarListEntry> items = calendarList.getItems();
+
+            for (CalendarListEntry calendarListEntry : items) {
+                System.out.println(calendarListEntry.getSummary() + " " + calendarListEntry.getId());
+            }
+            pageToken = calendarList.getNextPageToken();
+        } while (pageToken != null);
+
+        // List the next 10 events from the primary calendar.
+        DateTime now = new DateTime(System.currentTimeMillis());
+        Events events = service.events().list("ggjkjd2dvspjiirkp5e9sv2566ujt1bh@import.calendar.google.com")
+                .setMaxResults(10)
+                .setTimeMin(now)
+                .setOrderBy("startTime")
+                .setSingleEvents(true)
+                .execute();
+        List<Event> items = events.getItems();
+        StringBuilder tenEventsBuilder = new StringBuilder();
+
+        if (items.isEmpty()) {
+            System.out.println("No upcoming events found.");
+        } else {
+            System.out.println("Upcoming events");
+            FileWriter myWriter = new FileWriter("filename.txt");
+            for (Event event : items) {
+                DateTime start = event.getStart().getDateTime();
+                if (start == null) {
+                    start = event.getStart().getDate();
+                }
+                DateTime end = event.getEnd().getDateTime();
+                if (end == null) {
+                    end = event.getEnd().getDate();
+                }
+
+                System.out.printf("%s (%s) [%s]\n", event.getSummary(), start, end);
+                myWriter.write("" + event.getSummary() + " (" + start + ") [" + end + "] \n");
+                tenEventsBuilder.append(event.getSummary()).append(" (").append(start).append(") [").append(end).append("] \n");
+            }
+            myWriter.close();
+        }
+
+        return tenEventsBuilder.toString();
+    }*/
+
+    /**
+     * 3# creates the Plan-It calendar and adds it the user's calendar list
+     *
+     * @param calendarService a calendar service of the user
+     * @throws IOException in case of failure in "execute"
+     */
+    private void createPlanItCalendar(Calendar calendarService) throws IOException {
+
+        // Create a new calendar
+        com.google.api.services.calendar.model.Calendar calendar = new com.google.api.services.calendar.model.Calendar();
+        calendar.setSummary("PlanIt Calendar");
+        calendar.setTimeZone("Asia/Jerusalem");
+
+        // Insert the new calendar
+        com.google.api.services.calendar.model.Calendar createdCalendar = calendarService.calendars().insert(calendar).execute();
     }
 }
