@@ -152,6 +152,11 @@ public class Engine {
         return new DTOfreetime(adjustedUserFreeSlots, totalFreeTime);
     }
 
+    /**
+     * find the name of the course, from the String that contains the event summery of an exam event.
+     * e.g מבחן מועד 1 ציון בחינה - פרונטלי גב' אריאן שלומית חישוביות
+     * return "חישוביות"
+     */
     public static String extractCourseFromExam(String summary) { // TO DO
         String courseName = "";
 

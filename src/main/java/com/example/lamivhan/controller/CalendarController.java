@@ -2,51 +2,29 @@ package com.example.lamivhan.controller;
 
 import com.example.lamivhan.engine.Engine;
 import com.example.lamivhan.googleapis.AccessToken;
-import com.example.lamivhan.model.course.Course;
-import com.example.lamivhan.model.course.CoursesRepository;
-import com.example.lamivhan.model.exam.Exam;
-import com.example.lamivhan.model.user.UserRepository;
 import com.example.lamivhan.utill.Constants;
-import com.example.lamivhan.utill.EventComparator;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.Calendar;
-import com.google.api.services.calendar.model.CalendarList;
 import com.google.api.services.calendar.model.CalendarListEntry;
 import com.google.api.services.calendar.model.Event;
-import com.google.api.services.calendar.model.Events;
-import com.google.auth.http.HttpCredentialsAdapter;
-import com.google.auth.oauth2.GoogleCredentials;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 public class CalendarController {
 
-    // check maybe syntax is not as it should be.
-    @Autowired
-    private CoursesRepository courseRepo;
-
-    @Autowired
-    private UserRepository userRepo;
-
-    /**
-     * Application name.
-     */
-    private static final String APPLICATION_NAME = "Google Calendar API Java Quickstart";
 
     /**
      * Global instance of the JSON factory.
@@ -59,11 +37,11 @@ public class CalendarController {
 
         if (!scannedAlready) {
             // get user's calendar service
-            Calendar calendarService = getCalendarService(accessToken);
+            Calendar calendarService = Engine.getCalendarService(accessToken, JSON_FACTORY, Constants.APPLICATION_NAME);
 
             // get user's calendar list
 
-            List<CalendarListEntry> calendarList = getCalendarList(calendarService);
+            List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
 
             // set up startDate & endDate
             // ...
@@ -73,7 +51,7 @@ public class CalendarController {
             List<Event> fullDayEvents = new ArrayList<>();
 
             // get List of user's events
-            List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
+            List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
 
 
             if (fullDayEvents.size() != 0) {
@@ -91,9 +69,6 @@ public class CalendarController {
 
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<List<Event>> generateStudyEvents(@RequestBody AccessToken accessToken, @RequestParam boolean scannedAlready) throws IOException, GeneralSecurityException {
-
-        //createEvents()
-
 
         if (!scannedAlready) {
 
@@ -166,181 +141,5 @@ public class CalendarController {
         // create events
 
         return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    private List<Event>
-    getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end, List<Event> fullDayEvents) {
-        List<Event> allEventsFromCalendars = new ArrayList<>();
-        List<Exam> examsFound = new LinkedList<>();
-
-        for (CalendarListEntry calendar : calendarList) {
-            Events events = null;
-            try {
-                events = calendarService.events().list(calendar.getId())
-                        .setTimeMin(start)
-                        .setOrderBy("startTime")
-                        .setTimeMax(end)
-                        .setSingleEvents(true)
-                        .execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            // check if calendar is the exams calendar
-            if (calendar.getSummary().equals("יומן אישי מתחנת המידע")) {
-                // scan events to find exams
-                for (Event event : events.getItems()) {
-                    // check if event is an exam
-                    if (event.getSummary().contains("מבחן")) {
-                        // get exam/course name
-                        String courseName = Engine.extractCourseFromExam(event.getSummary());
-                        // query course from DB check if exist
-                        Optional<Course> maybeFoundCourse = courseRepo.findCourseByCourseName(courseName);
-                        // add to list of found exams
-                        maybeFoundCourse.ifPresent(course -> examsFound.add(new Exam(course, event.getStart().getDateTime())));
-                    }
-                }
-            }
-            allEventsFromCalendars.addAll(events.getItems());
-        }
-
-        for (Event event : allEventsFromCalendars) {
-            System.out.println(event.getStart().getDateTime() + " : " + event.getSummary());
-        }
-        allEventsFromCalendars.sort(new EventComparator());
-        return allEventsFromCalendars;
-    }
-
-    private List<Event> getEventsFromCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end) {
-        List<Event> allEventsFromCalendars = new ArrayList<>();
-
-        for (CalendarListEntry calendar : calendarList) {
-            Events events = null;
-            try {
-                events = calendarService.events().list(calendar.getId())
-                        .setTimeMin(start)
-                        .setOrderBy("startTime")
-                        .setTimeMax(end)
-                        .setSingleEvents(true)
-                        .execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            allEventsFromCalendars.addAll(events.getItems());
-        }
-
-
-        return allEventsFromCalendars;
-    }
-
-    private List<CalendarListEntry> getCalendarList(Calendar calendarService) {
-        String pageToken = null;
-        List<CalendarListEntry> calendars = new ArrayList<>();
-        do {
-            CalendarList calendarList = null;
-            try {
-                calendarList = calendarService.calendarList().list().setPageToken(pageToken).execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            calendars.addAll(calendarList.getItems());
-
-            pageToken = calendarList.getNextPageToken();
-        } while (pageToken != null);
-
-        return calendars;
-    }
-
-    private Calendar getCalendarService(AccessToken access_token) throws GeneralSecurityException, IOException {
-
-        // Build a new authorized API client service.
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        Date expireDate = new Date(new Date().getTime() + 3600000);
-
-        com.google.auth.oauth2.AccessToken accessToken = new com.google.auth.oauth2.AccessToken(access_token.getAccessToken(), expireDate);
-        GoogleCredentials credential = new GoogleCredentials(accessToken);
-        HttpRequestInitializer httpRequestInitializer = new HttpCredentialsAdapter(credential);
-
-        return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, httpRequestInitializer)
-                .setApplicationName(APPLICATION_NAME)
-                .build();
-
-    }
-
-
-    public String test(AccessToken accessToken) throws GeneralSecurityException, IOException {
-
-        // 1. get access_token from DB / request body / need to think about it...
-
-
-        // 2. Build a new authorized API client service.
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        GoogleCredential credential = new GoogleCredential().setAccessToken(accessToken.getAccessToken());
-        Calendar service =
-                new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-                        .setApplicationName(APPLICATION_NAME)
-                        .build();
-        // Iterate through entries in calendar list
-        String pageToken = null;
-        do {
-            CalendarList calendarList = service.calendarList().list().setPageToken(pageToken).execute();
-            List<CalendarListEntry> items = calendarList.getItems();
-
-            for (CalendarListEntry calendarListEntry : items) {
-                System.out.println(calendarListEntry.getSummary() + " " + calendarListEntry.getId());
-            }
-            pageToken = calendarList.getNextPageToken();
-        } while (pageToken != null);
-
-        // List the next 10 events from the primary calendar.
-        DateTime now = new DateTime(System.currentTimeMillis());
-        Events events = service.events().list("ggjkjd2dvspjiirkp5e9sv2566ujt1bh@import.calendar.google.com")
-                .setMaxResults(10)
-                .setTimeMin(now)
-                .setOrderBy("startTime")
-                .setSingleEvents(true)
-                .execute();
-        List<Event> items = events.getItems();
-        StringBuilder tenEventsBuilder = new StringBuilder();
-
-        if (items.isEmpty()) {
-            System.out.println("No upcoming events found.");
-        } else {
-            System.out.println("Upcoming events");
-            FileWriter myWriter = new FileWriter("filename.txt");
-            for (Event event : items) {
-                DateTime start = event.getStart().getDateTime();
-                if (start == null) {
-                    start = event.getStart().getDate();
-                }
-                DateTime end = event.getEnd().getDateTime();
-                if (end == null) {
-                    end = event.getEnd().getDate();
-                }
-
-                System.out.printf("%s (%s) [%s]\n", event.getSummary(), start, end);
-                myWriter.write("" + event.getSummary() + " (" + start + ") [" + end + "] \n");
-                tenEventsBuilder.append(event.getSummary()).append(" (").append(start).append(") [").append(end).append("] \n");
-            }
-            myWriter.close();
-        }
-
-        return tenEventsBuilder.toString();
-    }
-
-    /**
-     * creates the Plan-It calendar and adds it the user's calendar list
-     *
-     * @param calendarService a calendar service of the user
-     * @throws IOException in case of failure in "execute"
-     */
-    private void createPlanItCalendar(Calendar calendarService) throws IOException {
-
-        // Create a new calendar
-        com.google.api.services.calendar.model.Calendar calendar = new com.google.api.services.calendar.model.Calendar();
-        calendar.setSummary("PlanIt Calendar");
-        calendar.setTimeZone("Asia/Jerusalem");
-
-        // Insert the new calendar
-        com.google.api.services.calendar.model.Calendar createdCalendar = calendarService.calendars().insert(calendar).execute();
     }
 }
