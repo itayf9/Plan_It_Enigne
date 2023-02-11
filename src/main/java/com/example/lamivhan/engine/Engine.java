@@ -42,8 +42,10 @@ public class Engine {
      * @param user       is containing user preferences.
      * @return DTOfreetime object the return from the function adjustFreeSlotsList.
      */
-    public static DTOfreetime getFreeSlots(List<Event> userEvents, User user) {
+    public static DTOfreetime getFreeSlots(List<Event> userEvents, User user, List<Exam> examsFound) {
 
+        Exam lastExam = examsFound.get(examsFound.size() - 1);
+        long startTimeOfLastExam = lastExam.getDateTime().getValue();
         List<TimeSlot> userFreeTimeSlots = new ArrayList<>();
         Date now = new Date();
 
@@ -63,6 +65,9 @@ public class Engine {
             if (endOfCurrentEvent < startOfNextEvent) {
                 //check if we have time to add, add to list of free time.
                 userFreeTimeSlots.add(new TimeSlot(new DateTime(endOfCurrentEvent), new DateTime(startOfNextEvent)));
+                if (startTimeOfLastExam == startOfNextEvent) {
+                    break;
+                }
             }
         }
 

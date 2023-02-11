@@ -51,10 +51,11 @@ public class CalendarController {
         DateTime start = new DateTime(System.currentTimeMillis()); // need to get from user
         DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS); // // need to get from user
 
-            List<Event> fullDayEvents = new ArrayList<>();
+        List<Event> fullDayEvents = new ArrayList<>();
+        List<Exam> examsFound = new LinkedList<>();
 
-            // get List of user's events
-            List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
+        // 1# get List of user's events
+        List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents, examsFound, courseRepo);
 
 
         if (fullDayEvents.size() != 0) {
