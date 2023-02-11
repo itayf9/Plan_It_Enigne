@@ -39,14 +39,12 @@ public class CalendarController {
             // get user's calendar service
             Calendar calendarService = Engine.getCalendarService(accessToken, JSON_FACTORY, Constants.APPLICATION_NAME);
 
-            // get user's calendar list
+        // get user's calendars list
+        List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
 
-            List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
-
-            // set up startDate & endDate
-            // ...
-            DateTime start = new DateTime(System.currentTimeMillis());
-            DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);
+        // set up start date of study range & end date of study range
+        DateTime start = new DateTime(System.currentTimeMillis()); // need to get from user
+        DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS); // // need to get from user
 
             List<Event> fullDayEvents = new ArrayList<>();
 
@@ -54,14 +52,15 @@ public class CalendarController {
             List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
 
 
-            if (fullDayEvents.size() != 0) {
-                // return list of events... for client to decide
-            } else {
-
-                //createEvents(accessToken, true, events);
-            }
+        if (fullDayEvents.size() != 0) {
+            // return list of events... for client to decide
         } else {
-            // return full day events to client to get list of true-false in order to know which days he wants to study
+            // 2# 3# 4# 5#
+            //generateStudyEvents(accessToken, true, events);
+            // we can call the generateStudyEvents function, as usual, like it was some regular function
+            // we need to pass all the required parameters
+            // also, we need to check the ResponseEntity that is returned from the generateStudyEvents
+            // then we can do things according to the HTTP status code, or body, from generateStudyEvents
         }
 
         return new ResponseEntity<>(HttpStatus.OK);

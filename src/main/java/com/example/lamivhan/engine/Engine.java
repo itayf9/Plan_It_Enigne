@@ -49,7 +49,7 @@ public class Engine {
         List<TimeSlot> userFreeTimeSlots = new ArrayList<>();
         Date now = new Date();
 
-        // get the time before the first event
+        // get the free slot before the first event
         if (userEvents.size() > 0) {
             long CurrentTimeOfPress = now.getTime();
             long startOfCurrentEvent = userEvents.get(0).getStart().getDateTime().getValue();
