@@ -41,29 +41,38 @@ public class Utility {
         long endStudyMinute = convertUserStudyTimeToMinute(userStudyEndTime);
         // create an instant of the start of the interval
         Instant startOfInterval = currentDay.with(ChronoField.HOUR_OF_DAY, startStudyHours);
-        startOfInterval = startOfInterval.with(ChronoField.MINUTE_OF_DAY,startStudyMinute);
-        startOfInterval = startOfInterval.with(ChronoField.SECOND_OF_DAY,0);
+        startOfInterval = startOfInterval.with(ChronoField.MINUTE_OF_DAY, startStudyMinute);
+        startOfInterval = startOfInterval.with(ChronoField.SECOND_OF_DAY, 0);
         // create an instant of the end of the interval
         Instant endOfInterval = currentDay.with(ChronoField.HOUR_OF_DAY, endStudyHours);
-        endOfInterval = endOfInterval.with(ChronoField.MINUTE_OF_DAY,endStudyMinute);
-        endOfInterval = endOfInterval.with(ChronoField.SECOND_OF_DAY,0);
+        endOfInterval = endOfInterval.with(ChronoField.MINUTE_OF_DAY, endStudyMinute);
+        endOfInterval = endOfInterval.with(ChronoField.SECOND_OF_DAY, 0);
 
-        return new DTOstartAndEndOfInterval(startOfInterval,endOfInterval);
+        return new DTOstartAndEndOfInterval(startOfInterval, endOfInterval);
     }
 
-    public static Instant addDayToCurrentInstant(Instant CurrentDay)
-    {
-       return  CurrentDay.plus(1, ChronoUnit.DAYS);
+    /**
+     * extracts the day out of the CurrentDay Instant object and return an object with the next day.
+     *
+     * @param CurrentDay is an Instant object that contains a current day.
+     * @return Instant object that contains the next day.
+     */
+    public static Instant addDayToCurrentInstant(Instant CurrentDay) {
+        return CurrentDay.plus(1, ChronoUnit.DAYS);
     }
 
-    private static long convertUserStudyTimeToHours(int userStudyTime)
-    {
+    /**
+     * extracts the hours out of the userStudyTime
+     *
+     * @param userStudyTime is an int that represents user study time (e.g. 800 is 8:00).
+     * @return a long number that represents only the hours from user study time.
+     */
+    private static long convertUserStudyTimeToHours(int userStudyTime) {
         long hours;
 
         hours = userStudyTime / 100;
 
-        if (hours > 23)
-        {
+        if (hours > 23) {
             throw new IllegalArgumentException();
         }
 
@@ -81,8 +90,7 @@ public class Utility {
 
         minute = userStudyTime % 100;
 
-        if (minute > 59)
-        {
+        if (minute > 59) {
             throw new IllegalArgumentException();
         }
         return minute;
