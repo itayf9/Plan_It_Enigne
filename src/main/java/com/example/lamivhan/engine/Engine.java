@@ -6,7 +6,6 @@ import com.example.lamivhan.model.course.CoursesRepository;
 import com.example.lamivhan.model.exam.Exam;
 import com.example.lamivhan.model.timeslot.TimeSlot;
 import com.example.lamivhan.model.user.User;
-import com.example.lamivhan.model.user.UserRepository;
 import com.example.lamivhan.utill.Constants;
 import com.example.lamivhan.utill.EventComparator;
 import com.example.lamivhan.utill.Utility;
@@ -29,13 +28,12 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 public class Engine {
-
-    private static CoursesRepository courseRepo;
-
-    private static UserRepository userRepo;
 
     /**
      * Takes out all the free time slots that can be taken out of the user events.
@@ -172,9 +170,9 @@ public class Engine {
      * @param fullDayEvents   list of full day events found
      * @return List of all the event's user has
      */
-    public static List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end, List<Event> fullDayEvents) {
+    public static List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
+                                                        List<Event> fullDayEvents, List<Exam> examsFound, CoursesRepository courseRepo) {
         List<Event> allEventsFromCalendars = new ArrayList<>();
-        List<Exam> examsFound = new LinkedList<>();
 
         for (CalendarListEntry calendar : calendarList) {
             Events events = null;
@@ -280,20 +278,6 @@ public class Engine {
                 .setApplicationName(APPLICATION_NAME)
                 .build();
 
-    }
-
-    /**
-     * get User from DB
-     *
-     * @param email unique email of username.
-     * @return with optional<User> if user exist return the User Java object else will return null.
-     */
-    public static Optional<User> findUserByEmail(String email) {
-        return userRepo.findUserByEmail(email);
-    }
-
-    public static void saveUserToDB(User user) {
-        userRepo.save(user);
     }
 
     /*public String test(AccessToken accessToken) throws GeneralSecurityException, IOException {

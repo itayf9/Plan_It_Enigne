@@ -2,6 +2,8 @@ package com.example.lamivhan.controller;
 
 import com.example.lamivhan.engine.Engine;
 import com.example.lamivhan.googleapis.AccessToken;
+import com.example.lamivhan.model.course.CoursesRepository;
+import com.example.lamivhan.model.exam.Exam;
 import com.example.lamivhan.utill.Constants;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
@@ -9,6 +11,7 @@ import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.CalendarListEntry;
 import com.google.api.services.calendar.model.Event;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +23,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 @RestController
 public class CalendarController {
 
+    @Autowired
+    private CoursesRepository courseRepo;
 
     /**
      * Global instance of the JSON factory.
@@ -33,11 +39,10 @@ public class CalendarController {
 
 
     @PostMapping(value = "/scan", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<List<Event>> scanUserEvents(@RequestBody AccessToken accessToken, @RequestParam boolean scannedAlready) throws IOException, GeneralSecurityException {
+    public ResponseEntity<List<Event>> scanUserEvents(@RequestBody AccessToken accessToken) throws IOException, GeneralSecurityException {
 
-        if (!scannedAlready) {
-            // get user's calendar service
-            Calendar calendarService = Engine.getCalendarService(accessToken, JSON_FACTORY, Constants.APPLICATION_NAME);
+        // get user's calendar service
+        Calendar calendarService = Engine.getCalendarService(accessToken, JSON_FACTORY, Constants.APPLICATION_NAME);
 
         // get user's calendars list
         List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
@@ -84,9 +89,10 @@ public class CalendarController {
             DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);
 
             List<Event> fullDayEvents = new ArrayList<>();
+            List<Exam> examsFound = new LinkedList<>();
 
             // get List of user's events
-            List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents);
+            List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents, examsFound, courseRepo);
 
             if (fullDayEvents.size() != 0) {
                 // return list of events... for client to decide

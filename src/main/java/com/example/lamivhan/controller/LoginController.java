@@ -1,7 +1,8 @@
 package com.example.lamivhan.controller;
 
-import com.example.lamivhan.engine.Engine;
 import com.example.lamivhan.model.user.User;
+import com.example.lamivhan.model.user.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,9 @@ import java.util.Optional;
 
 @RestController
 public class LoginController {
+
+    @Autowired
+    UserRepository userRepo;
 
     /**
      * login endpoint
@@ -34,10 +38,10 @@ public class LoginController {
     public ResponseEntity<String> signUp(@RequestBody String email) {
 
         // check if user is new and not already exist in DB
-        if (Engine.findUserByEmail(email).isEmpty()) {
+        if (userRepo.findUserByEmail(email).isEmpty()) {
             // 1. create Java user-object
             // 2. save user to DB with userRepo
-            Engine.saveUserToDB(new User(email));
+            userRepo.save(new User(email));
             return ResponseEntity.status(HttpStatus.OK).body("User saved successfully");
         }
         return ResponseEntity.status(HttpStatus.CONFLICT).body("User already exist please log-in");
@@ -51,7 +55,7 @@ public class LoginController {
     public User getUserPreferencesFromDB(@RequestBody String email) throws Exception {
 
         // assuming user exist and email will be found when this endpoint will be called.
-        Optional<User> maybeUser = Engine.findUserByEmail(email);
+        Optional<User> maybeUser = userRepo.findUserByEmail(email);
         if (maybeUser.isPresent()) {
             return maybeUser.get();
         } else {
