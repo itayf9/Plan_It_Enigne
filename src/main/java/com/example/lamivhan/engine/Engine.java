@@ -11,6 +11,7 @@ import com.example.lamivhan.utill.EventComparator;
 import com.example.lamivhan.utill.Utility;
 import com.example.lamivhan.utill.dto.DTOfreetime;
 import com.example.lamivhan.utill.dto.DTOstartAndEndOfInterval;
+import com.example.lamivhan.utill.dto.DTOuserEvents;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -28,10 +29,7 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class Engine {
 
@@ -216,6 +214,36 @@ public class Engine {
         return allEventsFromCalendars;
     }
 
+    /**
+     * Extract all the events that are in the user calendars.
+     * @param accessToken use for get the calenders from google DB
+     * @param jsonFactory a {@link JsonFactory} that is used for google's calendar service
+     * @param courseRepo a {@link CoursesRepository} which is the DB of courses
+     * @return DTOuserEvents contains all the events, full day events and the exams
+     * @throws GeneralSecurityException
+     * @throws IOException
+     */
+    public static DTOuserEvents getEvents (AccessToken accessToken, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
+        // get user's calendar service
+        Calendar calendarService = Engine.getCalendarService(accessToken, jsonFactory, Constants.APPLICATION_NAME);
+
+        // get user's calendar list
+
+        List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
+
+        // set up startDate & endDate
+        // ...
+        DateTime start = new DateTime(System.currentTimeMillis());
+        DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);
+
+        List<Event> fullDayEvents = new ArrayList<>();
+        List<Exam> examsFound = new LinkedList<>();
+
+        // get List of user's events
+        List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents, examsFound, courseRepo);
+        return new DTOuserEvents(fullDayEvents, examsFound, events, calendarService);
+    }
+
     // same function just without sort at the end - delete this
     private static List<Event> getEventsFromCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end) {
         List<Event> allEventsFromCalendars = new ArrayList<>();
@@ -262,6 +290,7 @@ public class Engine {
     }
 
     /**
+     * get Google Calendar service provider.
      * @param access_token     User Google AccessToken
      * @param JSON_FACTORY     Json Factory Instance
      * @param APPLICATION_NAME The name of the Application - PlanIt

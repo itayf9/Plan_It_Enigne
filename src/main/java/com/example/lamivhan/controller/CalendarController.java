@@ -3,8 +3,9 @@ package com.example.lamivhan.controller;
 import com.example.lamivhan.engine.Engine;
 import com.example.lamivhan.googleapis.AccessToken;
 import com.example.lamivhan.model.course.CoursesRepository;
-import com.example.lamivhan.model.exam.Exam;
-import com.example.lamivhan.utill.Constants;
+import com.example.lamivhan.model.user.User;
+import com.example.lamivhan.model.user.UserRepository;
+import com.example.lamivhan.utill.dto.DTOuserEvents;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.DateTime;
@@ -39,23 +40,21 @@ public class CalendarController {
 
 
     @PostMapping(value = "/scan", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<List<Event>> scanUserEvents(@RequestBody AccessToken accessToken) throws IOException, GeneralSecurityException {
+    public ResponseEntity<List<Event>> scanUserEvents(@RequestBody AccessToken accessToken, @RequestParam String email) throws IOException, GeneralSecurityException {
 
-        // get user's calendar service
-        Calendar calendarService = Engine.getCalendarService(accessToken, JSON_FACTORY, Constants.APPLICATION_NAME);
+        // check if user exist in DB
+        Optional<User> maybeUser = userRepo.findUserByEmail(email);
+        if (maybeUser.isEmpty()){
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
 
-        // get user's calendars list
-        List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
+        DTOuserEvents userEvents = Engine.getEvents(accessToken,JSON_FACTORY,courseRepo);
 
-        // set up start date of study range & end date of study range
-        DateTime start = new DateTime(System.currentTimeMillis()); // need to get from user
-        DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS); // // need to get from user
-
-        List<Event> fullDayEvents = new ArrayList<>();
-        List<Exam> examsFound = new LinkedList<>();
+        List<Event> fullDayEvents = userEvents.getFullDayEvents();
 
         // 1# get List of user's events
-        List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents, examsFound, courseRepo);
+        List<Event> events = userEvents.getEvents();
+
 
 
         if (fullDayEvents.size() != 0) {
@@ -139,12 +138,7 @@ public class CalendarController {
 
 
                  */
-
-
-            }
-        }
-
-        // create events
+            Engine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService());
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

@@ -2,6 +2,10 @@ package com.example.lamivhan.utill.dto;
 
 import java.time.Instant;
 
+/**
+ * DTO that represents a single slot contain a start and end
+ *
+ */
 public class DTOstartAndEndOfInterval {
     private Instant StartOfInterval;
     private Instant EndOfInterval;
