@@ -61,7 +61,7 @@ public class CalendarController {
             // return list of events... for client to decide
         } else {
             // 2# 3# 4# 5#
-            //generateStudyEvents(accessToken, true, events);
+            // generateStudyEvents(accessToken, true, events);
             // we can call the generateStudyEvents function, as usual, like it was some regular function
             // we need to pass all the required parameters
             // also, we need to check the ResponseEntity that is returned from the generateStudyEvents

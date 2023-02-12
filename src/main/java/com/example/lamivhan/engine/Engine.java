@@ -390,4 +390,66 @@ public class Engine {
         // Insert the new calendar
         com.google.api.services.calendar.model.Calendar createdCalendar = calendarService.calendars().insert(calendar).execute();
     }
+
+    /**
+     *
+     *
+     * @param allEvents list of the user events we found during the initial scan
+     * @param exams list of the user exams to determine when to stop embed free slots and division of study time.
+     */
+    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service) {
+
+        // gets the list of free slots
+        getFreeSlots(allEvents, user ,exams);
+
+        // creates PlanIt calendar if not yet exists
+        try {
+            createPlanItCalendar(service);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        /*
+
+        fix #3 :
+        need to search for the PlanIt calendar if it already exists.
+        we need to decide if we determine the calendarId of PlanIt calendar,
+         or we let Google to generate for us a new calendarId + save this id to the DB.
+
+        continue #4 + #5
+        
+
+         */
+
+
+        /*
+        #4
+                private List<StudySession> divideStudySessionsForExams(DTOfreetime dtoFreeTime, List<Course> exams);
+                private Map<String, Double> getExamsRatio(List<Course> exams);
+                User user = userRepo.findByEmail();
+                breakValue = user.getPreferences().getUserBreakValue();
+
+                int getSumOfRecommendedStudyTime(List<Course> exams);
+
+
+
+
+
+
+
+                separate each slot in the free time list, to a few study sessions:
+                4. determine on MINIMUM_STUDY_TIME, BREAK_DEFAULT
+                5. find the proportions of each course from 100% study time. need to think how to do that.
+                6. sum all recommended study time
+                7. divide total free time / total recommended time
+                8. take the max of MINIMUM_STUDY_TIME , the result of divide (7)
+
+               embed the courses in the time slots:
+                9. create events of courses depending on slots and proportions
+                10. go through the free list and put the events
+                11. start from the end and go towards the start
+                12. when having more than one session merge them and insert a break
+         */
+
+    }
 }
