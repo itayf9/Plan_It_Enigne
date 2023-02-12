@@ -34,7 +34,7 @@ import java.util.*;
 public class Engine {
 
     /**
-     * Takes out all the free time slots that can be taken out of the user events.
+     * 2# Takes out all the free time slots that can be taken out of the user events.
      *
      * @param userEvents is an array with all the events the user had.
      * @param user       is containing user preferences.
@@ -165,7 +165,7 @@ public class Engine {
         return courseName;
     }
 
-    /**
+    /** 1# get List of all the event's user has
      * @param calendarService Google Calendar service provider.
      * @param calendarList    List of all the User Google Calendars
      * @param start           the time to start scan of events
@@ -268,6 +268,7 @@ public class Engine {
     }
 
     /**
+     * get a List of all the User Google Calendars
      * @param calendarService Google Calendar service provider.
      * @return List of all the User Google Calendars
      */
@@ -380,15 +381,26 @@ public class Engine {
      * @param calendarService a calendar service of the user
      * @throws IOException in case of failure in "execute"
      */
-    private void createPlanItCalendar(Calendar calendarService) throws IOException {
+    private static String createPlanItCalendar(Calendar calendarService) throws IOException {
 
-        // Create a new calendar
-        com.google.api.services.calendar.model.Calendar calendar = new com.google.api.services.calendar.model.Calendar();
-        calendar.setSummary("PlanIt Calendar");
-        calendar.setTimeZone("Asia/Jerusalem");
+        String calendarId = "";
 
-        // Insert the new calendar
-        com.google.api.services.calendar.model.Calendar createdCalendar = calendarService.calendars().insert(calendar).execute();
+        // checks if the calendar already exists
+        //if (calendarService.calendars()) {
+
+        //} else {
+            // Create a new calendar
+            com.google.api.services.calendar.model.Calendar calendar = new com.google.api.services.calendar.model.Calendar();
+            calendar.setSummary("PlanIt Calendar");
+            calendar.setTimeZone("Asia/Jerusalem");
+
+            // Insert the new calendar
+            com.google.api.services.calendar.model.Calendar createdCalendar = calendarService.calendars().insert(calendar).execute();
+            calendarId = createdCalendar.getId();
+        //}
+
+
+        return calendarId;
     }
 
     /**

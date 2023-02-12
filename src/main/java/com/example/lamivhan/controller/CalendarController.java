@@ -8,9 +8,6 @@ import com.example.lamivhan.model.user.UserRepository;
 import com.example.lamivhan.utill.dto.DTOuserEvents;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
-import com.google.api.client.util.DateTime;
-import com.google.api.services.calendar.Calendar;
-import com.google.api.services.calendar.model.CalendarListEntry;
 import com.google.api.services.calendar.model.Event;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,9 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 public class CalendarController {
@@ -33,11 +29,13 @@ public class CalendarController {
     @Autowired
     private CoursesRepository courseRepo;
 
+    @Autowired
+    private UserRepository userRepo;
+
     /**
      * Global instance of the JSON factory.
      */
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-
 
     @PostMapping(value = "/scan", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<List<Event>> scanUserEvents(@RequestBody AccessToken accessToken, @RequestParam String email) throws IOException, GeneralSecurityException {
@@ -60,6 +58,9 @@ public class CalendarController {
         if (fullDayEvents.size() != 0) {
             // return list of events... for client to decide
         } else {
+
+            Engine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService());
+
             // 2# 3# 4# 5#
             // generateStudyEvents(accessToken, true, events);
             // we can call the generateStudyEvents function, as usual, like it was some regular function
@@ -72,39 +73,25 @@ public class CalendarController {
     }
 
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<List<Event>> generateStudyEvents(@RequestBody AccessToken accessToken, @RequestParam boolean scannedAlready) throws IOException, GeneralSecurityException {
+    public ResponseEntity<List<Event>> generateStudyEvents(@RequestBody AccessToken accessToken, @RequestParam String email) throws IOException, GeneralSecurityException {
 
-        if (!scannedAlready) {
+        // check if user exist in DB
+        Optional<User> maybeUser = userRepo.findUserByEmail(email);
+        if (maybeUser.isEmpty()){
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
 
-            // get user's calendar service
-            Calendar calendarService = Engine.getCalendarService(accessToken, JSON_FACTORY, Constants.APPLICATION_NAME);
-
-            // get user's calendar list
-
-            List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
-
-            // set up startDate & endDate
-            // ...
-            DateTime start = new DateTime(System.currentTimeMillis());
-            DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);
-
-            List<Event> fullDayEvents = new ArrayList<>();
-            List<Exam> examsFound = new LinkedList<>();
-
-            // get List of user's events
-            List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents, examsFound, courseRepo);
+        // 1# get List of user's events
+        DTOuserEvents userEvents = Engine.getEvents(accessToken,JSON_FACTORY,courseRepo);
+        List<Event> fullDayEvents = userEvents.getFullDayEvents();
+        List<Event> events = userEvents.getEvents();
 
             if (fullDayEvents.size() != 0) {
-                // return list of events... for client to decide
-            } else {
 
-                // get List of free time from list of events
-                // decide which test gets each free time
-                // create the events
+                // find the full day events that the user want to study at
+                // exclude them from the list of events
 
-
-
-
+            }
                 /*
 
                 algorithm of #2
