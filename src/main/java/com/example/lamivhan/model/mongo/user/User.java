@@ -1,18 +1,23 @@
 package com.example.lamivhan.model.mongo.user;
 
 import com.example.lamivhan.model.preferences.Preferences;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 @Document("users")
 public class User {
+
+    @Id
+    private String id;
+
     @Field(name = "user_name")
     private String userName;
     @Field(name = "is_day_learner")
     private boolean isDayLearner;
 
     @Field(name = "email")
-    private String email;
+    private final String email;
 
     @Field(name = "user_preferences")
     private Preferences userPreferences;

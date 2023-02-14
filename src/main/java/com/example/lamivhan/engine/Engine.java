@@ -166,7 +166,9 @@ public class Engine {
         return courseName;
     }
 
-    /** 1# get List of all the event's user has
+    /**
+     * 1# get List of all the event's user has
+     *
      * @param calendarService Google Calendar service provider.
      * @param calendarList    List of all the User Google Calendars
      * @param start           the time to start scan of events
@@ -227,14 +229,15 @@ public class Engine {
 
     /**
      * Extract all the events that are in the user calendars.
+     *
      * @param accessToken use for get the calenders from google DB
      * @param jsonFactory a {@link JsonFactory} that is used for google's calendar service
-     * @param courseRepo a {@link CoursesRepository} which is the DB of courses
+     * @param courseRepo  a {@link CoursesRepository} which is the DB of courses
      * @return DTOuserEvents contains all the events, full day events and the exams
      * @throws GeneralSecurityException
      * @throws IOException
      */
-    public static DTOuserEvents getEvents (AccessToken accessToken, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
+    public static DTOuserEvents getEvents(AccessToken accessToken, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
         // get user's calendar service
         Calendar calendarService = Engine.getCalendarService(accessToken, jsonFactory, Constants.APPLICATION_NAME);
 
@@ -280,6 +283,7 @@ public class Engine {
 
     /**
      * get a List of all the User Google Calendars
+     *
      * @param calendarService Google Calendar service provider.
      * @return List of all the User Google Calendars
      */
@@ -303,6 +307,7 @@ public class Engine {
 
     /**
      * get Google Calendar service provider.
+     *
      * @param access_token     User Google AccessToken
      * @param JSON_FACTORY     Json Factory Instance
      * @param APPLICATION_NAME The name of the Application - PlanIt
@@ -392,18 +397,26 @@ public class Engine {
      * @param calendarService a calendar service of the user
      * @throws IOException in case of failure in "execute"
      */
-    private static String createPlanItCalendar(Calendar calendarService) throws IOException {
+    private static String createPlanItCalendar(Calendar calendarService, User user, UserRepository userRepo) {
 
-        String calendarId = "";
+        String planItCalendarID = "";
 
-        // checks if the calendar already exists
-        //if (calendarService.calendars()) {
+        String PlanItCalendarId = user.getPlanItCalendarID();
 
-        //} else {
-            // Create a new calendar
-            com.google.api.services.calendar.model.Calendar calendar = new com.google.api.services.calendar.model.Calendar();
-            calendar.setSummary("PlanIt Calendar");
-            calendar.setTimeZone("Asia/Jerusalem");
+        // checks if the calendar already exists in DB
+        try {
+            if (PlanItCalendarId != null && calendarService.calendars().get(PlanItCalendarId).execute() != null) {
+                return PlanItCalendarId;
+            }
+        } catch (IOException ignored) {
+            // if we end up in here, then calendar was deleted by the user...
+        }
+
+        // else {
+        // Create a new calendar
+        com.google.api.services.calendar.model.Calendar calendar = new com.google.api.services.calendar.model.Calendar();
+        calendar.setSummary(PLANIT_CALENDAR_SUMMERY_NAME);
+        calendar.setTimeZone("Asia/Jerusalem");
 
         // Insert the new calendar
         com.google.api.services.calendar.model.Calendar createdCalendar = null;
@@ -420,26 +433,19 @@ public class Engine {
     }
 
     /**
-     *
-     *
      * @param allEvents list of the user events we found during the initial scan
-     * @param exams list of the user exams to determine when to stop embed free slots and division of study time.
+     * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
      */
-    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service) {
+    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, UserRepository userRepo) {
 
         // gets the list of free slots
-        getFreeSlots(allEvents, user ,exams);
+        getFreeSlots(allEvents, user, exams);
 
         // creates PlanIt calendar if not yet exists
         String planItCalendarID = createPlanItCalendar(service, user, userRepo);
 
 
         /*
-
-        fix #3 :
-        need to search for the PlanIt calendar if it already exists.
-        we need to decide if we determine the calendarId of PlanIt calendar,
-         or we let Google to generate for us a new calendarId + save this id to the DB.
 
         continue #4 + #5
         

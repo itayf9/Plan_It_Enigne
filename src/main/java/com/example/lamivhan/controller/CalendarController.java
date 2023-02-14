@@ -42,11 +42,11 @@ public class CalendarController {
 
         // check if user exist in DB
         Optional<User> maybeUser = userRepo.findUserByEmail(email);
-        if (maybeUser.isEmpty()){
+        if (maybeUser.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
-        DTOuserEvents userEvents = Engine.getEvents(accessToken,JSON_FACTORY,courseRepo);
+        DTOuserEvents userEvents = Engine.getEvents(accessToken, JSON_FACTORY, courseRepo);
 
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
 
@@ -54,12 +54,11 @@ public class CalendarController {
         List<Event> events = userEvents.getEvents();
 
 
-
         if (fullDayEvents.size() != 0) {
             // return list of events... for client to decide
         } else {
 
-            Engine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService());
+            Engine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
 
             // 2# 3# 4# 5#
             // generateStudyEvents(accessToken, true, events);
@@ -77,21 +76,21 @@ public class CalendarController {
 
         // check if user exist in DB
         Optional<User> maybeUser = userRepo.findUserByEmail(email);
-        if (maybeUser.isEmpty()){
+        if (maybeUser.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
         // 1# get List of user's events
-        DTOuserEvents userEvents = Engine.getEvents(accessToken,JSON_FACTORY,courseRepo);
+        DTOuserEvents userEvents = Engine.getEvents(accessToken, JSON_FACTORY, courseRepo);
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
         List<Event> events = userEvents.getEvents();
 
-            if (fullDayEvents.size() != 0) {
+        if (fullDayEvents.size() != 0) {
 
-                // find the full day events that the user want to study at
-                // exclude them from the list of events
+            // find the full day events that the user want to study at
+            // exclude them from the list of events
 
-            }
+        }
                 /*
 
                 algorithm of #2
@@ -125,7 +124,7 @@ public class CalendarController {
 
 
                  */
-            Engine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService());
+        Engine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
