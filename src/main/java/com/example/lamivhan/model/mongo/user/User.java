@@ -22,11 +22,15 @@ public class User {
     @Field(name = "user_preferences")
     private Preferences userPreferences;
 
+    @Field(name = "planIt_calendar_ID")
+    private String planItCalendarID;
+
     public User(String userName, boolean isDayLearner, Preferences userPreferences, String email) {
         this.userName = userName;
         this.isDayLearner = isDayLearner;
         this.userPreferences = userPreferences;
         this.email = email;
+        this.planItCalendarID = null;
     }
 
     public User(String email) {
@@ -57,5 +61,13 @@ public class User {
 
     public void setUserPreferences(Preferences userPreferences) {
         this.userPreferences = userPreferences;
+    }
+
+    public String getPlanItCalendarID() {
+        return planItCalendarID;
+    }
+
+    public void setPlanItCalendarID(String planItCalendarID) {
+        this.planItCalendarID = planItCalendarID;
     }
 }

@@ -32,6 +32,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+import static com.example.lamivhan.utill.Constants.PLANIT_CALENDAR_SUMMERY_NAME;
+
 public class Engine {
 
     /**
@@ -206,6 +208,7 @@ public class Engine {
                         maybeFoundCourse.ifPresent(course -> examsFound.add(new Exam(course, event.getStart().getDateTime())));
                     }
                 }
+
             }
 
             // checks if calendar is the PlanIt calendar
