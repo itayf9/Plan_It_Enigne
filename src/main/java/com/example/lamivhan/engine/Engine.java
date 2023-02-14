@@ -1,11 +1,12 @@
 package com.example.lamivhan.engine;
 
 import com.example.lamivhan.googleapis.AccessToken;
-import com.example.lamivhan.model.course.Course;
-import com.example.lamivhan.model.course.CoursesRepository;
 import com.example.lamivhan.model.exam.Exam;
+import com.example.lamivhan.model.mongo.course.Course;
+import com.example.lamivhan.model.mongo.course.CoursesRepository;
+import com.example.lamivhan.model.mongo.user.User;
+import com.example.lamivhan.model.mongo.user.UserRepository;
 import com.example.lamivhan.model.timeslot.TimeSlot;
-import com.example.lamivhan.model.user.User;
 import com.example.lamivhan.utill.Constants;
 import com.example.lamivhan.utill.EventComparator;
 import com.example.lamivhan.utill.Utility;
@@ -204,12 +205,22 @@ public class Engine {
                     }
                 }
             }
+
+            // checks if calendar is the PlanIt calendar
+            // ignores the PlanIt calendar in order to generate new study time slots
+            if (calendar.getSummary().equals(PLANIT_CALENDAR_SUMMERY_NAME)) {
+                continue;
+            }
+
+            // adds the events from the calendar to the list
             allEventsFromCalendars.addAll(events.getItems());
         }
 
         for (Event event : allEventsFromCalendars) {
             System.out.println(event.getStart().getDateTime() + " : " + event.getSummary());
         }
+
+        // sorts the events, so they will be ordered by start time
         allEventsFromCalendars.sort(new EventComparator());
         return allEventsFromCalendars;
     }
@@ -394,13 +405,18 @@ public class Engine {
             calendar.setSummary("PlanIt Calendar");
             calendar.setTimeZone("Asia/Jerusalem");
 
-            // Insert the new calendar
-            com.google.api.services.calendar.model.Calendar createdCalendar = calendarService.calendars().insert(calendar).execute();
-            calendarId = createdCalendar.getId();
-        //}
+        // Insert the new calendar
+        com.google.api.services.calendar.model.Calendar createdCalendar = null;
+        try {
+            createdCalendar = calendarService.calendars().insert(calendar).execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        planItCalendarID = createdCalendar.getId();
+        user.setPlanItCalendarID(planItCalendarID);
+        userRepo.save(user);
 
-
-        return calendarId;
+        return planItCalendarID;
     }
 
     /**
@@ -415,11 +431,8 @@ public class Engine {
         getFreeSlots(allEvents, user ,exams);
 
         // creates PlanIt calendar if not yet exists
-        try {
-            createPlanItCalendar(service);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        String planItCalendarID = createPlanItCalendar(service, user, userRepo);
+
 
         /*
 
@@ -436,31 +449,69 @@ public class Engine {
 
         /*
         #4
-                private List<StudySession> divideStudySessionsForExams(DTOfreetime dtoFreeTime, List<Course> exams);
-                private Map<String, Double> getExamsRatio(List<Course> exams);
-                User user = userRepo.findByEmail();
-                breakValue = user.getPreferences().getUserBreakValue();
 
-                int getSumOfRecommendedStudyTime(List<Course> exams);
+                - find the proportions of each course from 100% study time. ( Map<String, Double> proportionsList = getCoursesProportions(user) )
+                - separate each slot in the free time list, to a few study sessions. ( List<StudySession> sessionsList = separateSlotsToSessions() )
+                - insert breaks. ( also separateSlotsToSessions() )
 
-
-
-
+                embed the courses in the time slots:
+                - calc how many sessions to each course ( Map<String, int> numberOfSessions2Courses = distributeNumberOfSessionsToCourses( proportionsList, sessionList.size()) )
+                - go from the end to the start and embed courses to session ( List<StudySession> sessionsWithCoursesList =  embedCoursesInSessions( numberOfSessions2Courses, sessionList, examsList) )
 
 
 
-                separate each slot in the free time list, to a few study sessions:
-                4. determine on MINIMUM_STUDY_TIME, BREAK_DEFAULT
-                5. find the proportions of each course from 100% study time. need to think how to do that.
-                6. sum all recommended study time
-                7. divide total free time / total recommended time
-                8. take the max of MINIMUM_STUDY_TIME , the result of divide (7)
+                functions:
+                - convertRoundTime ( currentTime, Up/Down)
 
-               embed the courses in the time slots:
-                9. create events of courses depending on slots and proportions
-                10. go through the free list and put the events
-                11. start from the end and go towards the start
-                12. when having more than one session merge them and insert a break
+
+
+
+
+
+
+
+
+
+
+
+
+
+                SESSION = STUDY_TIME+ BREAK
+                1. Create Instant start
+                2. Create Instant end
+                3. calc how many times you can put the session in the slot
+                4. for:
+                    - sessionList.add (new dateTime (start, end))
+                    - start.plus(SESSION)
+                    - end.plus(SESSION)
+
+
+
+
+
+
+
+
+
+                for (slot :freeSlot)
+                {
+
+                currentStart = slot.start;
+                currentEnd = currentStart + session;
+                while (currentEnd < slot.end)
+                {
+                    add session study time(currentStart,currentEnd) // create event for google clandar
+                    currentStart = currentEnd;
+                    currentEnd = currentEnd + break;
+                    if (currentEnd < slot.end)
+                    {
+                        add break;
+                        currentStart = currentEnd;
+                        currentEnd = currentStart + session;
+                    }
+
+                }
+
          */
 
     }

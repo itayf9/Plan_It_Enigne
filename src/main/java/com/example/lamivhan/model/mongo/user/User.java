@@ -1,4 +1,4 @@
-package com.example.lamivhan.model.user;
+package com.example.lamivhan.model.mongo.user;
 
 import com.example.lamivhan.model.preferences.Preferences;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -28,7 +28,6 @@ public class User {
         this.userPreferences = new Preferences();
         this.email = email;
     }
-
 
 
     public String getUserName() {

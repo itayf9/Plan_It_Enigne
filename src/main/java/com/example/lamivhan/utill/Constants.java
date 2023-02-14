@@ -12,4 +12,6 @@ public class Constants {
      * Application name.
      */
     public static final String APPLICATION_NAME = "PlanIt";
+
+    public static final String PLANIT_CALENDAR_SUMMERY_NAME = "PlanIt Calendar";
 }

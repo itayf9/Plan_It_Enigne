@@ -1,7 +1,7 @@
 package com.example.lamivhan.controller;
 
-import com.example.lamivhan.model.user.User;
-import com.example.lamivhan.model.user.UserRepository;
+import com.example.lamivhan.model.mongo.user.User;
+import com.example.lamivhan.model.mongo.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

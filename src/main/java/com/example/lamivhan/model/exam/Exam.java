@@ -1,6 +1,6 @@
 package com.example.lamivhan.model.exam;
 
-import com.example.lamivhan.model.course.Course;
+import com.example.lamivhan.model.mongo.course.Course;
 import com.google.api.client.util.DateTime;
 
 public class Exam {

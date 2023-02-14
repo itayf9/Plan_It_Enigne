@@ -2,9 +2,9 @@ package com.example.lamivhan.controller;
 
 import com.example.lamivhan.engine.Engine;
 import com.example.lamivhan.googleapis.AccessToken;
-import com.example.lamivhan.model.course.CoursesRepository;
-import com.example.lamivhan.model.user.User;
-import com.example.lamivhan.model.user.UserRepository;
+import com.example.lamivhan.model.mongo.course.CoursesRepository;
+import com.example.lamivhan.model.mongo.user.User;
+import com.example.lamivhan.model.mongo.user.UserRepository;
 import com.example.lamivhan.utill.dto.DTOuserEvents;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;

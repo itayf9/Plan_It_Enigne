@@ -1,4 +1,4 @@
-package com.example.lamivhan.model.user;
+package com.example.lamivhan.model.mongo.user;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 

@@ -1,4 +1,4 @@
-package com.example.lamivhan.model.course;
+package com.example.lamivhan.model.mongo.course;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
