@@ -95,4 +95,52 @@ public class Utility {
         }
         return minute;
     }
+
+    /**
+     * @param currentTime       Instant represent current time
+     * @param isRoundedForwards a boolean to tell which way to round.
+     * @return Instant with the rounded value of minutes
+     */
+    public static Instant roundInstantMinutesTime(Instant currentTime, boolean isRoundedForwards) {
+
+        int timeUnit1 = 0;
+        int timeUnit2 = 15;
+        int timeUnit3 = 30;
+        int timeUnit4 = 45;
+
+        int currentMinutes = currentTime.get(ChronoField.MINUTE_OF_HOUR);
+
+        // case 1 where minutes value is in between 0 and 15
+        if (currentMinutes >= timeUnit1 && currentMinutes <= timeUnit2) {
+            if (isRoundedForwards) {
+                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit2);
+            } else {
+                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit1);
+            }
+
+            // case 2 where minutes value is in between 15 and 30
+        } else if (currentMinutes >= timeUnit2 && currentMinutes <= timeUnit3) {
+            if (isRoundedForwards) {
+                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit3);
+            } else {
+                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit2);
+            }
+
+            // case 3 where minutes value is in between 30 and 45
+        } else if (currentMinutes >= timeUnit3 && currentMinutes <= timeUnit4) {
+            if (isRoundedForwards) {
+                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit4);
+            } else {
+                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit3);
+            }
+
+            // case 4 where minutes value is in between 45 and 0
+        } else {
+            if (isRoundedForwards) {
+                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit1);
+            } else {
+                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit4);
+            }
+        }
+    }
 }

@@ -442,11 +442,25 @@ public class Engine {
     public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, UserRepository userRepo) {
 
         // gets the list of free slots
-        getFreeSlots(allEvents, user, exams);
+        DTOfreetime dtofreetime = getFreeSlots(allEvents, user, exams);
 
         // creates PlanIt calendar if not yet exists
         String planItCalendarID = createPlanItCalendar(service, user, userRepo);
 
+
+        // finds the proportions of each course from 100% study time
+        Map<String, Double> coursesNames2Proportions = getCoursesProportions(exams);
+
+        // separates each slot in the free slots list, to a few study sessions
+        // and inserts breaks
+        List<StudySession> sessionsList = separateSlotsToSessions(user, dtofreetime.getFreeTimeSlots());
+
+
+        // calculates how many sessions belong to each course
+        //Map<String, Integer> numberOfSessions2Courses = distributeNumberOfSessionsToCourses(coursesNames2Proportions, sessionsList.size());
+
+        // goes from the end to the start and embed courses to sessions
+        //List<StudySession> sessionsWithCoursesList = embedCoursesInSessions(numberOfSessions2Courses, sessionsList, exams);
 
         /*
 
@@ -523,5 +537,87 @@ public class Engine {
 
          */
 
+    }
+
+    /**
+     * separate the free time slots to study sessions.
+     *
+     * @param user          use for get user preferences.
+     * @param freeTimeSlots have all the free time slots.
+     * @return list of study session
+     */
+    private static List<StudySession> separateSlotsToSessions(User user, List<TimeSlot> freeTimeSlots) {
+
+        List<StudySession> listOfStudySessions = new ArrayList<>();
+
+        long breakTime = user.getUserPreferences().getUserBreakTime();
+
+        int studyTimeInHours = user.getUserPreferences().getStudySessionTime();
+        long studyTimeInMinutes = studyTimeInHours * 60L;
+
+        // go through the slots list
+        for (TimeSlot timeSlot : freeTimeSlots) {
+            // initial the startOfSession and endOfSession.
+            Instant startOfSession = Instant.ofEpochMilli(timeSlot.getStart().getValue());
+            Instant endOfSession = startOfSession.plus(studyTimeInMinutes, ChronoUnit.MINUTES);
+
+            // while "endOfSession" is in the range of the slot
+            while (endOfSession.toEpochMilli() <= timeSlot.getEnd().getValue()) {
+                // add the current study session to the list
+                listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(endOfSession.toEpochMilli())));
+                // add to the endOfSession the break time
+                endOfSession.plus(breakTime, ChronoUnit.MINUTES);
+                // initial the new startOfSession and endOfSession.
+                startOfSession = endOfSession;
+                endOfSession = startOfSession.plus(studyTimeInMinutes, ChronoUnit.MINUTES);
+            }
+
+            // if the "startOfSession" is in the range and the "endOfSession" is out of range,
+            // adds the session from "startOfSession" to the end of range.
+            if (startOfSession.toEpochMilli() < timeSlot.getEnd().getValue()) {
+                listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(timeSlot.getEnd().getValue())));
+            }
+        }
+
+        return listOfStudySessions;
+    }
+
+    /**
+     * calculates the proportions of the courses that the user has.
+     * for each course, the proportion is determined by a double (e.g. 99.5 is 99.5%)
+     *
+     * @param exams a list of {@link Exam} that represents the exams that the user have
+     * @return a map of string to double that represents the course names and their proportion
+     */
+    private static Map<String, Double> getCoursesProportions(List<Exam> exams) {
+
+        Map<String, Integer> courseName2TotalValue = new HashMap<>();
+        int sumTotalValues = 0;
+        Map<String, Double> courseName2Proportion = new HashMap<>();
+
+        for (Exam exam : exams) {
+
+            Course currentCourse = exam.getCourse();
+
+            // gets the total value of the course ( credits + difficulty level + recommended study time)
+            int currentCourseTotalValue = currentCourse.getCredits() + currentCourse.getDifficultyLevel() + currentCourse.getRecommendedStudyTime();
+
+            // adds the course to the map of total values
+            courseName2TotalValue.put(currentCourse.getCourseName(), currentCourseTotalValue);
+            sumTotalValues += currentCourseTotalValue;
+        }
+
+        for (Map.Entry<String, Integer> courseNameTotalValueMapEntry : courseName2TotalValue.entrySet()) {
+            String currentCourseName = courseNameTotalValueMapEntry.getKey();
+            int currentCourseTotalValue = courseNameTotalValueMapEntry.getValue();
+
+            // calculates the percentage of the course's value
+            double currentCourseProportion = ((double) currentCourseTotalValue / (double) sumTotalValues) * 100;
+
+            // adds the course to the map of proportions
+            courseName2Proportion.put(currentCourseName, currentCourseProportion);
+        }
+
+        return courseName2Proportion;
     }
 }
