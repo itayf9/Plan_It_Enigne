@@ -496,32 +496,6 @@ public class Engine {
                     - end.plus(SESSION)
 
 
-
-
-
-
-
-
-
-                for (slot :freeSlot)
-                {
-
-                currentStart = slot.start;
-                currentEnd = currentStart + session;
-                while (currentEnd < slot.end)
-                {
-                    add session study time(currentStart,currentEnd) // create event for google clandar
-                    currentStart = currentEnd;
-                    currentEnd = currentEnd + break;
-                    if (currentEnd < slot.end)
-                    {
-                        add break;
-                        currentStart = currentEnd;
-                        currentEnd = currentStart + session;
-                    }
-
-                }
-
          */
 
     }
