@@ -6,6 +6,7 @@ import com.example.lamivhan.model.mongo.course.Course;
 import com.example.lamivhan.model.mongo.course.CoursesRepository;
 import com.example.lamivhan.model.mongo.user.User;
 import com.example.lamivhan.model.mongo.user.UserRepository;
+import com.example.lamivhan.model.studysession.StudySession;
 import com.example.lamivhan.model.timeslot.TimeSlot;
 import com.example.lamivhan.utill.Constants;
 import com.example.lamivhan.utill.EventComparator;
@@ -481,22 +482,8 @@ public class Engine {
                 - calc how many sessions to each course ( Map<String, int> numberOfSessions2Courses = distributeNumberOfSessionsToCourses( proportionsList, sessionList.size()) )
                 - go from the end to the start and embed courses to session ( List<StudySession> sessionsWithCoursesList =  embedCoursesInSessions( numberOfSessions2Courses, sessionList, examsList) )
 
-
-
                 functions:
                 - convertRoundTime ( currentTime, Up/Down)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
                 SESSION = STUDY_TIME+ BREAK
