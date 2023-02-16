@@ -551,7 +551,8 @@ public class Engine {
         // go through the slots list
         for (TimeSlot timeSlot : freeTimeSlots) {
             // initial the startOfSession and endOfSession.
-            Instant startOfSession = Instant.ofEpochMilli(timeSlot.getStart().getValue());
+            // the sessions are rounded to 15 minutes intervals
+            Instant startOfSession = roundInstantMinutesTime(Instant.ofEpochMilli(timeSlot.getStart().getValue()), true);
             Instant endOfSession = startOfSession.plus(studyTimeInMinutes, ChronoUnit.MINUTES);
 
             // while "endOfSession" is in the range of the slot
@@ -605,7 +606,7 @@ public class Engine {
             int currentCourseTotalValue = courseNameTotalValueMapEntry.getValue();
 
             // calculates the percentage of the course's value
-            double currentCourseProportion = ((double) currentCourseTotalValue / (double) sumTotalValues) * 100;
+            double currentCourseProportion = ((double) currentCourseTotalValue / (double) sumTotalValues);
 
             // adds the course to the map of proportions
             courseName2Proportion.put(currentCourseName, currentCourseProportion);
