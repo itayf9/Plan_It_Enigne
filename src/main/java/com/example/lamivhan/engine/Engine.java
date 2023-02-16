@@ -569,7 +569,8 @@ public class Engine {
             // if the "startOfSession" is in the range and the "endOfSession" is out of range,
             // adds the session from "startOfSession" to the end of range.
             if (startOfSession.toEpochMilli() < timeSlot.getEnd().getValue()) {
-                listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(timeSlot.getEnd().getValue())));
+                Instant endOfSlot = roundInstantMinutesTime(Instant.ofEpochMilli(timeSlot.getEnd().getValue()), false);
+                listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(endOfSlot.toEpochMilli())));
             }
         }
 
@@ -615,3 +616,17 @@ public class Engine {
         return courseName2Proportion;
     }
 }
+
+/*
+A   B   C
+3   3   5
+[A][A][A]testA[C][B][B][B]testB[C][C][C][C]testC
+
+A   B   C
+3   4   5
+[A][A][A]testA[B/C][B][B][B]testB[C][C][C][C]testC
+
+A   B   C
+4   5   6
+[A][A][A]testA[B/C][B][B][B]testB[C][C][C][C]testC
+* */
