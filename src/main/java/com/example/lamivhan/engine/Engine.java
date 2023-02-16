@@ -34,6 +34,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static com.example.lamivhan.utill.Constants.PLANIT_CALENDAR_SUMMERY_NAME;
+import static com.example.lamivhan.utill.Utility.roundInstantMinutesTime;
 
 public class Engine {
 
@@ -458,45 +459,76 @@ public class Engine {
 
 
         // calculates how many sessions belong to each course
-        //Map<String, Integer> numberOfSessions2Courses = distributeNumberOfSessionsToCourses(coursesNames2Proportions, sessionsList.size());
+        Map<String, Integer> courseName2numberOfSessions = distributeNumberOfSessionsToCourses(coursesNames2Proportions, sessionsList.size());
 
         // goes from the end to the start and embed courses to sessions
-        //List<StudySession> sessionsWithCoursesList = embedCoursesInSessions(numberOfSessions2Courses, sessionsList, exams);
+        embedCoursesInSessions(courseName2numberOfSessions, sessionsList, exams);
 
-        /*
+        // #5
 
-        continue #4 + #5
-        
+    }
 
-         */
+    private static void embedCoursesInSessions(Map<String, Integer> courseName2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
 
-
-        /*
-        #4
-
-                - find the proportions of each course from 100% study time. ( Map<String, Double> proportionsList = getCoursesProportions(user) )
-                - separate each slot in the free time list, to a few study sessions. ( List<StudySession> sessionsList = separateSlotsToSessions() )
-                - insert breaks. ( also separateSlotsToSessions() )
-
-                embed the courses in the time slots:
-                - calc how many sessions to each course ( Map<String, int> numberOfSessions2Courses = distributeNumberOfSessionsToCourses( proportionsList, sessionList.size()) )
-                - go from the end to the start and embed courses to session ( List<StudySession> sessionsWithCoursesList =  embedCoursesInSessions( numberOfSessions2Courses, sessionList, examsList) )
-
-                functions:
-                - convertRoundTime ( currentTime, Up/Down)
+        List<String> coursesNamesSeenSoFar = new ArrayList<>();
+        int currentCourseNameIndex = exams.size() - 1;
 
 
-                SESSION = STUDY_TIME+ BREAK
-                1. Create Instant start
-                2. Create Instant end
-                3. calc how many times you can put the session in the slot
-                4. for:
-                    - sessionList.add (new dateTime (start, end))
-                    - start.plus(SESSION)
-                    - end.plus(SESSION)
+        // initiate the set with the course name of the last dated exam in the exams period
+        coursesNamesSeenSoFar.add(exams.get(currentCourseNameIndex).getCourse().getCourseName());
+        currentCourseNameIndex--;
 
+        // goes through the sessions from the end to the start
+        for (int i = sessionsList.size() - 1; i >= 0; i--) {
 
-         */
+            // if the current session starts before the following exam to be seen
+            // e.g. if 08:00-10:00 of 09/07 is before the 10/07
+            if (sessionsList.get(i).getStart().getValue() < exams.get(currentCourseNameIndex).getDateTime().getValue()) {
+                coursesNamesSeenSoFar.add(exams.get(currentCourseNameIndex).getCourse().getCourseName());
+                currentCourseNameIndex--;
+            }
+
+            if (coursesNamesSeenSoFar.size() == 1) {
+
+                // set the session to be associated with the only exam that is existing in the list
+                sessionsList.get(i).setCourseName(coursesNamesSeenSoFar.get(0));
+
+                // extract course name and sessions count values
+                String courseName = coursesNamesSeenSoFar.get(0);
+                int numOfSessionPerExam = courseName2numberOfSessions.get(coursesNamesSeenSoFar.get(0));
+
+                // update session count value and save new value to the map
+                numOfSessionPerExam -= 1;
+                courseName2numberOfSessions.put(courseName, numOfSessionPerExam);
+            } else {
+
+            }
+        }
+    }
+
+    /**
+     * for every session, calculates the number of sessions, considering the proportions and the number of total sessions.
+     * for each course X, the number of sessions is calculated as a rounded value of: (number of sessions * proportions of course X)
+     *
+     * @param coursesNames2Proportions a map that contains values of proportions for each exam
+     * @param numOfSessions            the number of sessions available
+     * @return a map of string to int that represents, for each course name, the number of sessions
+     */
+    private static Map<String, Integer> distributeNumberOfSessionsToCourses(Map<String, Double> coursesNames2Proportions, int numOfSessions) {
+        Map<String, Integer> courseName2numberOfSessions = new HashMap<>();
+
+        for (Map.Entry<String, Double> courseNameProportionMapEntry : coursesNames2Proportions.entrySet()) {
+            String courseName = courseNameProportionMapEntry.getKey();
+            Double proportion = courseNameProportionMapEntry.getValue();
+
+            // gets the number of session for thr current course
+            Integer numberOfSessionForCurrentCourse = (int) Math.round(numOfSessions * proportion);
+
+            // adds the number of courses to the map
+            courseName2numberOfSessions.put(courseName, numberOfSessionForCurrentCourse);
+        }
+
+        return courseName2numberOfSessions;
 
     }
 
@@ -545,7 +577,7 @@ public class Engine {
 
     /**
      * calculates the proportions of the courses that the user has.
-     * for each course, the proportion is determined by a double (e.g. 99.5 is 99.5%)
+     * for each course, the proportion is determined by a double (e.g. 0.995 is 99.5%)
      *
      * @param exams a list of {@link Exam} that represents the exams that the user have
      * @return a map of string to double that represents the course names and their proportion
