@@ -20,10 +20,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.Calendar;
-import com.google.api.services.calendar.model.CalendarList;
-import com.google.api.services.calendar.model.CalendarListEntry;
-import com.google.api.services.calendar.model.Event;
-import com.google.api.services.calendar.model.Events;
+import com.google.api.services.calendar.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 
@@ -33,6 +30,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+import static com.example.lamivhan.utill.Constants.ISRAEL_TIME_ZONE;
 import static com.example.lamivhan.utill.Constants.PLANIT_CALENDAR_SUMMERY_NAME;
 import static com.example.lamivhan.utill.Utility.roundInstantMinutesTime;
 
@@ -421,7 +419,7 @@ public class Engine {
         // Create a new calendar
         com.google.api.services.calendar.model.Calendar calendar = new com.google.api.services.calendar.model.Calendar();
         calendar.setSummary(PLANIT_CALENDAR_SUMMERY_NAME);
-        calendar.setTimeZone("Asia/Jerusalem");
+        calendar.setTimeZone(ISRAEL_TIME_ZONE);
 
         // Insert the new calendar
         com.google.api.services.calendar.model.Calendar createdCalendar = null;
@@ -468,14 +466,69 @@ public class Engine {
 
     }
 
+    /**
+     * updates the PlanIt calendar with the new sessions list.
+     * clears the calendar and create new Google {@link Event} for each study session
+     *
+     * @param sessionsList     a list of {@link StudySession} that represents the user's study sessions
+     * @param service          the Google's {@link Calendar} service
+     * @param planItCalendarID the calendar ID of the PlanIt calendar in the user's calendar list
+     */
+    private static void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID) {
+
+        // removes all previous events in the PlanIt calendar
+        try {
+            service.calendars().clear(planItCalendarID).execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        // adds updated events to the PlanIt calendar
+        // goes through the sessions and adds to the PlanIt calendar
+        for (StudySession session : sessionsList) {
+
+            // creates a new Google Event
+            Event event = new Event()
+                    .setSummary(Constants.EVENT_SUMMERY_PREFIX + session.getCourseName())
+                    .setDescription(session.getDescription())
+                    .setStart(new EventDateTime()
+                            .setDateTime(session.getStart())
+                            .setTimeZone(ISRAEL_TIME_ZONE))
+                    .setEnd(new EventDateTime()
+                            .setDateTime(session.getEnd())
+                            .setTimeZone(ISRAEL_TIME_ZONE));
+
+            // inserts the new Google Event to the PlanIt calendar
+            try {
+                service.events().insert(planItCalendarID, event).execute();
+
+            } catch (GoogleJsonResponseException e) {
+                System.out.println(e.getDetails());
+                System.out.println(e.getStatusCode());
+                System.out.println(e.getMessage());
+                throw new RuntimeException();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    /**
+     * embeds the courses names in the sessions, considering the exams dates and the number of sessions required for each course.
+     *
+     * @param courseName2numberOfSessions a map of string to int that represents, for each course name, the required number of sessions
+     * @param sessionsList                a list of {@link StudySession} that represents the user's created study sessions
+     * @param exams                       a list of {@link Exam} that represents the user's exams
+     */
     private static void embedCoursesInSessions(Map<String, Integer> courseName2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
 
-        List<String> coursesNamesSeenSoFar = new ArrayList<>();
+        Stack<String> nextExams = new Stack<>();
         int currentCourseNameIndex = exams.size() - 1;
 
 
         // initiate the set with the course name of the last dated exam in the exams period
-        coursesNamesSeenSoFar.add(exams.get(currentCourseNameIndex).getCourse().getCourseName());
+        nextExams.push(exams.get(currentCourseNameIndex).getCourse().getCourseName());
         currentCourseNameIndex--;
 
         // goes through the sessions from the end to the start
@@ -484,24 +537,25 @@ public class Engine {
             // if the current session starts before the following exam to be seen
             // e.g. if 08:00-10:00 of 09/07 is before the 10/07
             if (sessionsList.get(i).getStart().getValue() < exams.get(currentCourseNameIndex).getDateTime().getValue()) {
-                coursesNamesSeenSoFar.add(exams.get(currentCourseNameIndex).getCourse().getCourseName());
+                nextExams.push(exams.get(currentCourseNameIndex).getCourse().getCourseName());
                 currentCourseNameIndex--;
             }
 
-            if (coursesNamesSeenSoFar.size() == 1) {
+            // sets the session to be associated with the exam that is the closest to the session
+            sessionsList.get(i).setCourseName(nextExams.peek());
+            // sessionsList.get(i).setDescription();
 
-                // set the session to be associated with the only exam that is existing in the list
-                sessionsList.get(i).setCourseName(coursesNamesSeenSoFar.get(0));
+            // extract course name and sessions-count values
+            String courseName = nextExams.peek();
+            int numOfSessionsPerExam = courseName2numberOfSessions.get(nextExams.peek());
 
-                // extract course name and sessions count values
-                String courseName = coursesNamesSeenSoFar.get(0);
-                int numOfSessionPerExam = courseName2numberOfSessions.get(coursesNamesSeenSoFar.get(0));
+            // update session count value and save new value to the map
+            numOfSessionsPerExam -= 1;
 
-                // update session count value and save new value to the map
-                numOfSessionPerExam -= 1;
-                courseName2numberOfSessions.put(courseName, numOfSessionPerExam);
-            } else {
-
+            if (numOfSessionsPerExam != 0) { // if there are more session left to insert, updates the value in the map
+                courseName2numberOfSessions.put(courseName, numOfSessionsPerExam);
+            } else { // if no more sessions left to insert, removes course from stack
+                nextExams.pop();
             }
         }
     }

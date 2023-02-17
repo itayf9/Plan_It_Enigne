@@ -14,4 +14,8 @@ public class Constants {
     public static final String APPLICATION_NAME = "PlanIt";
 
     public static final String PLANIT_CALENDAR_SUMMERY_NAME = "PlanIt Calendar";
+
+    public static final String EVENT_SUMMERY_PREFIX = "למידה ל";
+
+    public static final String ISRAEL_TIME_ZONE = "Asia/Jerusalem";
 }

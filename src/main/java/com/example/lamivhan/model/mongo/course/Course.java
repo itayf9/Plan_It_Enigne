@@ -16,7 +16,7 @@ public class Course {
     @Field(name = "study-time")
     private int recommendedStudyTime;
 
-    public Course(String courseName, int difficultyLevel, int credits, int recommendedStudyTime) {
+    public Course(String courseName, int difficultyLevel, int credits, int recommendedStudyTime, String[] courseSubjects) {
         this.courseName = courseName;
         this.difficultyLevel = difficultyLevel;
         this.credits = credits;
@@ -39,6 +39,10 @@ public class Course {
         return recommendedStudyTime;
     }
 
+    public String[] getCourseSubjects() {
+        return courseSubjects;
+    }
+
     public void setCourseName(String courseName) {
         this.courseName = courseName;
     }
@@ -53,5 +57,9 @@ public class Course {
 
     public void setRecommendedStudyTime(int recommendedStudyTime) {
         this.recommendedStudyTime = recommendedStudyTime;
+    }
+
+    public void setCourseSubjects(String[] courseSubjects) {
+        this.courseSubjects = courseSubjects;
     }
 }
