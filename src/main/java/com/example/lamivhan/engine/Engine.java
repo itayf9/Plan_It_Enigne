@@ -15,6 +15,7 @@ import com.example.lamivhan.utill.dto.DTOfreetime;
 import com.example.lamivhan.utill.dto.DTOstartAndEndOfInterval;
 import com.example.lamivhan.utill.dto.DTOuserEvents;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -464,6 +465,8 @@ public class Engine {
 
         // #5
 
+        updatePlanItCalendar(sessionsList, service, planItCalendarID);
+
     }
 
     /**
@@ -673,7 +676,7 @@ public class Engine {
 
 /*
 A   B   C
-3   3   5
+3   3   5                Coman              OS &LINUX
 [A][A][A]testA[C][B][B][B]testB[C][C][C][C]testC
 
 A   B   C

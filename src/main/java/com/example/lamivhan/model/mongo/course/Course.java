@@ -8,13 +8,14 @@ public class Course {
 
     @Field(name = "name")
     private String courseName;
-
     @Field(name = "level")
     private int difficultyLevel;
     @Field(name = "credits")
     private int credits;
     @Field(name = "study-time")
     private int recommendedStudyTime;
+    @Field(name = "subjects")
+    private String[] courseSubjects;
 
     public Course(String courseName, int difficultyLevel, int credits, int recommendedStudyTime, String[] courseSubjects) {
         this.courseName = courseName;
