@@ -22,6 +22,7 @@ public class Course {
         this.difficultyLevel = difficultyLevel;
         this.credits = credits;
         this.recommendedStudyTime = recommendedStudyTime;
+        this.courseSubjects = courseSubjects;
     }
 
     public String getCourseName() {

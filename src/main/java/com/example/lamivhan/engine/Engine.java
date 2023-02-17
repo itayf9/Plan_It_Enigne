@@ -675,15 +675,65 @@ public class Engine {
 }
 
 /*
+
+<string, int>
+<name, show>
+
+
+Priority Queue:    [           B   C           ]
+
+name      show     priority
+C          5       First
+
+
+[A][A][A][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]testA[C][B][B][B]testB[C][C][C][C]testC
+               {A,B,C}
+                1 2 3
+
+
+
+[ ][ ][ ][ ][ ]testA[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]testB
+
+after embed the exam's course names we know, for each course:
+ numOfSessions
+ numOfSubjects
+
+ case1: numOfSessions > numOfSubjects
+ - more than one subjects for each session.
+
+ case2: numOfSubjects < numOfSessions
+ - each subject for more than one session.
+
+ case3: numOfSubjects = numOfSessions
+ - each subject gets one session
+
+
+
+
+
+ CCCBBAAAAAAA testA - testB CCCCC testC
+    {A,B,C}               {B,C}          {C}
+
+<<String, int>,       int>
+<<name,   difficult>, show>
+<-----------------------------------------------
 A   B   C
 3   3   5                Coman              OS &LINUX
 [A][A][A]testA[C][B][B][B]testB[C][C][C][C]testC
 
 A   B   C
 3   4   5
-[A][A][A]testA[B/C][B][B][B]testB[C][C][C][C]testC
+[A][A][A]testA[B/C][B][B][B]testB[C][C][C][C]testC ?
 
 A   B   C
-4   5   6
-[A][A][A]testA[B/C][B][B][B]testB[C][C][C][C]testC
+4   2   6
+[A][A][A]testA[C][C][B][B]testB[C][C][C][C]testC
+
+A   B   C
+4   2   5
+[A][A][A]testA[ ][C][B][B]testB[C][C][C][C]testC ?
+
+A   B   C
+4   5   3
+[A][A][A]testA[B][B][B][B]testB[ ][C][C][C]testC
 * */
