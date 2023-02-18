@@ -518,7 +518,8 @@ public class Engine {
     }
 
     /**
-     * embeds the courses names in the sessions, considering the exams dates and the number of sessions required for each course.
+     * embeds the details (courses' names and subjects) in the user's sessions list.
+     * embeds the courses considering exams' dates, courses' proportions, and information about courses subjects
      *
      * @param courseName2numberOfSessions a map of string to int that represents, for each course name, the required number of sessions
      * @param sessionsList                a list of {@link StudySession} that represents the user's created study sessions
@@ -526,6 +527,116 @@ public class Engine {
      */
     private static void embedCoursesInSessions(Map<String, Integer> courseName2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
 
+        // represents each course name with a unique index identifier.
+        Map<String, Integer> coursesNames2Index = new HashMap<>();
+        for (int i = 0; i < exams.size(); i++) {
+            coursesNames2Index.put(exams.get(i).getCourse().getCourseName(), i);
+        }
+
+        // embeds the courses' names in the sessions list
+        embedCoursesNamesInSessions(courseName2numberOfSessions, sessionsList, exams);
+        // embeds the courses' subjects in the sessions list.
+        embedCoursesSubjectsInSessions(coursesNames2Index, sessionsList, exams);
+
+
+    }
+
+    /**
+     * embeds the courses subjects in the sessions, assuming all the sessions have been embedded with courses names.
+     *
+     * @param coursesNames2Index a map of string to int, representing for each course name, a unique index that is helpful for identifying the course in an internal array
+     * @param sessionsList       a list of {@link StudySession} that represent the user's created study sessions
+     * @param exams              a list of a {@link Exam} that represents the user's exams
+     */
+    private static void embedCoursesSubjectsInSessions(Map<String, Integer> coursesNames2Index, List<StudySession> sessionsList, List<Exam> exams) {
+
+        // create list of a list of study-sessions to make insertion of subjects easier later.
+        List<List<StudySession>> listOfListOfStudySessions = new ArrayList<>(Collections.nCopies(exams.size(), new ArrayList<>()));
+
+        // run through the sessions list and initialize the list of lists
+        for (StudySession session : sessionsList) {
+            int courseIndexInListOfLists = coursesNames2Index.get(session.getCourseName());
+            listOfListOfStudySessions.get(courseIndexInListOfLists).add(session);
+        }
+
+
+        //  run through the list of lists and embed the subjects, for each session
+        for (int i = 0; i < exams.size(); i++) {
+
+            Exam currentExam = exams.get(i);
+
+            String[] subjects = currentExam.getCourse().getCourseSubjects(); // e.g ["עוצמות" ,"פונקציות"]
+            int numberOfSubjectsInCurrentExam = subjects.length;
+            int indexOfCurrentSubject = 0;
+
+            // present the percent for study the subject for the current test.
+            double subjectsToExamsPracticeProportions = (currentExam.getCourse().getSubjectsPracticePercentage()) * 0.01; // e.g - 60% of 100%
+
+            List<StudySession> sessionsListOfCurrentExam = listOfListOfStudySessions.get(i);
+            int numberOfSessions = sessionsListOfCurrentExam.size();
+
+            for (int j = 0; j < numberOfSessions; j++) {
+
+                if (((double) j / (double) numberOfSessions) > subjectsToExamsPracticeProportions) {
+                    // set "test" Description in the current session
+                    sessionsListOfCurrentExam.get(j).setDescription("תרגול מבחנים");
+                } else {
+                    double numberOfSessionsForStudySubjects = numberOfSessions * subjectsToExamsPracticeProportions;
+
+                    if (numberOfSessionsForStudySubjects >= (double) numberOfSubjectsInCurrentExam) {
+                        // each subject gets one session
+                        if (indexOfCurrentSubject < numberOfSubjectsInCurrentExam) {
+                            sessionsListOfCurrentExam.get(j).setDescription(subjects[indexOfCurrentSubject]);
+                            indexOfCurrentSubject++;
+                        }
+                    } else { // numberOfSessionsForStudySubjects < numberOfSubjectsInCurrentExam
+                        // each session get more than one subject
+                        if (indexOfCurrentSubject < numberOfSubjectsInCurrentExam && indexOfCurrentSubject + 1 < numberOfSubjectsInCurrentExam) {
+                            String subjectsToStudy = subjects[indexOfCurrentSubject] + " " + subjects[indexOfCurrentSubject + 1];
+                            sessionsListOfCurrentExam.get(j).setDescription(subjectsToStudy);
+                            indexOfCurrentSubject += 2;
+
+                        } else if (indexOfCurrentSubject < numberOfSubjectsInCurrentExam && !(indexOfCurrentSubject + 1 < numberOfSubjectsInCurrentExam)) {
+                            sessionsListOfCurrentExam.get(j).setDescription(subjects[indexOfCurrentSubject]);
+                            indexOfCurrentSubject++;
+                        }
+                    }
+                }
+
+
+                /*
+
+                sessions      subjects            Math.ceil( subjects/sessions )        ordering
+                  3              5                             2                        2, 2, 1
+                  2              10                            5                        5, 5
+                  4              15                            4                        4, 4, 4, 3
+
+
+                אחד יותר ללמידה מלמבחן (גודל מספר התאים * אחוז ללמידה )מעגל למעלה
+                אם האינדקס של מערך שלך הסשנים גדול מ^
+                אז תשים מבחן
+                אחרת
+                נשבץ קורס
+                (מה היחס בין מספר התאים ללמידה למספר הנושאים של אותו מבחן)עגיל למעלה
+                אם היחס פחות מ1
+                אפשר לשבץ לכל תא נושא אחד
+                אחרת זה יחס של יותר מאחד
+                אז נרוץ הלולאה על מספר הנושאים שאנחנו צריכים לשים לכל תא ונשרשר אותם ונשים לאותו תא
+                 */
+
+
+            }
+        }
+    }
+
+    /**
+     * embeds the courses names in the sessions, considering the exams dates and the number of sessions required for each course.
+     *
+     * @param courseName2numberOfSessions a map of string to int that represents, for each course name, the required number of sessions
+     * @param sessionsList                a list of {@link StudySession} that represents the user's created study sessions
+     * @param exams                       a list of {@link Exam} that represents the user's exams
+     */
+    private static void embedCoursesNamesInSessions(Map<String, Integer> courseName2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
         Stack<String> nextExams = new Stack<>();
         int currentCourseNameIndex = exams.size() - 1;
 
@@ -546,7 +657,6 @@ public class Engine {
 
             // sets the session to be associated with the exam that is the closest to the session
             sessionsList.get(i).setCourseName(nextExams.peek());
-            // sessionsList.get(i).setDescription();
 
             // extract course name and sessions-count values
             String courseName = nextExams.peek();
@@ -562,6 +672,7 @@ public class Engine {
             }
         }
     }
+
 
     /**
      * for every session, calculates the number of sessions, considering the proportions and the number of total sessions.
