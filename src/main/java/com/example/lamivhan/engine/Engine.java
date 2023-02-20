@@ -588,30 +588,46 @@ public class Engine {
 
             for (int j = 0; j < numberOfSessions; j++) {
 
-                if (((double) j / (double) numberOfSessions) > subjectsToExamsPracticeProportions) {
+                if (numberOfSessionsForSubjects < j) {
                     // set "test" Description in the current session
                     sessionsListOfCurrentExam.get(j).setDescription("תרגול מבחנים");
                 } else {
-                    double numberOfSessionsForStudySubjects = numberOfSessions * subjectsToExamsPracticeProportions;
 
-                    if (numberOfSessionsForStudySubjects >= (double) numberOfSubjectsInCurrentExam) {
+                    if (subjectsPerSession < 1) {
+                        // numOfSubjects < numOfSessions
+                        // each subject get more than one session.
+                        sessionsListOfCurrentExam.get(j).setDescription(subjects[indexOfCurrentSubject]);
+                        subjectsPerSessionCounter += subjectsPerSession;
+                        // we pass to the need subject.
+                        if ((int) subjectsPerSessionCounter == nextSubjectsPerSessionInteger) {
+                            indexOfCurrentSubject++;
+                            nextSubjectsPerSessionInteger++;
+                        }
+
+
+                    } else if (subjectsPerSession == 1) {
+                        // numOfSubjects = numOfSessions
                         // each subject gets one session
-                        if (indexOfCurrentSubject < numberOfSubjectsInCurrentExam) {
-                            sessionsListOfCurrentExam.get(j).setDescription(subjects[indexOfCurrentSubject]);
-                            indexOfCurrentSubject++;
-                        }
-                    } else { // numberOfSessionsForStudySubjects < numberOfSubjectsInCurrentExam
-                        // each session get more than one subject
-                        if (indexOfCurrentSubject < numberOfSubjectsInCurrentExam && indexOfCurrentSubject + 1 < numberOfSubjectsInCurrentExam) {
-                            String subjectsToStudy = subjects[indexOfCurrentSubject] + " " + subjects[indexOfCurrentSubject + 1];
-                            sessionsListOfCurrentExam.get(j).setDescription(subjectsToStudy);
-                            indexOfCurrentSubject += 2;
+                        sessionsListOfCurrentExam.get(j).setDescription(subjects[indexOfCurrentSubject]);
+                        indexOfCurrentSubject++;
 
-                        } else if (indexOfCurrentSubject < numberOfSubjectsInCurrentExam && !(indexOfCurrentSubject + 1 < numberOfSubjectsInCurrentExam)) {
-                            sessionsListOfCurrentExam.get(j).setDescription(subjects[indexOfCurrentSubject]);
-                            indexOfCurrentSubject++;
+                    } else if (subjectsPerSession > 1) {
+                        // numOfSubjects > numOfSessions
+                        // each session get more than one subject.
+                        int k;
+                        StringBuilder subjectsToStudyBuilder = new StringBuilder();
+
+                        // inserts the next few subjects in the new session
+                        for (k = 0; k < subjectsPerSession && indexOfCurrentSubject + k < subjects.length; k++) {
+                            if (k != 0) {
+                                subjectsToStudyBuilder.append(" , ");
+                            }
+                            subjectsToStudyBuilder.append(subjects[indexOfCurrentSubject + k]);
                         }
+                        sessionsListOfCurrentExam.get(j).setDescription(subjectsToStudyBuilder.toString());
+                        indexOfCurrentSubject += k;
                     }
+
                 }
 
 
@@ -621,18 +637,9 @@ public class Engine {
                   3              5                             2                        2, 2, 1
                   2              10                            5                        5, 5
                   4              15                            4                        4, 4, 4, 3
+                  5              5                             1                        1,1,1,1,1
+                  10             2                             0.2                      0.5, 0.5 0.5, 0.5 0.5, 0.5 0.5, 0.5 0.5, 0.5
 
-
-                אחד יותר ללמידה מלמבחן (גודל מספר התאים * אחוז ללמידה )מעגל למעלה
-                אם האינדקס של מערך שלך הסשנים גדול מ^
-                אז תשים מבחן
-                אחרת
-                נשבץ קורס
-                (מה היחס בין מספר התאים ללמידה למספר הנושאים של אותו מבחן)עגיל למעלה
-                אם היחס פחות מ1
-                אפשר לשבץ לכל תא נושא אחד
-                אחרת זה יחס של יותר מאחד
-                אז נרוץ הלולאה על מספר הנושאים שאנחנו צריכים לשים לכל תא ונשרשר אותם ונשים לאותו תא
                  */
 
 
