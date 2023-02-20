@@ -574,6 +574,17 @@ public class Engine {
 
             List<StudySession> sessionsListOfCurrentExam = listOfListOfStudySessions.get(i);
             int numberOfSessions = sessionsListOfCurrentExam.size();
+            int numberOfSessionsForSubjects = (int) Math.ceil(numberOfSessions * subjectsToExamsPracticeProportions);
+
+            double subjectsPerSession = (double) subjects.length / (double) numberOfSessionsForSubjects;
+            double subjectsPerSessionCounter = 0;
+            int nextSubjectsPerSessionInteger = 1;
+
+            // makes the subjectsPerSession an integer
+            if (subjectsPerSession >= 1) {
+                subjectsPerSession = Math.ceil(subjectsPerSession);
+            }
+
 
             for (int j = 0; j < numberOfSessions; j++) {
 
