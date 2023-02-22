@@ -25,6 +25,12 @@ public class User {
     @Field(name = "planIt_calendar_ID")
     private String planItCalendarID;
 
+    @Field(name = "access_token")
+    private String accessToken;
+
+    @Field(name = "refresh_token")
+    private String refreshToken;
+
     public User(String userName, boolean isDayLearner, Preferences userPreferences, String email) {
         this.userName = userName;
         this.isDayLearner = isDayLearner;
@@ -33,8 +39,10 @@ public class User {
         this.planItCalendarID = null;
     }
 
-    public User(String email) {
+    public User(String email, String accessToken, String refreshToken) {
         this.userPreferences = new Preferences();
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
         this.email = email;
     }
 
