@@ -222,8 +222,10 @@ public class Engine {
                 continue;
             }
 
-            // adds the events from the calendar to the list
+            // adds the events, including the full day events, from the calendar to the list
             allEventsFromCalendars.addAll(events.getItems());
+            // adds the full day events to the fullDayEvents list
+            fullDayEvents.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
         }
 
         for (Event event : allEventsFromCalendars) {
@@ -232,6 +234,7 @@ public class Engine {
 
         // sorts the events, so they will be ordered by start time
         allEventsFromCalendars.sort(new EventComparator());
+        fullDayEvents.sort(new EventComparator());
         return allEventsFromCalendars;
     }
 
