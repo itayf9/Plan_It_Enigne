@@ -246,7 +246,7 @@ public class Engine {
      * @throws GeneralSecurityException GeneralSecurityException
      * @throws IOException IOException
      */
-    public static DTOuserEvents getEvents(String accessToken, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
+    public static DTOuserEvents getEvents(String accessToken, String start, String end, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
         // get user's calendar service
         Calendar calendarService = Engine.getCalendarService(accessToken, jsonFactory);
 
@@ -254,16 +254,19 @@ public class Engine {
 
         List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
 
-        // set up startDate & endDate
+        /*// set up startDate & endDate
         // ...
         DateTime start = new DateTime(System.currentTimeMillis());
-        DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);
+        DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);*/
+
+        DateTime startDate = new DateTime(start);
+        DateTime endDate = new DateTime(end);
 
         List<Event> fullDayEvents = new ArrayList<>();
         List<Exam> examsFound = new LinkedList<>();
 
         // get List of user's events
-        List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents, examsFound, courseRepo);
+        List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, examsFound, courseRepo);
         return new DTOuserEvents(fullDayEvents, examsFound, events, calendarService);
     }
 
