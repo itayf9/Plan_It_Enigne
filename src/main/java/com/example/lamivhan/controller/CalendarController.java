@@ -1,7 +1,6 @@
 package com.example.lamivhan.controller;
 
 import com.example.lamivhan.engine.Engine;
-import com.example.lamivhan.googleapis.AccessToken;
 import com.example.lamivhan.model.mongo.course.CoursesRepository;
 import com.example.lamivhan.model.mongo.user.User;
 import com.example.lamivhan.model.mongo.user.UserRepository;
@@ -10,11 +9,11 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.calendar.model.Event;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,6 +26,9 @@ import java.util.Optional;
 public class CalendarController {
 
     @Autowired
+    private Environment env;
+
+    @Autowired
     private CoursesRepository courseRepo;
 
     @Autowired
@@ -37,16 +39,27 @@ public class CalendarController {
      */
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
-    @PostMapping(value = "/scan", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<List<Event>> scanUserEvents(@RequestBody AccessToken accessToken, @RequestParam String email) throws IOException, GeneralSecurityException {
+    @PostMapping(value = "/scan")
+    public ResponseEntity<List<Event>> scanUserEvents(@RequestParam String email) throws IOException, GeneralSecurityException {
 
         // check if user exist in DB
         Optional<User> maybeUser = userRepo.findUserByEmail(email);
         if (maybeUser.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
+        User user = maybeUser.get();
 
-        DTOuserEvents userEvents = Engine.getEvents(accessToken, JSON_FACTORY, courseRepo);
+        if (!Engine.isAccessTokenExpired(user.getAccessToken())) {
+
+            String clientID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
+            String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
+
+            // refresh the accessToken
+            Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
+
+        }
+
+        DTOuserEvents userEvents = Engine.getEvents(user.getAccessToken(), JSON_FACTORY, courseRepo);
 
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
 
@@ -60,10 +73,6 @@ public class CalendarController {
 
             Engine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
 
-            // 2# 3# 4# 5#
-            // generateStudyEvents(accessToken, true, events);
-            // we can call the generateStudyEvents function, as usual, like it was some regular function
-            // we need to pass all the required parameters
             // also, we need to check the ResponseEntity that is returned from the generateStudyEvents
             // then we can do things according to the HTTP status code, or body, from generateStudyEvents
         }
@@ -72,7 +81,7 @@ public class CalendarController {
     }
 
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<List<Event>> generateStudyEvents(@RequestBody AccessToken accessToken, @RequestParam String email) throws IOException, GeneralSecurityException {
+    public ResponseEntity<List<Event>> generateStudyEvents(@RequestParam String email) throws IOException, GeneralSecurityException {
 
         // check if user exist in DB
         Optional<User> maybeUser = userRepo.findUserByEmail(email);
@@ -80,8 +89,22 @@ public class CalendarController {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
+        // get instance of the user
+        User user = maybeUser.get();
+
+        // check if accessToken is still valid
+        if (!Engine.isAccessTokenExpired(user.getAccessToken())) {
+
+            String clientID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
+            String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
+
+            // refresh the accessToken
+            Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
+
+        }
+
         // 1# get List of user's events
-        DTOuserEvents userEvents = Engine.getEvents(accessToken, JSON_FACTORY, courseRepo);
+        DTOuserEvents userEvents = Engine.getEvents(user.getAccessToken(), JSON_FACTORY, courseRepo);
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
         List<Event> events = userEvents.getEvents();
 
@@ -91,39 +114,8 @@ public class CalendarController {
             // exclude them from the list of events
 
         }
-                /*
 
-                algorithm of #2
-                1. Create Slot object  - done
-                2. implement getFreeSlots(List<Event>); - in progress
-                1. assume you have a list of Event (Google's Event) - done
-                2. go through list, find free slots - in progress
-                3. find total free time
-                4. each slot is inserted to a list of free slots (slot is the gap between events)
-
-                #4
-                private List<StudySession> divideStudySessionsForExams(DTOfreetime dtoFreeTime, List<Course> exams);
-                private Map<String, Double> getExamsRatio(List<Course> exams);
-                User user = userRepo.findByEmail();
-                breakValue = user.getPreferences().getUserBreakValue();
-
-                int getSumOfRecommendedStudyTime(List<Course> exams);
-
-                separate each slot in the free time list, to a few study sessions:
-                4. determine on MINIMUM_STUDY_TIME, BREAK_DEFAULT
-                5. find the proportions of each course from 100% study time. need to think how to do that.
-                6. sum all recommended study time
-                7. divide total free time / total recommended time
-                8. take the max of MINIMUM_STUDY_TIME , the result of divide (7)
-
-               embed the courses in the time slots:
-                9. create events of courses depending on slots and proportions
-                10. go through the free list and put the events
-
-
-
-
-                 */
+        // 2# 3# 4# 5#
         Engine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
 
         return new ResponseEntity<>(HttpStatus.OK);
