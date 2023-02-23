@@ -39,6 +39,18 @@ public class User {
         this.planItCalendarID = null;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
     public User(String email, String accessToken, String refreshToken) {
         this.userPreferences = new Preferences();
         this.accessToken = accessToken;

@@ -46,6 +46,7 @@ public class LoginController {
     }
 
     /**
+     * register a user end-point
      * @param code auth-code of the user
      * @return response entity with status message
      */
@@ -67,10 +68,10 @@ public class LoginController {
     }
 
     /**
-     *
+     * extract the user's email and access tokens, from the auth code sent by the front-end.
      * @param code Auth-Code from Frontend OAuth process.
      * @return DTO contains access tokens, Refresh token & user Email
-     * @throws IOException
+     * @throws IOException exception
      */
     private DTOtokens getEmailAndTokensFromAuthCode(String code) throws IOException {
         HttpTransport httpTransport = new NetHttpTransport();
@@ -97,6 +98,7 @@ public class LoginController {
     }
 
     /**
+     * get the user Object from the DB to later display Profile information of the user
      * @param email email of the user
      * @return User object with preferences.
      */

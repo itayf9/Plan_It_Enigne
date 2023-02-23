@@ -1,6 +1,5 @@
 package com.example.lamivhan.engine;
 
-import com.example.lamivhan.googleapis.AccessToken;
 import com.example.lamivhan.model.exam.Exam;
 import com.example.lamivhan.model.mongo.course.Course;
 import com.example.lamivhan.model.mongo.course.CoursesRepository;
@@ -14,6 +13,11 @@ import com.example.lamivhan.utill.Utility;
 import com.example.lamivhan.utill.dto.DTOfreetime;
 import com.example.lamivhan.utill.dto.DTOstartAndEndOfInterval;
 import com.example.lamivhan.utill.dto.DTOuserEvents;
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.auth.oauth2.RefreshTokenRequest;
+import com.google.api.client.auth.oauth2.TokenResponse;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpRequestInitializer;
@@ -24,6 +28,7 @@ import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
+
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -238,27 +243,30 @@ public class Engine {
      * @param jsonFactory a {@link JsonFactory} that is used for google's calendar service
      * @param courseRepo  a {@link CoursesRepository} which is the DB of courses
      * @return DTOuserEvents contains all the events, full day events and the exams
-     * @throws GeneralSecurityException
-     * @throws IOException
+     * @throws GeneralSecurityException GeneralSecurityException
+     * @throws IOException IOException
      */
-    public static DTOuserEvents getEvents(AccessToken accessToken, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
+    public static DTOuserEvents getEvents(String accessToken, String start, String end, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
         // get user's calendar service
-        Calendar calendarService = Engine.getCalendarService(accessToken, jsonFactory, Constants.APPLICATION_NAME);
+        Calendar calendarService = Engine.getCalendarService(accessToken, jsonFactory);
 
         // get user's calendar list
 
         List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
 
-        // set up startDate & endDate
+        /*// set up startDate & endDate
         // ...
         DateTime start = new DateTime(System.currentTimeMillis());
-        DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);
+        DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);*/
+
+        DateTime startDate = new DateTime(start);
+        DateTime endDate = new DateTime(end);
 
         List<Event> fullDayEvents = new ArrayList<>();
         List<Exam> examsFound = new LinkedList<>();
 
         // get List of user's events
-        List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, start, end, fullDayEvents, examsFound, courseRepo);
+        List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, examsFound, courseRepo);
         return new DTOuserEvents(fullDayEvents, examsFound, events, calendarService);
     }
 
@@ -312,25 +320,24 @@ public class Engine {
     /**
      * get Google Calendar service provider.
      *
-     * @param access_token     User Google AccessToken
-     * @param JSON_FACTORY     Json Factory Instance
-     * @param APPLICATION_NAME The name of the Application - PlanIt
+     * @param access_token User Google AccessToken
+     * @param JSON_FACTORY Json Factory Instance
      * @return Google Calendar service provider.
-     * @throws GeneralSecurityException
-     * @throws IOException
+     * @throws GeneralSecurityException GeneralSecurityException
+     * @throws IOException              IOException
      */
-    public static Calendar getCalendarService(AccessToken access_token, JsonFactory JSON_FACTORY, String APPLICATION_NAME) throws GeneralSecurityException, IOException {
+    private static Calendar getCalendarService(String access_token, JsonFactory JSON_FACTORY) throws GeneralSecurityException, IOException {
 
         // Build a new authorized API client service.
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         Date expireDate = new Date(new Date().getTime() + 3600000);
 
-        com.google.auth.oauth2.AccessToken accessToken = new com.google.auth.oauth2.AccessToken(access_token.getAccessToken(), expireDate);
+        com.google.auth.oauth2.AccessToken accessToken = new com.google.auth.oauth2.AccessToken(access_token, expireDate);
         GoogleCredentials credential = new GoogleCredentials(accessToken);
         HttpRequestInitializer httpRequestInitializer = new HttpCredentialsAdapter(credential);
 
         return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, httpRequestInitializer)
-                .setApplicationName(APPLICATION_NAME)
+                .setApplicationName(Constants.APPLICATION_NAME)
                 .build();
 
     }
@@ -399,7 +406,6 @@ public class Engine {
      * 3# creates the Plan-It calendar and adds it the user's calendar list
      *
      * @param calendarService a calendar service of the user
-     * @throws IOException in case of failure in "execute"
      */
     private static String createPlanItCalendar(Calendar calendarService, User user, UserRepository userRepo) {
 
@@ -800,6 +806,50 @@ public class Engine {
         }
 
         return courseName2Proportion;
+    }
+
+    /**
+     * check if accessToken is still valid
+     * @param accessToken the accessToken
+     * @return true for valid, false otherwise
+     */
+    public static boolean isAccessTokenExpired(String accessToken) throws IOException {
+        Credential credential = new GoogleCredential().setAccessToken(accessToken);
+        Long expirationTime = credential.getExpirationTimeMilliseconds();
+
+        if (expirationTime == null) {
+            return false;
+        }
+
+        Instant expirationInstant = Instant.ofEpochMilli(expirationTime);
+        Instant now = Instant.now();
+        return expirationInstant.isBefore(now);
+    }
+
+
+    /**
+     * get a new accessToken with the refresh token
+     * @param refreshToken the refreshToken
+     * @param clientId client id string
+     * @param clientSecret client secret string
+     * @param JSON_FACTORY JSON_FACTORY instance
+     * @return TokenResponse contains new accessToken
+     * @throws IOException IOException
+     * @throws GeneralSecurityException GeneralSecurityException
+     */
+    public static TokenResponse refreshAccessToken(String refreshToken, String clientId, String clientSecret, JsonFactory JSON_FACTORY)
+            throws IOException, GeneralSecurityException {
+
+        // Create a RefreshTokenRequest to get a new access token using the refresh token
+        RefreshTokenRequest refreshTokenRequest = new GoogleRefreshTokenRequest(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                JSON_FACTORY,
+                refreshToken,
+                clientId,
+                clientSecret);
+
+        // Execute the RefreshTokenRequest to get a new Credential object with the updated access token
+        return refreshTokenRequest.execute();
     }
 }
 
