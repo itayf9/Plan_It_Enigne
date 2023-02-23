@@ -5,6 +5,7 @@ import com.example.lamivhan.model.mongo.course.CoursesRepository;
 import com.example.lamivhan.model.mongo.user.User;
 import com.example.lamivhan.model.mongo.user.UserRepository;
 import com.example.lamivhan.utill.dto.DTOuserEvents;
+import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.calendar.model.Event;
@@ -43,9 +44,10 @@ public class CalendarController {
 
     /**
      * Scan the user's Calendar to get list of events and check to see if user has fullDayEvents existed.
+     *
      * @param email user's email address to search the User on DB & get preferences.
-     * @return ResponseEntity<List<Event>> we return list of events in a case of full day events found, otherwise we generate the calendar.
-     * @throws IOException IOException
+     * @return ResponseEntity<List < Event>> we return list of events in a case of full day events found, otherwise we generate the calendar.
+     * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
     @PostMapping(value = "/scan")
@@ -60,19 +62,23 @@ public class CalendarController {
         // get instance of the user
         User user = maybeUser.get();
 
-        // check if accessToken is still valid
-        if (!Engine.isAccessTokenExpired(user.getAccessToken())) {
+        // check if accessToken is already invalid
+        if (Engine.isAccessTokenExpired(user.getAccessToken())) {
 
             String clientID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
             String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
             // refresh the accessToken
-            Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
+            TokenResponse tokensResponse = Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
+
+            // updates the access token of the user in the DB
+            user.setAccessToken(tokensResponse.getAccessToken());
+            userRepo.save(user);
 
         }
 
         // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserEvents userEvents = Engine.getEvents(user.getAccessToken(), start, end,JSON_FACTORY, courseRepo);
+        DTOuserEvents userEvents = Engine.getEvents(user.getAccessToken(), start, end, JSON_FACTORY, courseRepo);
 
         // list of fullDayEvents that has been found during the scan of the user's Calendar.
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
@@ -95,14 +101,15 @@ public class CalendarController {
 
     /**
      * this endpoint re-scan the user Calendar events, deals with the full days events that has been found and generates the plan it calendar.
-     * @param email user's email address to search the User on DB & get preferences
+     *
+     * @param email         user's email address to search the User on DB & get preferences
      * @param userDecisions array of boolean values representing
      * @return ResponseEntity<String> this method not suppose to fail unless it's been called externally
-     * @throws IOException IOException
+     * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> generateStudyEvents(@RequestParam String email,  @RequestParam String start, @RequestParam String end, @RequestBody boolean[] userDecisions) throws IOException, GeneralSecurityException {
+    public ResponseEntity<String> generateStudyEvents(@RequestParam String email, @RequestParam String start, @RequestParam String end, @RequestBody boolean[] userDecisions) throws IOException, GeneralSecurityException {
 
         // check if user exist in DB
         Optional<User> maybeUser = userRepo.findUserByEmail(email);
@@ -113,15 +120,18 @@ public class CalendarController {
         // get instance of the user
         User user = maybeUser.get();
 
-        // check if accessToken is still valid
-        if (!Engine.isAccessTokenExpired(user.getAccessToken())) {
+        // check if accessToken is already invalid
+        if (Engine.isAccessTokenExpired(user.getAccessToken())) {
 
             String clientID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
             String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
             // refresh the accessToken
-            Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
+            TokenResponse tokensResponse = Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
 
+            // updates the access token of the user in the DB
+            user.setAccessToken(tokensResponse.getAccessToken());
+            userRepo.save(user);
         }
 
         // 1# get List of user's events
@@ -133,7 +143,7 @@ public class CalendarController {
         if (fullDayEvents.size() != 0) {
 
             // go through the list
-            for (int i = 0; i < fullDayEvents.size() ; i++) {
+            for (int i = 0; i < fullDayEvents.size(); i++) {
 
                 boolean userWantToStudyAtCurrentFullDayEvent = userDecisions[i];
                 Event currentFullDayEvent = fullDayEvents.get(i);

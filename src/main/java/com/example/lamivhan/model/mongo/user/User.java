@@ -90,4 +90,12 @@ public class User {
     public void setPlanItCalendarID(String planItCalendarID) {
         this.planItCalendarID = planItCalendarID;
     }
+
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
+    }
+
+    public void setRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
+    }
 }
