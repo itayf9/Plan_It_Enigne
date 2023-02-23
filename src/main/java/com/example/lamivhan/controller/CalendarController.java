@@ -63,27 +63,15 @@ public class CalendarController {
         User user = maybeUser.get();
 
         // check if accessToken is already invalid
-        if (Engine.isAccessTokenExpired(user.getAccessToken())) {
+        checkValidAccessToken(user);
 
-            String clientID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
-            String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
-
-            // refresh the accessToken
-            TokenResponse tokensResponse = Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
-
-            // updates the access token of the user in the DB
-            user.setAccessToken(tokensResponse.getAccessToken());
-            userRepo.save(user);
-
-        }
-
+        // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
         DTOuserEvents userEvents = Engine.getEvents(user.getAccessToken(), start, end, JSON_FACTORY, courseRepo);
 
-        // list of fullDayEvents that has been found during the scan of the user's Calendar.
+        // events - a list of events that represents all the user's events
+        // fullDayEvents - a list of events that represents the user's full day events
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
-
-        // 1# get List of user's events
         List<Event> events = userEvents.getEvents();
 
         if (fullDayEvents.size() != 0) {
@@ -121,21 +109,14 @@ public class CalendarController {
         User user = maybeUser.get();
 
         // check if accessToken is already invalid
-        if (Engine.isAccessTokenExpired(user.getAccessToken())) {
-
-            String clientID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
-            String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
-
-            // refresh the accessToken
-            TokenResponse tokensResponse = Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
-
-            // updates the access token of the user in the DB
-            user.setAccessToken(tokensResponse.getAccessToken());
-            userRepo.save(user);
-        }
+        checkValidAccessToken(user);
 
         // 1# get List of user's events
+        // perform a scan on the user's Calendar to get all of his events at the time interval
         DTOuserEvents userEvents = Engine.getEvents(user.getAccessToken(), start, end, JSON_FACTORY, courseRepo);
+
+        // events - a list of events that represents all the user's events
+        // fullDayEvents - a list of events that represents the user's full day events
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
         List<Event> events = userEvents.getEvents();
 
@@ -159,5 +140,29 @@ public class CalendarController {
         Engine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
 
         return ResponseEntity.status(HttpStatus.CREATED).body("PlanIt Calendar Has Been Created Successfully Good Luck !!");
+    }
+
+    /**
+     * checks the access token of the user.
+     * if not valid, refreshes the access token
+     * also, updates the user's new access token in the DB
+     *
+     * @param user a {@link User} represents the user
+     * @throws IOException
+     * @throws GeneralSecurityException
+     */
+    private void checkValidAccessToken(User user) throws IOException, GeneralSecurityException {
+        if (Engine.isAccessTokenExpired(user.getAccessToken())) {
+
+            String clientID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
+            String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
+
+            // refresh the accessToken
+            TokenResponse tokensResponse = Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
+
+            // updates the access token of the user in the DB
+            user.setAccessToken(tokensResponse.getAccessToken());
+            userRepo.save(user);
+        }
     }
 }

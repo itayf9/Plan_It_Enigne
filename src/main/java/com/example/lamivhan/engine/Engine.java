@@ -29,7 +29,6 @@ import com.google.api.services.calendar.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 
-
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
@@ -244,7 +243,7 @@ public class Engine {
      * @param courseRepo  a {@link CoursesRepository} which is the DB of courses
      * @return DTOuserEvents contains all the events, full day events and the exams
      * @throws GeneralSecurityException GeneralSecurityException
-     * @throws IOException IOException
+     * @throws IOException              IOException
      */
     public static DTOuserEvents getEvents(String accessToken, String start, String end, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
         // get user's calendar service
@@ -810,6 +809,7 @@ public class Engine {
 
     /**
      * check if accessToken is still valid
+     *
      * @param accessToken the accessToken
      * @return true for valid, false otherwise
      */
@@ -829,12 +829,13 @@ public class Engine {
 
     /**
      * get a new accessToken with the refresh token
+     *
      * @param refreshToken the refreshToken
-     * @param clientId client id string
+     * @param clientId     client id string
      * @param clientSecret client secret string
      * @param JSON_FACTORY JSON_FACTORY instance
      * @return TokenResponse contains new accessToken
-     * @throws IOException IOException
+     * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
     public static TokenResponse refreshAccessToken(String refreshToken, String clientId, String clientSecret, JsonFactory JSON_FACTORY)
@@ -851,6 +852,8 @@ public class Engine {
         // Execute the RefreshTokenRequest to get a new Credential object with the updated access token
         return refreshTokenRequest.execute();
     }
+
+
 }
 
 /*
