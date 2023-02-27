@@ -166,11 +166,27 @@ public class Engine {
      * e.g מבחן מועד 1 ציון בחינה - פרונטלי גב' אריאן שלומית חישוביות
      * return "חישוביות"
      */
-    public static String extractCourseFromExam(String summary) { // TO DO
-        String courseName = "";
+    public static Optional<Course> extractCourseFromExam(String summary, List<Course> courses) { // TO DO
+        StringBuilder courseNameBuilder = new StringBuilder();
+        String[] courseName = {""}; // init empty array
 
         // find course name from the string of the exam
-        return courseName;
+
+        String[] summeryInWords = summary.split(" ");
+
+        Optional<Course> maybeFoundCourse = null;
+
+        for (int i = summeryInWords.length - 1; i > 0 ; i--) {
+            courseName[0] = courseNameBuilder.append(" ").append(summeryInWords[i]).toString().trim();
+            maybeFoundCourse = courses.stream().filter(Course -> Course.getCourseName().contains(courseName[0])).findFirst();
+
+            // check if found course is not a null
+            if (maybeFoundCourse.isPresent()) {
+                break;
+            }
+        }
+
+        return maybeFoundCourse;
     }
 
     /**
@@ -187,8 +203,10 @@ public class Engine {
                                                         List<Event> fullDayEvents, List<Exam> examsFound, CoursesRepository courseRepo) {
         List<Event> allEventsFromCalendars = new ArrayList<>();
 
+        List<Course>  courses = courseRepo.findAll(); // get all courses from DB
+
         for (CalendarListEntry calendar : calendarList) {
-            Events events = null;
+            Events events;
             try {
                 events = calendarService.events().list(calendar.getId())
                         .setTimeMin(start)
@@ -206,9 +224,8 @@ public class Engine {
                     // check if event is an exam
                     if (event.getSummary().contains("מבחן")) {
                         // get exam/course name
-                        String courseName = Engine.extractCourseFromExam(event.getSummary());
-                        // query course from DB check if exist
-                        Optional<Course> maybeFoundCourse = courseRepo.findCourseByCourseName(courseName);
+                        Optional<Course> maybeFoundCourse = Engine.extractCourseFromExam(event.getSummary(), courses);
+
                         // add to list of found exams
                         maybeFoundCourse.ifPresent(course -> examsFound.add(new Exam(course, event.getStart().getDateTime())));
                     }
@@ -241,8 +258,8 @@ public class Engine {
     /**
      * Extract all the events that are in the user calendars.
      *
-     * @param accessToken use for get the calenders from google DB
-     * @param jsonFactory a {@link JsonFactory} that is used for google's calendar service
+     * @param accessToken use for get the calenders from Google DB
+     * @param jsonFactory a {@link JsonFactory} that is used for Google's calendar service
      * @param courseRepo  a {@link CoursesRepository} which is the DB of courses
      * @return DTOuserEvents contains all the events, full day events and the exams
      * @throws GeneralSecurityException GeneralSecurityException
@@ -256,7 +273,7 @@ public class Engine {
 
         List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
 
-        /*// set up startDate & endDate
+        /* set up startDate & endDate
         // ...
         DateTime start = new DateTime(System.currentTimeMillis());
         DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);*/
@@ -277,7 +294,7 @@ public class Engine {
         List<Event> allEventsFromCalendars = new ArrayList<>();
 
         for (CalendarListEntry calendar : calendarList) {
-            Events events = null;
+            Events events;
             try {
                 events = calendarService.events().list(calendar.getId())
                         .setTimeMin(start)
@@ -305,7 +322,7 @@ public class Engine {
         String pageToken = null;
         List<CalendarListEntry> calendars = new ArrayList<>();
         do {
-            CalendarList calendarList = null;
+            CalendarList calendarList;
             try {
                 calendarList = calendarService.calendarList().list().setPageToken(pageToken).execute();
             } catch (IOException e) {
@@ -411,7 +428,7 @@ public class Engine {
      */
     private static String createPlanItCalendar(Calendar calendarService, User user, UserRepository userRepo) {
 
-        String planItCalendarID = "";
+        String planItCalendarID;
 
         String PlanItCalendarId = user.getPlanItCalendarID();
 
@@ -431,7 +448,7 @@ public class Engine {
         calendar.setTimeZone(ISRAEL_TIME_ZONE);
 
         // Insert the new calendar
-        com.google.api.services.calendar.model.Calendar createdCalendar = null;
+        com.google.api.services.calendar.model.Calendar createdCalendar;
         try {
             createdCalendar = calendarService.calendars().insert(calendar).execute();
         } catch (IOException e) {
@@ -816,7 +833,7 @@ public class Engine {
      * @param accessToken the accessToken
      * @return true for valid, false otherwise
      */
-    public static boolean isAccessTokenExpired(String accessToken) throws IOException {
+    public static boolean isAccessTokenExpired(String accessToken) {
         Credential credential = new GoogleCredential().setAccessToken(accessToken);
         Long expirationTime = credential.getExpirationTimeMilliseconds();
 

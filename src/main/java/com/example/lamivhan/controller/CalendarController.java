@@ -148,8 +148,8 @@ public class CalendarController {
      * also, updates the user's new access token in the DB
      *
      * @param user a {@link User} represents the user
-     * @throws IOException
-     * @throws GeneralSecurityException
+     * @throws IOException IOException
+     * @throws GeneralSecurityException GeneralSecurityException
      */
     private void checkValidAccessToken(User user) throws IOException, GeneralSecurityException {
         if (Engine.isAccessTokenExpired(user.getAccessToken())) {
