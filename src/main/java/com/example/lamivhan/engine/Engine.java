@@ -167,18 +167,20 @@ public class Engine {
      * return "חישוביות"
      */
     public static Optional<Course> extractCourseFromExam(String summary, List<Course> courses) { // TO DO
-        StringBuilder courseNameBuilder = new StringBuilder();
         String[] courseName = {""}; // init empty array
 
         // find course name from the string of the exam
-
         String[] summeryInWords = summary.split(" ");
+        Optional<Course> maybeFoundCourse = Optional.empty();
 
-        Optional<Course> maybeFoundCourse = null;
+        // scan through the String array to add words that finally will adds up to a course name from the DB
+        for (int i = summeryInWords.length - 1; i >= 0 ; i--) {
 
-        for (int i = summeryInWords.length - 1; i > 0 ; i--) {
-            courseName[0] = courseNameBuilder.append(" ").append(summeryInWords[i]).toString().trim();
-            maybeFoundCourse = courses.stream().filter(Course -> Course.getCourseName().contains(courseName[0])).findFirst();
+            // assign the new word to the start of the current course-name concatenation
+            courseName[0] = (summeryInWords[i] + " " + courseName[0]).trim();
+
+            // try to get a Course from the list of courses in the DB
+            maybeFoundCourse = courses.stream().filter(Course -> Course.getCourseName().equals(courseName[0])).findFirst();
 
             // check if found course is not a null
             if (maybeFoundCourse.isPresent()) {
@@ -203,7 +205,7 @@ public class Engine {
                                                         List<Event> fullDayEvents, List<Exam> examsFound, CoursesRepository courseRepo) {
         List<Event> allEventsFromCalendars = new ArrayList<>();
 
-        List<Course>  courses = courseRepo.findAll(); // get all courses from DB
+        List<Course> courses = courseRepo.findAll(); // get all courses from DB
 
         for (CalendarListEntry calendar : calendarList) {
             Events events;
