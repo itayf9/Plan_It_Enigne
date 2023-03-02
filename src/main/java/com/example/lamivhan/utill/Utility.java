@@ -52,9 +52,13 @@ public class Utility {
                 .toInstant();
 
         // create an instant of the end of the interval
-        Instant endOfInterval = currentDay.with(ChronoField.HOUR_OF_DAY, endStudyHours);
-        endOfInterval = endOfInterval.with(ChronoField.MINUTE_OF_DAY, endStudyMinute);
-        endOfInterval = endOfInterval.with(ChronoField.SECOND_OF_DAY, 0);
+        Instant endOfInterval = currentDay
+                .atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE))
+                .withHour(endStudyHours)
+                .withMinute(endStudyMinute)
+                .withSecond(0)
+                .withNano(0)
+                .toInstant();
 
         return new DTOstartAndEndOfInterval(startOfInterval, endOfInterval);
     }
