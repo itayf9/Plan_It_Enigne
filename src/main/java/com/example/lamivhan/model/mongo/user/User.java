@@ -17,7 +17,7 @@ public class User {
     private boolean isDayLearner;
 
     @Field(name = "email")
-    private final String email;
+    private String email;
 
     @Field(name = "user_preferences")
     private Preferences userPreferences;
@@ -28,6 +28,9 @@ public class User {
     @Field(name = "access_token")
     private String accessToken;
 
+    @Field(name = "expires_in")
+    private long expireTimeInMilliseconds;
+
     @Field(name = "refresh_token")
     private String refreshToken;
 
@@ -37,6 +40,18 @@ public class User {
         this.userPreferences = userPreferences;
         this.email = email;
         this.planItCalendarID = null;
+    }
+
+    // need empty ctor for mongo to execute methods of findBy..
+    public User() {
+    }
+
+    public User(String email, String accessToken, long expireTimeInMilliseconds, String refreshToken) {
+        this.userPreferences = new Preferences();
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.email = email;
+        this.expireTimeInMilliseconds = expireTimeInMilliseconds;
     }
 
     public String getEmail() {
@@ -50,14 +65,6 @@ public class User {
     public String getRefreshToken() {
         return refreshToken;
     }
-
-    public User(String email, String accessToken, String refreshToken) {
-        this.userPreferences = new Preferences();
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        this.email = email;
-    }
-
 
     public String getUserName() {
         return userName;
@@ -97,5 +104,13 @@ public class User {
 
     public void setRefreshToken(String refreshToken) {
         this.refreshToken = refreshToken;
+    }
+
+    public long getExpireTimeInMilliseconds() {
+        return expireTimeInMilliseconds;
+    }
+
+    public void setExpireTimeInMilliseconds(long expireTimeInMilliseconds) {
+        this.expireTimeInMilliseconds = expireTimeInMilliseconds;
     }
 }

@@ -14,16 +14,15 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+@CrossOrigin(origins = "http://localhost:3000")
 
 @RestController
 public class LoginController {
@@ -50,9 +49,11 @@ public class LoginController {
      * @param code auth-code of the user
      * @return response entity with status message
      */
+    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/sign-up")
-    public ResponseEntity<String> signUp(@RequestBody String code) throws IOException {
+    public ResponseEntity<String> signUp(@RequestParam String code) throws IOException {
 
+        code = URLDecoder.decode(code, StandardCharsets.UTF_8);
         DTOtokens tokens = getEmailAndTokensFromAuthCode(code);
 
         String email = tokens.getUserEmail();
@@ -61,7 +62,7 @@ public class LoginController {
         if (userRepo.findUserByEmail(email).isEmpty()) {
             // 1. create Java user-object
             // 2. save user to DB with userRepo
-            userRepo.save(new User(email, tokens.getRefreshToken(), tokens.getAccessToken()));
+            userRepo.save(new User(email, tokens.getAccessToken(), tokens.getExpireTimeInMilliseconds(), tokens.getRefreshToken()));
             return ResponseEntity.status(HttpStatus.OK).body("User saved successfully");
         }
         return ResponseEntity.status(HttpStatus.CONFLICT).body("User already exist please log-in");
@@ -76,16 +77,15 @@ public class LoginController {
     private DTOtokens getEmailAndTokensFromAuthCode(String code) throws IOException {
         HttpTransport httpTransport = new NetHttpTransport();
         JsonFactory jsonFactory = GsonFactory.getDefaultInstance();
-
-        code = URLDecoder.decode(code, StandardCharsets.UTF_8);
-
-        String REDIRECT_URI = "http://localhost:8083/callback";
+        String REDIRECT_URI = "http://localhost:3000";
+        String CLIENT_ID = Objects.requireNonNull(env.getProperty("spring.security.oauth2.client.registration.google.client-id"));
+        String CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
         GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
                 httpTransport,
                 jsonFactory,
-                Objects.requireNonNull(env.getProperty("spring.security.oauth2.client.registration.google.client-id")),
-                env.getProperty("spring.security.oauth2.client.registration.google.client-secret"),
+                CLIENT_ID,
+                CLIENT_SECRET,
                 code,
                 REDIRECT_URI
         ).execute();
@@ -93,8 +93,12 @@ public class LoginController {
         String email = tokenResponse.parseIdToken().getPayload().getEmail();
 
         String accessToken = tokenResponse.getAccessToken();
+
+        // we decrease the 100 seconds to make sure expire date will be valid even with busy network traffic
+        long expireTimeInMilliseconds = Instant.now().plusMillis(((tokenResponse.getExpiresInSeconds() - 100) * 1000)).toEpochMilli();
+
         String refreshToken = tokenResponse.getRefreshToken();
-        return new DTOtokens(accessToken, refreshToken, email);
+        return new DTOtokens(accessToken, expireTimeInMilliseconds, refreshToken, email);
     }
 
     /**

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -159,9 +160,11 @@ public class CalendarController {
 
             // refresh the accessToken
             TokenResponse tokensResponse = Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
+            long expireTimeInMilliseconds = Instant.now().plusMillis(((tokensResponse.getExpiresInSeconds() - 100) * 1000)).toEpochMilli();
 
             // updates the access token of the user in the DB
             user.setAccessToken(tokensResponse.getAccessToken());
+            user.setExpireTimeInMilliseconds(expireTimeInMilliseconds);
             userRepo.save(user);
         }
     }
