@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -63,7 +64,7 @@ public class CalendarController {
         User user = maybeUser.get();
 
         // check if accessToken is already invalid
-        checkValidAccessToken(user);
+        validateAccessToken(user);
 
         // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
@@ -109,7 +110,7 @@ public class CalendarController {
         User user = maybeUser.get();
 
         // check if accessToken is already invalid
-        checkValidAccessToken(user);
+        validateAccessToken(user);
 
         // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
@@ -151,17 +152,19 @@ public class CalendarController {
      * @throws IOException IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
-    private void checkValidAccessToken(User user) throws IOException, GeneralSecurityException {
-        if (Engine.isAccessTokenExpired(user.getAccessToken())) {
+    private void validateAccessToken(User user) throws IOException, GeneralSecurityException {
+        if (!Engine.isAccessTokenValid(user.getExpireTimeInMilliseconds())) {
 
             String clientID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
             String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
             // refresh the accessToken
             TokenResponse tokensResponse = Engine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
+            long expireTimeInMilliseconds = Instant.now().plusMillis(((tokensResponse.getExpiresInSeconds() - 100) * 1000)).toEpochMilli();
 
             // updates the access token of the user in the DB
             user.setAccessToken(tokensResponse.getAccessToken());
+            user.setExpireTimeInMilliseconds(expireTimeInMilliseconds);
             userRepo.save(user);
         }
     }

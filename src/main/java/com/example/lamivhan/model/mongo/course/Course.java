@@ -21,6 +21,8 @@ public class Course {
     @Field(name = "subjects-practice-percentage")
     private int subjectsPracticePercentage;
 
+    public Course() {
+    }
 
     public Course(String courseName, int difficultyLevel, int credits, int recommendedStudyTime, String[] courseSubjects, int subjectsPracticePercentage) {
         this.courseName = courseName;
