@@ -13,10 +13,8 @@ import com.example.lamivhan.utill.Utility;
 import com.example.lamivhan.utill.dto.DTOfreetime;
 import com.example.lamivhan.utill.dto.DTOstartAndEndOfInterval;
 import com.example.lamivhan.utill.dto.DTOuserEvents;
-import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.auth.oauth2.RefreshTokenRequest;
 import com.google.api.client.auth.oauth2.TokenResponse;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
@@ -27,6 +25,7 @@ import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 
 import java.io.IOException;
@@ -126,7 +125,7 @@ public class CalendarEngine {
                 selectedStart = userStudyStartFirst;
             }
 
-            if (selectedStart.until(selectedEnd, ChronoUnit.HOURS) >= userStudySessionTime) {
+            if (selectedStart.until(selectedEnd, ChronoUnit.MINUTES) >= userStudySessionTime) {
                 // adds the study time of the first day
                 adjustedUserFreeSlots.add(new TimeSlot(new DateTime(selectedStart.toEpochMilli()), new DateTime(selectedEnd.toEpochMilli())));
                 totalFreeTime += (selectedEnd.toEpochMilli() - selectedStart.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
@@ -149,7 +148,7 @@ public class CalendarEngine {
             }
 
             if ((userStudyStartNext.isBefore(endOfCurrentSlot))
-                    && (userStudyStartNext.until(endOfCurrentSlot, ChronoUnit.HOURS) >= userStudySessionTime)) {
+                    && (userStudyStartNext.until(endOfCurrentSlot, ChronoUnit.MINUTES) >= userStudySessionTime)) {
                 // adds the study time of the last day
                 adjustedUserFreeSlots.add(new TimeSlot(new DateTime(userStudyStartNext.toEpochMilli()), new DateTime(endOfCurrentSlot.toEpochMilli())));
                 totalFreeTime += (endOfCurrentSlot.toEpochMilli() - userStudyStartNext.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
@@ -174,7 +173,7 @@ public class CalendarEngine {
         Optional<Course> maybeFoundCourse = Optional.empty();
 
         // scan through the String array to add words that finally will adds up to a course name from the DB
-        for (int i = summeryInWords.length - 1; i >= 0 ; i--) {
+        for (int i = summeryInWords.length - 1; i >= 0; i--) {
 
             // assign the new word to the start of the current course-name concatenation
             courseName[0] = (summeryInWords[i] + " " + courseName[0]).trim();
@@ -270,21 +269,19 @@ public class CalendarEngine {
      * @throws GeneralSecurityException GeneralSecurityException
      * @throws IOException              IOException
      */
-    public static DTOuserEvents getEvents(String accessToken, String start, String end, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
+    public static DTOuserEvents getEvents(String accessToken, long expireTimeInMilliSeconds, String start, String end, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
         // get user's calendar service
-        Calendar calendarService = getCalendarService(accessToken, jsonFactory);
+        Calendar calendarService = getCalendarService(accessToken, expireTimeInMilliSeconds, jsonFactory);
 
         // get user's calendar list
-
         List<CalendarListEntry> calendarList = getCalendarList(calendarService);
-
-        /* set up startDate & endDate
-        // ...
-        DateTime start = new DateTime(System.currentTimeMillis());
-        DateTime end = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);*/
 
         DateTime startDate = new DateTime(start);
         DateTime endDate = new DateTime(end);
+
+
+        /*DateTime startDate = new DateTime(Instant.parse(start).toEpochMilli());
+        DateTime endDate = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);*/
 
         List<Event> fullDayEvents = new ArrayList<>();
         List<Exam> examsFound = new LinkedList<>();
@@ -327,20 +324,19 @@ public class CalendarEngine {
      * @throws GeneralSecurityException GeneralSecurityException
      * @throws IOException              IOException
      */
-    private static Calendar getCalendarService(String access_token, JsonFactory JSON_FACTORY) throws GeneralSecurityException, IOException {
+    private static Calendar getCalendarService(String access_token, long expireTimeInMilliSeconds, JsonFactory JSON_FACTORY) throws GeneralSecurityException, IOException {
 
         // Build a new authorized API client service.
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        Date expireDate = new Date(new Date().getTime() + 3600000);
+        Date expireDate = new Date(expireTimeInMilliSeconds);
 
-        com.google.auth.oauth2.AccessToken accessToken = new com.google.auth.oauth2.AccessToken(access_token, expireDate);
+        AccessToken accessToken = new AccessToken(access_token, expireDate);
         GoogleCredentials credential = new GoogleCredentials(accessToken);
         HttpRequestInitializer httpRequestInitializer = new HttpCredentialsAdapter(credential);
 
         return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, httpRequestInitializer)
                 .setApplicationName(Constants.APPLICATION_NAME)
                 .build();
-
     }
 
     /*public String test(AccessToken accessToken) throws GeneralSecurityException, IOException {
@@ -737,8 +733,7 @@ public class CalendarEngine {
 
         long breakTime = user.getUserPreferences().getUserBreakTime();
 
-        int studyTimeInHours = user.getUserPreferences().getStudySessionTime();
-        long studyTimeInMinutes = studyTimeInHours * 60L;
+        int studyTimeInMinutes = user.getUserPreferences().getStudySessionTime();
 
         // go through the slots list
         for (TimeSlot timeSlot : freeTimeSlots) {

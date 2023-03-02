@@ -3,6 +3,7 @@ package com.example.lamivhan.utill;
 import com.example.lamivhan.utill.dto.DTOstartAndEndOfInterval;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 
@@ -35,18 +36,29 @@ public class Utility {
      * @return a {@link DTOstartAndEndOfInterval} represents the current userStudyStartTime and userStudyEndTime values
      */
     public static DTOstartAndEndOfInterval getCurrentInterval(Instant currentDay, int userStudyStartTime, int userStudyEndTime) {
-        long startStudyHours = convertUserStudyTimeToHours(userStudyStartTime);
-        long startStudyMinute = convertUserStudyTimeToMinute(userStudyStartTime);
-        long endStudyHours = convertUserStudyTimeToHours(userStudyEndTime);
-        long endStudyMinute = convertUserStudyTimeToMinute(userStudyEndTime);
+
+        int startStudyHours = convertUserStudyTimeToHours(userStudyStartTime);
+        int startStudyMinute = convertUserStudyTimeToMinute(userStudyStartTime);
+        int endStudyHours = convertUserStudyTimeToHours(userStudyEndTime);
+        int endStudyMinute = convertUserStudyTimeToMinute(userStudyEndTime);
+
         // create an instant of the start of the interval
-        Instant startOfInterval = currentDay.with(ChronoField.HOUR_OF_DAY, startStudyHours);
-        startOfInterval = startOfInterval.with(ChronoField.MINUTE_OF_DAY, startStudyMinute);
-        startOfInterval = startOfInterval.with(ChronoField.SECOND_OF_DAY, 0);
+        Instant startOfInterval = currentDay
+                .atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE))
+                .withHour(startStudyHours)
+                .withMinute(startStudyMinute)
+                .withSecond(0)
+                .withNano(0)
+                .toInstant();
+
         // create an instant of the end of the interval
-        Instant endOfInterval = currentDay.with(ChronoField.HOUR_OF_DAY, endStudyHours);
-        endOfInterval = endOfInterval.with(ChronoField.MINUTE_OF_DAY, endStudyMinute);
-        endOfInterval = endOfInterval.with(ChronoField.SECOND_OF_DAY, 0);
+        Instant endOfInterval = currentDay
+                .atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE))
+                .withHour(endStudyHours)
+                .withMinute(endStudyMinute)
+                .withSecond(0)
+                .withNano(0)
+                .toInstant();
 
         return new DTOstartAndEndOfInterval(startOfInterval, endOfInterval);
     }
@@ -67,8 +79,8 @@ public class Utility {
      * @param userStudyTime is an int that represents user study time (e.g. 800 is 8:00).
      * @return a long number that represents only the hours from user study time.
      */
-    private static long convertUserStudyTimeToHours(int userStudyTime) {
-        long hours;
+    private static int convertUserStudyTimeToHours(int userStudyTime) {
+        int hours;
 
         hours = userStudyTime / 100;
 
@@ -85,8 +97,8 @@ public class Utility {
      * @param userStudyTime is an int that represents user study time (e.g. 800 is 8:00).
      * @return a long number that represents only the minutes from user study time.
      */
-    private static long convertUserStudyTimeToMinute(int userStudyTime) {
-        long minute;
+    private static int convertUserStudyTimeToMinute(int userStudyTime) {
+        int minute;
 
         minute = userStudyTime % 100;
 

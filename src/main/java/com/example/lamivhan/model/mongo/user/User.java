@@ -11,11 +11,6 @@ public class User {
     @Id
     private String id;
 
-    @Field(name = "user_name")
-    private String userName;
-    @Field(name = "is_day_learner")
-    private boolean isDayLearner;
-
     @Field(name = "email")
     private String email;
 
@@ -34,15 +29,7 @@ public class User {
     @Field(name = "refresh_token")
     private String refreshToken;
 
-    public User(String userName, boolean isDayLearner, Preferences userPreferences, String email) {
-        this.userName = userName;
-        this.isDayLearner = isDayLearner;
-        this.userPreferences = userPreferences;
-        this.email = email;
-        this.planItCalendarID = null;
-    }
-
-    // need empty ctor for mongo to execute methods of findBy..
+    // need empty ctor for mongo reflection stuff
     public User() {
     }
 
@@ -52,6 +39,7 @@ public class User {
         this.refreshToken = refreshToken;
         this.email = email;
         this.expireTimeInMilliseconds = expireTimeInMilliseconds;
+        this.planItCalendarID = null;
     }
 
     public String getEmail() {
@@ -64,22 +52,6 @@ public class User {
 
     public String getRefreshToken() {
         return refreshToken;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public boolean isDayLearner() {
-        return isDayLearner;
-    }
-
-    public void setDayLearner(boolean dayLearner) {
-        isDayLearner = dayLearner;
     }
 
     public Preferences getUserPreferences() {
