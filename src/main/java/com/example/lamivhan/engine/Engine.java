@@ -809,10 +809,12 @@ public class Engine {
     }
 
     /**
-     * check if accessToken is still valid
+     * check if accessToken is still valid.
+     * the function compares the expiration time with the current time.
+     * the expiration time is related to an accessToken.
      *
-     * @param accessToken the accessToken
-     * @return true for valid, false otherwise
+     * @param expirationTime a long that represents the expiration time (in milliseconds)
+     * @return true if the token is valid, false otherwise
      */
     public static boolean isAccessTokenValid(long expirationTime) {
         Instant expirationInstant = Instant.ofEpochMilli(expirationTime); // e.g. 1781874521 representing the time of 2023-05-17 - 14:30
