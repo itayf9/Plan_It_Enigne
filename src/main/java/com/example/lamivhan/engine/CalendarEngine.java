@@ -126,7 +126,7 @@ public class CalendarEngine {
                 selectedStart = userStudyStartFirst;
             }
 
-            if (selectedStart.until(selectedEnd, ChronoUnit.HOURS) >= userStudySessionTime) {
+            if (selectedStart.until(selectedEnd, ChronoUnit.MINUTES) >= userStudySessionTime) {
                 // adds the study time of the first day
                 adjustedUserFreeSlots.add(new TimeSlot(new DateTime(selectedStart.toEpochMilli()), new DateTime(selectedEnd.toEpochMilli())));
                 totalFreeTime += (selectedEnd.toEpochMilli() - selectedStart.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
@@ -149,7 +149,7 @@ public class CalendarEngine {
             }
 
             if ((userStudyStartNext.isBefore(endOfCurrentSlot))
-                    && (userStudyStartNext.until(endOfCurrentSlot, ChronoUnit.HOURS) >= userStudySessionTime)) {
+                    && (userStudyStartNext.until(endOfCurrentSlot, ChronoUnit.MINUTES) >= userStudySessionTime)) {
                 // adds the study time of the last day
                 adjustedUserFreeSlots.add(new TimeSlot(new DateTime(userStudyStartNext.toEpochMilli()), new DateTime(endOfCurrentSlot.toEpochMilli())));
                 totalFreeTime += (endOfCurrentSlot.toEpochMilli() - userStudyStartNext.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
@@ -737,8 +737,7 @@ public class CalendarEngine {
 
         long breakTime = user.getUserPreferences().getUserBreakTime();
 
-        int studyTimeInHours = user.getUserPreferences().getStudySessionTime();
-        long studyTimeInMinutes = studyTimeInHours * 60L;
+        int studyTimeInMinutes = user.getUserPreferences().getStudySessionTime();
 
         // go through the slots list
         for (TimeSlot timeSlot : freeTimeSlots) {
