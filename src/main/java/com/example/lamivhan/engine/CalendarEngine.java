@@ -216,8 +216,11 @@ public class CalendarEngine {
                         .setTimeMax(end)
                         .setSingleEvents(true)
                         .execute();
+            } catch (GoogleJsonResponseException e) {
+                throw new RuntimeException(e);
             } catch (IOException e) {
                 throw new RuntimeException(e);
+
             }
             // check if calendar is the exams calendar
             if (calendar.getSummary().equals("יומן אישי מתחנת המידע")) {
@@ -289,29 +292,6 @@ public class CalendarEngine {
         // get List of user's events
         List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, examsFound, courseRepo);
         return new DTOuserEvents(fullDayEvents, examsFound, events, calendarService);
-    }
-
-    // same function just without sort at the end - delete this
-    private static List<Event> getEventsFromCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end) {
-        List<Event> allEventsFromCalendars = new ArrayList<>();
-
-        for (CalendarListEntry calendar : calendarList) {
-            Events events;
-            try {
-                events = calendarService.events().list(calendar.getId())
-                        .setTimeMin(start)
-                        .setOrderBy("startTime")
-                        .setTimeMax(end)
-                        .setSingleEvents(true)
-                        .execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            allEventsFromCalendars.addAll(events.getItems());
-        }
-
-
-        return allEventsFromCalendars;
     }
 
     /**
@@ -718,7 +698,6 @@ public class CalendarEngine {
         }
     }
 
-
     /**
      * for every session, calculates the number of sessions, considering the proportions and the number of total sessions.
      * for each course X, the number of sessions is calculated as a rounded value of: (number of sessions * proportions of course X)
@@ -830,24 +809,18 @@ public class CalendarEngine {
     }
 
     /**
-     * check if accessToken is still valid
+     * check if accessToken is still valid.
+     * the function compares the expiration time with the current time.
+     * the expiration time is related to an accessToken.
      *
-     * @param accessToken the accessToken
-     * @return true for valid, false otherwise
+     * @param expirationTime a long that represents the expiration time (in milliseconds)
+     * @return true if the token is valid, false otherwise
      */
-    public static boolean isAccessTokenExpired(String accessToken) {
-        Credential credential = new GoogleCredential().setAccessToken(accessToken);
-        Long expirationTime = credential.getExpirationTimeMilliseconds();
-
-        if (expirationTime == null) {
-            return false;
-        }
-
-        Instant expirationInstant = Instant.ofEpochMilli(expirationTime);
+    public static boolean isAccessTokenValid(long expirationTime) {
+        Instant expirationInstant = Instant.ofEpochMilli(expirationTime); // e.g. 1781874521 representing the time of 2023-05-17 - 14:30
         Instant now = Instant.now();
-        return expirationInstant.isBefore(now);
+        return expirationInstant.isAfter(now); // true if expire date is before the current time 2023-05-17 - 14:40
     }
-
 
     /**
      * get a new accessToken with the refresh token
