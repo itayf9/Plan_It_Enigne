@@ -39,7 +39,7 @@ import static com.example.lamivhan.utill.Constants.ISRAEL_TIME_ZONE;
 import static com.example.lamivhan.utill.Constants.PLANIT_CALENDAR_SUMMERY_NAME;
 import static com.example.lamivhan.utill.Utility.roundInstantMinutesTime;
 
-public class Engine {
+public class CalendarEngine {
 
     /**
      * 2# Takes out all the free time slots that can be taken out of the user events.
@@ -226,7 +226,7 @@ public class Engine {
                     // check if event is an exam
                     if (event.getSummary().contains("מבחן")) {
                         // get exam/course name
-                        Optional<Course> maybeFoundCourse = Engine.extractCourseFromExam(event.getSummary(), courses);
+                        Optional<Course> maybeFoundCourse = extractCourseFromExam(event.getSummary(), courses);
 
                         // add to list of found exams
                         maybeFoundCourse.ifPresent(course -> examsFound.add(new Exam(course, event.getStart().getDateTime())));
@@ -269,11 +269,11 @@ public class Engine {
      */
     public static DTOuserEvents getEvents(String accessToken, String start, String end, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
         // get user's calendar service
-        Calendar calendarService = Engine.getCalendarService(accessToken, jsonFactory);
+        Calendar calendarService = getCalendarService(accessToken, jsonFactory);
 
         // get user's calendar list
 
-        List<CalendarListEntry> calendarList = Engine.getCalendarList(calendarService);
+        List<CalendarListEntry> calendarList = getCalendarList(calendarService);
 
         /* set up startDate & endDate
         // ...
@@ -287,7 +287,7 @@ public class Engine {
         List<Exam> examsFound = new LinkedList<>();
 
         // get List of user's events
-        List<Event> events = Engine.getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, examsFound, courseRepo);
+        List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, examsFound, courseRepo);
         return new DTOuserEvents(fullDayEvents, examsFound, events, calendarService);
     }
 
