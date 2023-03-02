@@ -1,7 +1,6 @@
 package com.example.lamivhan.controller;
 
 import com.example.lamivhan.engine.CalendarEngine;
-import com.example.lamivhan.engine.HolidaysEngine;
 import com.example.lamivhan.model.mongo.course.CoursesRepository;
 import com.example.lamivhan.model.mongo.user.User;
 import com.example.lamivhan.model.mongo.user.UserRepository;
@@ -10,7 +9,6 @@ import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.calendar.model.Event;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -24,12 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
-import java.time.temporal.ChronoField;
-import java.util.*;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 public class CalendarController {
@@ -51,12 +47,11 @@ public class CalendarController {
     private Set<String> holidaysDatesCurrentYear;
     private Set<String> holidaysDatesNextYear;
 
-    @PostConstruct
+    /*@PostConstruct
     private void init() {
         holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), "il", Instant.now().get(ChronoField.YEAR));
         holidaysDatesNextYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), "il", Instant.now().get(ChronoField.YEAR) + 1);
-    }
-
+    }*/
 
     /**
      * Scan the user's Calendar to get list of events and check to see if user has fullDayEvents existed.
@@ -83,7 +78,7 @@ public class CalendarController {
 
         // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), start, end, JSON_FACTORY, courseRepo);
+        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, JSON_FACTORY, courseRepo);
 
         // events - a list of events that represents all the user's events
         // fullDayEvents - a list of events that represents the user's full day events
@@ -110,8 +105,6 @@ public class CalendarController {
 
             // return the user with the updated list of fullDayEvents.
             return ResponseEntity.status(HttpStatus.CONFLICT).body(copyOfFullDayEvents);
-
-
         } else {
 
             CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
@@ -145,7 +138,7 @@ public class CalendarController {
 
         // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), start, end, JSON_FACTORY, courseRepo);
+        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, JSON_FACTORY, courseRepo);
 
         // events - a list of events that represents all the user's events
         // fullDayEvents - a list of events that represents the user's full day events
@@ -180,7 +173,7 @@ public class CalendarController {
      * also, updates the user's new access token in the DB
      *
      * @param user a {@link User} represents the user
-     * @throws IOException IOException
+     * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
     private void validateAccessToken(User user) throws IOException, GeneralSecurityException {
@@ -190,7 +183,7 @@ public class CalendarController {
             String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
             // refresh the accessToken
-            
+
             TokenResponse tokensResponse = CalendarEngine.refreshAccessToken(user.getRefreshToken(), clientID, clientSecret, JSON_FACTORY);
             long expireTimeInMilliseconds = Instant.now().plusMillis(((tokensResponse.getExpiresInSeconds() - 100) * 1000)).toEpochMilli();
 
