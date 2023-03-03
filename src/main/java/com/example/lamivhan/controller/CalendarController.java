@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.example.lamivhan.utill.Constants.ISRAEL_HOLIDAYS_CODE;
+
 @RestController
 public class CalendarController {
 
@@ -52,10 +54,10 @@ public class CalendarController {
 
     @PostConstruct
     private void init() {
-        // extract the holidays dates as iso format and return it in a set of string(iso format) (for current year and the next yaer).
+        // extract the holidays dates as iso format and return it in a set of string(iso format) (for current year and the next year).
 
-        holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), "il", ZonedDateTime.now().getYear());
-        holidaysDatesNextYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), "il", ZonedDateTime.now().getYear() + 1);
+        holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear());
+        holidaysDatesNextYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear() + 1);
     }
 
     /**
@@ -182,6 +184,8 @@ public class CalendarController {
      * @throws GeneralSecurityException GeneralSecurityException
      */
     private void validateAccessToken(User user) throws IOException, GeneralSecurityException {
+
+        // checks if the access token is not valid yet
         if (!CalendarEngine.isAccessTokenValid(user.getExpireTimeInMilliseconds())) {
 
             String clientID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");

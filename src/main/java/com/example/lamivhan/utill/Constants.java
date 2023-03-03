@@ -17,5 +17,9 @@ public class Constants {
 
     public static final String EVENT_SUMMERY_PREFIX = "למידה ל";
 
+    public static final String EVENT_DESCRIPTION_PRACTISE_PREV_EXAMS = "תרגול מבחנים";
+
+    public static final String ISRAEL_HOLIDAYS_CODE = "il";
+
     public static final String ISRAEL_TIME_ZONE = "Asia/Jerusalem";
 }
