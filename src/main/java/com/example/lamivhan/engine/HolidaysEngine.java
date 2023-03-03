@@ -20,8 +20,8 @@ public class HolidaysEngine {
     /**
      * get api key, country, year and return a set of holidays days for the current country in the requested year.
      *
-     * @param holidaysApiKey api key form calendarific
-     * @param country        country (ISO-3166) from calendarific
+     * @param holidaysApiKey api key form "calendarific"
+     * @param country        country (ISO-3166) from "calendarific"
      * @param year           the requested year
      * @return set of string that present the dates of the holidays.
      */
@@ -36,7 +36,7 @@ public class HolidaysEngine {
         url = createUrlForCurrentCountryAndYear(holidaysApiKey, country, year);
 
         try {
-            // send get request to calendarific server with the url that require to get all jews holidays
+            // send get request to "calendarific" server with the url that require to get all jews holidays
             HttpResponse<String> response = Unirest.get(url).asString();
 
             // parse the response to holidaysResponse object
@@ -64,7 +64,7 @@ public class HolidaysEngine {
     }
 
     /**
-     * get the country and the year and return in url the full url to get request form calendarific server.
+     * get the country and the year and return in url the full url to get request form "calendarific" server.
      *
      * @param country the country we want the holidays from (e.g. il is all the jewish and national holidays in israel)
      * @param year    the year we want the date of the holidays

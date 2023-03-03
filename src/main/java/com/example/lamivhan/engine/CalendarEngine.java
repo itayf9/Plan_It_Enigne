@@ -34,8 +34,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-import static com.example.lamivhan.utill.Constants.ISRAEL_TIME_ZONE;
-import static com.example.lamivhan.utill.Constants.PLANIT_CALENDAR_SUMMERY_NAME;
+import static com.example.lamivhan.utill.Constants.*;
 import static com.example.lamivhan.utill.Utility.roundInstantMinutesTime;
 
 public class CalendarEngine {
@@ -63,9 +62,9 @@ public class CalendarEngine {
 
         // get all free time slots in the event
         for (int i = 0; i < userEvents.size() - 1; i++) {
-            // get start of event in i+1 place
+            // get start of event in (i+1) place
             long startOfNextEvent = userEvents.get(i + 1).getStart().getDateTime().getValue();
-            // get the end of event in i place
+            // get the end of event in (i) place
             long endOfCurrentEvent = userEvents.get(i).getEnd().getDateTime().getValue();
             if (endOfCurrentEvent < startOfNextEvent) {
                 //check if we have time to add, add to list of free time.
@@ -172,7 +171,7 @@ public class CalendarEngine {
         String[] summeryInWords = summary.split(" ");
         Optional<Course> maybeFoundCourse = Optional.empty();
 
-        // scan through the String array to add words that finally will adds up to a course name from the DB
+        // scan through the String array to add words that finally will add up to a course name from the DB
         for (int i = summeryInWords.length - 1; i >= 0; i--) {
 
             // assign the new word to the start of the current course-name concatenation
@@ -467,8 +466,7 @@ public class CalendarEngine {
         // goes from the end to the start and embed courses to sessions
         embedCoursesInSessions(courseName2numberOfSessions, sessionsList, exams);
 
-        // #5
-
+        // #5 - updates the planIt calendar
         updatePlanItCalendar(sessionsList, service, planItCalendarID);
 
     }
@@ -594,7 +592,7 @@ public class CalendarEngine {
 
                 if (numberOfSessionsForSubjects < j) {
                     // set "test" Description in the current session
-                    sessionsListOfCurrentExam.get(j).setDescription("תרגול מבחנים");
+                    sessionsListOfCurrentExam.get(j).setDescription(EVENT_DESCRIPTION_PRACTISE_PREV_EXAMS);
                 } else {
 
                     if (subjectsPerSession < 1) {
@@ -847,6 +845,28 @@ public class CalendarEngine {
         return refreshTokenRequest.execute();
     }
 
+    public static List<Event> handleHolidaysInFullDaysEvents(List<Event> fullDayEvents, List<Event> events
+            , boolean isStudyOnHolyDays, Set<String> holidaysDatesCurrentYear, Set<String> holidaysDatesNextYear) {
+        List<Event> copyOfFullDayEvents = new ArrayList<>(fullDayEvents);
+        // scan through the list and check if an event is a holiday.
+        for (Event fullDayEvent : fullDayEvents) {
+            if (holidaysDatesCurrentYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())
+                    || holidaysDatesNextYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())) {
+
+                // check if user want to study on holidays
+                if (isStudyOnHolyDays) {
+
+                    // remove the holiday from the list of events
+                    events.remove(fullDayEvent);
+                }
+
+                // remove the event from the copy of list of fullDayEvents and the events list
+                copyOfFullDayEvents.remove(fullDayEvent);
+            }
+        }
+
+        return copyOfFullDayEvents;
+    }
 
 }
 
