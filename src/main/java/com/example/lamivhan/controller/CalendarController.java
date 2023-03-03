@@ -16,10 +16,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -32,6 +29,7 @@ import java.util.Set;
 
 import static com.example.lamivhan.utill.Constants.ISRAEL_HOLIDAYS_CODE;
 
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 public class CalendarController {
 
@@ -91,24 +89,22 @@ public class CalendarController {
         // fullDayEvents - a list of events that represents the user's full day events
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
         List<Event> events = userEvents.getEvents();
-        List<Event> copyOfFullDayEvents = new ArrayList<>(fullDayEvents);
+        List<Exam> examsFound = userEvents.getExamsFound();
+
+        // checks if no exams are
+        if (examsFound.size() <= 0) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new DTOscanResponseToClient(false, Constants.ERROR_NO_EXAMS_FOUND, fullDayEvents));
+        }
+
 
         if (fullDayEvents.size() != 0) {
 
-            // check if user want to study on holidays
-            if (user.getUserPreferences().isStudyOnHolyDays()) {
+            fullDayEvents = CalendarEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
+                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
 
-                // scan through the list and check if an event is a holiday.
-                for (Event fullDayEvent : fullDayEvents) {
-                    if (holidaysDatesCurrentYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())
-                            || holidaysDatesNextYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())) {
-
-                        // remove the event from the copy of list of fullDayEvents and the events list
-                        copyOfFullDayEvents.remove(fullDayEvent);
-                        events.remove(fullDayEvent);
-                    }
-                }
-            }
+            // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
+            if (fullDayEvents.size() != 0) {
 
             // return the user with the updated list of fullDayEvents.
             return ResponseEntity.status(HttpStatus.CONFLICT).body(copyOfFullDayEvents);
