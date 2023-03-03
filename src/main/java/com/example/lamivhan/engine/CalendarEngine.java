@@ -271,6 +271,7 @@ public class CalendarEngine {
      */
     public static DTOuserEvents getEvents(String accessToken, long expireTimeInMilliSeconds, String start, String end, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
         // get user's calendar service
+
         Calendar calendarService = getCalendarService(accessToken, expireTimeInMilliSeconds, jsonFactory);
 
         // get user's calendar list
