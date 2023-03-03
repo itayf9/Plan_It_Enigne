@@ -115,13 +115,16 @@ public class CalendarController {
             // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
             if (fullDayEvents.size() != 0) {
 
-            // return the user with the updated list of fullDayEvents.
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(copyOfFullDayEvents);
-        } else {
+                // return the user with the updated list of fullDayEvents.
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new DTOscanResponseToClient(false, Constants.UNHANDLED_FULL_DAY_EVENTS, fullDayEvents));
+            }
 
-            CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
-            return ResponseEntity.status(HttpStatus.CREATED).body(new ArrayList<>());
         }
+
+        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new DTOscanResponseToClient(true, Constants.NO_PROBLEM, new ArrayList<>()));
     }
 
     /**
@@ -160,6 +163,9 @@ public class CalendarController {
 
         // check if fullDayEvents List is empty (which doesn't suppose to be)
         if (fullDayEvents.size() != 0) {
+
+            fullDayEvents = CalendarEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
+                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
 
             // go through the list
             for (int i = 0; i < fullDayEvents.size(); i++) {

@@ -845,6 +845,28 @@ public class CalendarEngine {
         return refreshTokenRequest.execute();
     }
 
+    public static List<Event> handleHolidaysInFullDaysEvents(List<Event> fullDayEvents, List<Event> events
+            , boolean isStudyOnHolyDays, Set<String> holidaysDatesCurrentYear, Set<String> holidaysDatesNextYear) {
+        List<Event> copyOfFullDayEvents = new ArrayList<>(fullDayEvents);
+        // scan through the list and check if an event is a holiday.
+        for (Event fullDayEvent : fullDayEvents) {
+            if (holidaysDatesCurrentYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())
+                    || holidaysDatesNextYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())) {
+
+                // check if user want to study on holidays
+                if (isStudyOnHolyDays) {
+
+                    // remove the holiday from the list of events
+                    events.remove(fullDayEvent);
+                }
+
+                // remove the event from the copy of list of fullDayEvents and the events list
+                copyOfFullDayEvents.remove(fullDayEvent);
+            }
+        }
+
+        return copyOfFullDayEvents;
+    }
 
 }
 
