@@ -52,16 +52,10 @@ public class HolidaysEngine {
             Holiday[] holidaysArray =  holidaysResponse.getResponse().getHolidays();
 
             for (Holiday holiday : holidaysArray) {
-                System.out.println(holiday.getName() + " : " + holiday.getDate().getIso());
 
                 // add the date of the holidays to set
                 allHolidays.add(holiday.getDate().getIso());
             }
-
-            for (String s:allHolidays) {
-                System.out.println(s);
-            }
-
 
         } catch (UnirestException e) {
             throw new RuntimeException(e);

@@ -9,6 +9,7 @@ import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.calendar.model.Event;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -47,11 +49,13 @@ public class CalendarController {
     private Set<String> holidaysDatesCurrentYear;
     private Set<String> holidaysDatesNextYear;
 
-    /*@PostConstruct
+    @PostConstruct
     private void init() {
-        holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), "il", Instant.now().get(ChronoField.YEAR));
-        holidaysDatesNextYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), "il", Instant.now().get(ChronoField.YEAR) + 1);
-    }*/
+        // extract the holidays dates as iso format and return it in a set of string(iso format) (for current year and the next yaer).
+
+        holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), "il", ZonedDateTime.now().getYear());
+        holidaysDatesNextYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), "il", ZonedDateTime.now().getYear() + 1);
+    }
 
     /**
      * Scan the user's Calendar to get list of events and check to see if user has fullDayEvents existed.
