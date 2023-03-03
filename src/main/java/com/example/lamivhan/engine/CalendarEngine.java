@@ -814,7 +814,10 @@ public class CalendarEngine {
      */
     public static boolean isAccessTokenValid(long expirationTime) {
         Instant expirationInstant = Instant.ofEpochMilli(expirationTime); // e.g. 1781874521 representing the time of 2023-05-17 - 14:30
-        Instant now = Instant.now();
+
+        /* we add extra 5 minutes to make sure if token is about to be expired will be refreshed sooner */
+        Instant now = Instant.now().plus(5, ChronoUnit.MINUTES);
+
         return expirationInstant.isAfter(now); // true if expire date is before the current time 2023-05-17 - 14:40
     }
 
