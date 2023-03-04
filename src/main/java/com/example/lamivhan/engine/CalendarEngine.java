@@ -21,6 +21,7 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.*;
@@ -38,6 +39,11 @@ import static com.example.lamivhan.utill.Constants.*;
 import static com.example.lamivhan.utill.Utility.roundInstantMinutesTime;
 
 public class CalendarEngine {
+
+    /**
+     * Global instance of the JSON factory.
+     */
+    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
     /**
      * 2# Takes out all the free time slots that can be taken out of the user events.
@@ -150,10 +156,7 @@ public class CalendarEngine {
                 adjustedUserFreeSlots.add(new TimeSlot(new DateTime(userStudyStartNext.toEpochMilli()), new DateTime(endOfCurrentSlot.toEpochMilli())));
                 totalFreeTime += (endOfCurrentSlot.toEpochMilli() - userStudyStartNext.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
             }
-
-
         }
-
         return new DTOfreetime(adjustedUserFreeSlots, totalFreeTime);
     }
 
@@ -256,16 +259,15 @@ public class CalendarEngine {
      * Extract all the events that are in the user calendars.
      *
      * @param accessToken use for get the calenders from Google DB
-     * @param jsonFactory a {@link JsonFactory} that is used for Google's calendar service
      * @param courseRepo  a {@link CoursesRepository} which is the DB of courses
      * @return DTOuserEvents contains all the events, full day events and the exams
      * @throws GeneralSecurityException GeneralSecurityException
      * @throws IOException              IOException
      */
-    public static DTOuserEvents getEvents(String accessToken, long expireTimeInMilliSeconds, String start, String end, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
+    public static DTOuserEvents getEvents(String accessToken, long expireTimeInMilliSeconds, String start, String end, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
         // get user's calendar service
 
-        Calendar calendarService = getCalendarService(accessToken, expireTimeInMilliSeconds, jsonFactory);
+        Calendar calendarService = getCalendarService(accessToken, expireTimeInMilliSeconds);
 
         // get user's calendar list
         List<CalendarListEntry> calendarList = getCalendarList(calendarService);
@@ -313,12 +315,11 @@ public class CalendarEngine {
      * get Google Calendar service provider.
      *
      * @param access_token User Google AccessToken
-     * @param JSON_FACTORY Json Factory Instance
      * @return Google Calendar service provider.
      * @throws GeneralSecurityException GeneralSecurityException
      * @throws IOException              IOException
      */
-    private static Calendar getCalendarService(String access_token, long expireTimeInMilliSeconds, JsonFactory JSON_FACTORY) throws GeneralSecurityException, IOException {
+    private static Calendar getCalendarService(String access_token, long expireTimeInMilliSeconds) throws GeneralSecurityException, IOException {
 
         // Build a new authorized API client service.
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
@@ -447,8 +448,8 @@ public class CalendarEngine {
         String planItCalendarID = createPlanItCalendar(service, user, userRepo);
 
 
-        // finds the proportions of each course from 100% study time
-        Map<String, Double> coursesNames2Proportions = getCoursesProportions(exams);
+        // finds the proportions of each exam from 100% study time
+        Map<Exam, Double> exam2Proportions = getExamsProportions(exams);
 
         // separates each slot in the free slots list, to a few study sessions
         // and inserts breaks
@@ -456,10 +457,10 @@ public class CalendarEngine {
 
 
         // calculates how many sessions belong to each course
-        Map<String, Integer> courseName2numberOfSessions = distributeNumberOfSessionsToCourses(coursesNames2Proportions, sessionsList.size());
+        Map<Exam, Integer> exams2numberOfSessions = distributeNumberOfSessionsToCourses(exam2Proportions, sessionsList.size());
 
         // goes from the end to the start and embed courses to sessions
-        embedCoursesInSessions(courseName2numberOfSessions, sessionsList, exams);
+        embedCoursesInSessions(exams2numberOfSessions, sessionsList, exams);
 
         // #5 - updates the planIt calendar
         updatePlanItCalendar(sessionsList, service, planItCalendarID);
@@ -477,11 +478,11 @@ public class CalendarEngine {
     private static void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID) {
 
         // removes all previous events in the PlanIt calendar
-        try {
-            service.calendars().clear(planItCalendarID).execute();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            service.calendars().clear(planItCalendarID).execute();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
 
 
         // adds updated events to the PlanIt calendar
@@ -518,22 +519,22 @@ public class CalendarEngine {
      * embeds the details (courses' names and subjects) in the user's sessions list.
      * embeds the courses considering exams' dates, courses' proportions, and information about courses subjects
      *
-     * @param courseName2numberOfSessions a map of string to int that represents, for each course name, the required number of sessions
-     * @param sessionsList                a list of {@link StudySession} that represents the user's created study sessions
-     * @param exams                       a list of {@link Exam} that represents the user's exams
+     * @param exams2numberOfSessions a map of string to int that represents, for each course name, the required number of sessions
+     * @param sessionsList           a list of {@link StudySession} that represents the user's created study sessions
+     * @param exams                  a list of {@link Exam} that represents the user's exams
      */
-    private static void embedCoursesInSessions(Map<String, Integer> courseName2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
+    private static void embedCoursesInSessions(Map<Exam, Integer> exams2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
 
-        // represents each course name with a unique index identifier.
-        Map<String, Integer> coursesNames2Index = new HashMap<>();
+        // represents each exam with a unique index identifier.
+        Map<Exam, Integer> exam2Index = new HashMap<>();
         for (int i = 0; i < exams.size(); i++) {
-            coursesNames2Index.put(exams.get(i).getCourse().getCourseName(), i);
+            exam2Index.put(exams.get(i), i);
         }
 
         // embeds the courses' names in the sessions list
-        embedCoursesNamesInSessions(courseName2numberOfSessions, sessionsList, exams);
+        embedCoursesNamesInSessions(exams2numberOfSessions, sessionsList, exams);
         // embeds the courses' subjects in the sessions list.
-        embedCoursesSubjectsInSessions(coursesNames2Index, sessionsList, exams);
+        embedCoursesSubjectsInSessions(exam2Index, sessionsList, exams);
 
 
     }
@@ -541,19 +542,20 @@ public class CalendarEngine {
     /**
      * embeds the courses subjects in the sessions, assuming all the sessions have been embedded with courses names.
      *
-     * @param coursesNames2Index a map of string to int, representing for each course name, a unique index that is helpful for identifying the course in an internal array
-     * @param sessionsList       a list of {@link StudySession} that represent the user's created study sessions
-     * @param exams              a list of a {@link Exam} that represents the user's exams
+     * @param exams2IndexInListOfExams a map of string to int, representing for each course name, a unique index that is helpful for identifying the course in an internal array
+     * @param sessionsList             a list of {@link StudySession} that represent the user's created study sessions
+     * @param exams                    a list of a {@link Exam} that represents the user's exams
      */
-    private static void embedCoursesSubjectsInSessions(Map<String, Integer> coursesNames2Index, List<StudySession> sessionsList, List<Exam> exams) {
+    private static void embedCoursesSubjectsInSessions(Map<Exam, Integer> exams2IndexInListOfExams, List<StudySession> sessionsList, List<Exam> exams) {
 
         // create list of a list of study-sessions to make insertion of subjects easier later.
         List<List<StudySession>> listOfListOfStudySessions = new ArrayList<>(Collections.nCopies(exams.size(), new ArrayList<>()));
 
         // run through the sessions list and initialize the list of lists
         for (StudySession session : sessionsList) {
-            int courseIndexInListOfLists = coursesNames2Index.get(session.getCourseName());
-            listOfListOfStudySessions.get(courseIndexInListOfLists).add(session);
+
+            int examIndexInListOfLists = exams2IndexInListOfExams.get(session.getExamToStudyFor());
+            listOfListOfStudySessions.get(examIndexInListOfLists).add(session);
         }
 
 
@@ -566,7 +568,7 @@ public class CalendarEngine {
             int numberOfSubjectsInCurrentExam = subjects.length;
             int indexOfCurrentSubject = 0;
 
-            // present the percent for study the subject for the current test.
+            // presents the percentage for study the subject for the current exam.
             double subjectsToExamsPracticeProportions = (currentExam.getCourse().getSubjectsPracticePercentage()) * 0.01; // e.g - 60% of 100%
 
             List<StudySession> sessionsListOfCurrentExam = listOfListOfStudySessions.get(i);
@@ -624,7 +626,6 @@ public class CalendarEngine {
                         sessionsListOfCurrentExam.get(j).setDescription(subjectsToStudyBuilder.toString());
                         indexOfCurrentSubject += k;
                     }
-
                 }
 
 
@@ -647,42 +648,51 @@ public class CalendarEngine {
     /**
      * embeds the courses names in the sessions, considering the exams dates and the number of sessions required for each course.
      *
-     * @param courseName2numberOfSessions a map of string to int that represents, for each course name, the required number of sessions
-     * @param sessionsList                a list of {@link StudySession} that represents the user's created study sessions
-     * @param exams                       a list of {@link Exam} that represents the user's exams
+     * @param exams2numberOfSessions a map of string to int that represents, for each course name, the required number of sessions
+     * @param sessionsList           a list of {@link StudySession} that represents the user's created study sessions
+     * @param exams                  a list of {@link Exam} that represents the user's exams
      */
-    private static void embedCoursesNamesInSessions(Map<String, Integer> courseName2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
-        Stack<String> nextExams = new Stack<>();
-        int currentCourseNameIndex = exams.size() - 1;
+    private static void embedCoursesNamesInSessions(Map<Exam, Integer> exams2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
 
+        Stack<Exam> nextExams = new Stack<>();
+        int currentExamIndex = exams.size() - 1;
 
-        // initiate the set with the course name of the last dated exam in the exams period
-        nextExams.push(exams.get(currentCourseNameIndex).getCourse().getCourseName());
-        currentCourseNameIndex--;
+        // initiate the set with the last dated exam in the exams period
+        nextExams.push(exams.get(currentExamIndex));
+        currentExamIndex--;
 
         // goes through the sessions from the end to the start
         for (int i = sessionsList.size() - 1; i >= 0; i--) {
 
             // if the current session starts before the following exam to be seen
             // e.g. if 08:00-10:00 of 09/07 is before the 10/07
-            if (sessionsList.get(i).getStart().getValue() < exams.get(currentCourseNameIndex).getDateTime().getValue()) {
-                nextExams.push(exams.get(currentCourseNameIndex).getCourse().getCourseName());
-                currentCourseNameIndex--;
+            if (currentExamIndex > -1 && sessionsList.get(i).getStart().getValue() < exams.get(currentExamIndex).getDateTime().getValue()) {
+                nextExams.push(exams.get(currentExamIndex));
+                currentExamIndex--;
+            }
+
+            /* checks if the nextExams stack is empty.
+               if empty, removes the next sessions from the sessionsList,
+               until we reach the next exam */
+            if (nextExams.isEmpty()) {
+                sessionsList.remove(i);
+                continue;
             }
 
             // sets the session to be associated with the exam that is the closest to the session
-            sessionsList.get(i).setCourseName(nextExams.peek());
+            sessionsList.get(i).setCourseName(nextExams.peek().getCourse().getCourseName());
+            sessionsList.get(i).setExamToStudyFor(nextExams.peek());
 
             // extract course name and sessions-count values
-            String courseName = nextExams.peek();
-            int numOfSessionsPerExam = courseName2numberOfSessions.get(nextExams.peek());
+            Exam exam = nextExams.peek();
+            int numOfSessionsPerExam = exams2numberOfSessions.get(nextExams.peek());
 
             // update session count value and save new value to the map
             numOfSessionsPerExam -= 1;
 
             if (numOfSessionsPerExam != 0) { // if there are more session left to insert, updates the value in the map
-                courseName2numberOfSessions.put(courseName, numOfSessionsPerExam);
-            } else { // if no more sessions left to insert, removes course from stack
+                exams2numberOfSessions.put(exam, numOfSessionsPerExam);
+            } else { // if no more sessions left to insert, removes exam from stack
                 nextExams.pop();
             }
         }
@@ -692,25 +702,25 @@ public class CalendarEngine {
      * for every session, calculates the number of sessions, considering the proportions and the number of total sessions.
      * for each course X, the number of sessions is calculated as a rounded value of: (number of sessions * proportions of course X)
      *
-     * @param coursesNames2Proportions a map that contains values of proportions for each exam
-     * @param numOfSessions            the number of sessions available
+     * @param exam2Proportions a map that contains values of proportions for each exam
+     * @param numOfSessions    the number of sessions available
      * @return a map of string to int that represents, for each course name, the number of sessions
      */
-    private static Map<String, Integer> distributeNumberOfSessionsToCourses(Map<String, Double> coursesNames2Proportions, int numOfSessions) {
-        Map<String, Integer> courseName2numberOfSessions = new HashMap<>();
+    private static Map<Exam, Integer> distributeNumberOfSessionsToCourses(Map<Exam, Double> exam2Proportions, int numOfSessions) {
+        Map<Exam, Integer> exams2numberOfSessions = new HashMap<>();
 
-        for (Map.Entry<String, Double> courseNameProportionMapEntry : coursesNames2Proportions.entrySet()) {
-            String courseName = courseNameProportionMapEntry.getKey();
-            Double proportion = courseNameProportionMapEntry.getValue();
+        for (Map.Entry<Exam, Double> examProportionMapEntry : exam2Proportions.entrySet()) {
+            Exam exam = examProportionMapEntry.getKey();
+            Double proportion = examProportionMapEntry.getValue();
 
-            // gets the number of session for thr current course
-            Integer numberOfSessionForCurrentCourse = (int) Math.round(numOfSessions * proportion);
+            // gets the number of sessions for the current exam
+            Integer numberOfSessionForCurrentExam = (int) Math.round(numOfSessions * proportion);
 
-            // adds the number of courses to the map
-            courseName2numberOfSessions.put(courseName, numberOfSessionForCurrentCourse);
+            // adds the number of sessions to the map
+            exams2numberOfSessions.put(exam, numberOfSessionForCurrentExam);
         }
 
-        return courseName2numberOfSessions;
+        return exams2numberOfSessions;
 
     }
 
@@ -724,9 +734,7 @@ public class CalendarEngine {
     private static List<StudySession> separateSlotsToSessions(User user, List<TimeSlot> freeTimeSlots) {
 
         List<StudySession> listOfStudySessions = new ArrayList<>();
-
         long breakTime = user.getUserPreferences().getUserBreakTime();
-
         int studyTimeInMinutes = user.getUserPreferences().getStudySessionTime();
 
         // go through the slots list
@@ -741,7 +749,7 @@ public class CalendarEngine {
                 // add the current study session to the list
                 listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(endOfSession.toEpochMilli())));
                 // add to the endOfSession the break time
-                endOfSession.plus(breakTime, ChronoUnit.MINUTES);
+                endOfSession = endOfSession.plus(breakTime, ChronoUnit.MINUTES);
                 // initial the new startOfSession and endOfSession.
                 startOfSession = endOfSession;
                 endOfSession = startOfSession.plus(studyTimeInMinutes, ChronoUnit.MINUTES);
@@ -765,11 +773,11 @@ public class CalendarEngine {
      * @param exams a list of {@link Exam} that represents the exams that the user have
      * @return a map of string to double that represents the course names and their proportion
      */
-    private static Map<String, Double> getCoursesProportions(List<Exam> exams) {
+    private static Map<Exam, Double> getExamsProportions(List<Exam> exams) {
 
-        Map<String, Integer> courseName2TotalValue = new HashMap<>();
+        Map<Exam, Integer> exam2TotalValue = new HashMap<>();
         int sumTotalValues = 0;
-        Map<String, Double> courseName2Proportion = new HashMap<>();
+        Map<Exam, Double> exam2Proportion = new HashMap<>();
 
         for (Exam exam : exams) {
 
@@ -778,23 +786,23 @@ public class CalendarEngine {
             // gets the total value of the course ( credits + difficulty level + recommended study time)
             int currentCourseTotalValue = currentCourse.getCredits() + currentCourse.getDifficultyLevel() + currentCourse.getRecommendedStudyTime();
 
-            // adds the course to the map of total values
-            courseName2TotalValue.put(currentCourse.getCourseName(), currentCourseTotalValue);
+            // adds the exam to the map of total values
+            exam2TotalValue.put(exam, currentCourseTotalValue);
             sumTotalValues += currentCourseTotalValue;
         }
 
-        for (Map.Entry<String, Integer> courseNameTotalValueMapEntry : courseName2TotalValue.entrySet()) {
-            String currentCourseName = courseNameTotalValueMapEntry.getKey();
-            int currentCourseTotalValue = courseNameTotalValueMapEntry.getValue();
+        for (Map.Entry<Exam, Integer> examTotalValueMapEntry : exam2TotalValue.entrySet()) {
+            Exam currentExam = examTotalValueMapEntry.getKey();
+            int currentExamTotalValue = examTotalValueMapEntry.getValue();
 
-            // calculates the percentage of the course's value
-            double currentCourseProportion = ((double) currentCourseTotalValue / (double) sumTotalValues);
+            // calculates the percentage of the exam's value
+            double currentExamProportion = ((double) currentExamTotalValue / (double) sumTotalValues);
 
-            // adds the course to the map of proportions
-            courseName2Proportion.put(currentCourseName, currentCourseProportion);
+            // adds the exam to the map of proportions
+            exam2Proportion.put(currentExam, currentExamProportion);
         }
 
-        return courseName2Proportion;
+        return exam2Proportion;
     }
 
     /**
@@ -820,12 +828,11 @@ public class CalendarEngine {
      * @param refreshToken the refreshToken
      * @param clientId     client id string
      * @param clientSecret client secret string
-     * @param JSON_FACTORY JSON_FACTORY instance
      * @return TokenResponse contains new accessToken
      * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
-    public static TokenResponse refreshAccessToken(String refreshToken, String clientId, String clientSecret, JsonFactory JSON_FACTORY)
+    public static TokenResponse refreshAccessToken(String refreshToken, String clientId, String clientSecret)
             throws IOException, GeneralSecurityException {
 
         // Create a RefreshTokenRequest to get a new access token using the refresh token

@@ -4,6 +4,7 @@ import com.example.lamivhan.utill.dto.DTOstartAndEndOfInterval;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 
@@ -120,39 +121,42 @@ public class Utility {
         int timeUnit3 = 30;
         int timeUnit4 = 45;
 
-        int currentMinutes = currentTime.get(ChronoField.MINUTE_OF_HOUR);
+        ZonedDateTime result = currentTime.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE));
+        int currentMinutes = result.getMinute();
 
         // case 1 where minutes value is in between 0 and 15
         if (currentMinutes >= timeUnit1 && currentMinutes <= timeUnit2) {
             if (isRoundedForwards) {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit2);
+                result = result.withMinute(timeUnit2);
             } else {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit1);
+                result = result.withMinute(timeUnit1);
             }
 
             // case 2 where minutes value is in between 15 and 30
         } else if (currentMinutes >= timeUnit2 && currentMinutes <= timeUnit3) {
             if (isRoundedForwards) {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit3);
+                result = result.withMinute(timeUnit3);
             } else {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit2);
+                result = result.withMinute(timeUnit2);
             }
 
             // case 3 where minutes value is in between 30 and 45
         } else if (currentMinutes >= timeUnit3 && currentMinutes <= timeUnit4) {
             if (isRoundedForwards) {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit4);
+                result = result.withMinute(timeUnit4);
+
             } else {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit3);
+                result = result.withMinute(timeUnit3);
             }
 
             // case 4 where minutes value is in between 45 and 0
         } else {
             if (isRoundedForwards) {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit1);
+                result = result.withMinute(timeUnit1);
             } else {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit4);
+                result = result.withMinute(timeUnit4);
             }
         }
+        return result.toInstant();
     }
 }
