@@ -122,7 +122,7 @@ public class CalendarController {
 
         }
 
-        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
+        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo, start);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new DTOscanResponseToClient(true, Constants.NO_PROBLEM, new ArrayList<>()));
     }

@@ -142,8 +142,8 @@ public class CalendarEngine {
 
                 // finds the next place of user study start time (e.g. next 8:00)
                 // finds the next place of user study end time (e.g. next 22:00)
-                userStudyStartNext = Utility.addDayToCurrentInstant(userStudyStartFirst);
-                userStudyEndNext = Utility.addDayToCurrentInstant(userStudyEndFirst);
+                userStudyStartNext = Utility.addDayToCurrentInstant(userStudyStartNext);
+                userStudyEndNext = Utility.addDayToCurrentInstant(userStudyEndNext);
             }
 
             if ((userStudyStartNext.isBefore(endOfCurrentSlot))
@@ -408,12 +408,12 @@ public class CalendarEngine {
 
         String planItCalendarID;
 
-        String PlanItCalendarId = user.getPlanItCalendarID();
+        String planItCalendarIdFromDB = user.getPlanItCalendarID();
 
         // checks if the calendar already exists in DB
         try {
-            if (PlanItCalendarId != null && calendarService.calendars().get(PlanItCalendarId).execute() != null) {
-                return PlanItCalendarId;
+            if (planItCalendarIdFromDB != null && calendarService.calendars().get(planItCalendarIdFromDB).execute() != null) {
+                return planItCalendarIdFromDB;
             }
         } catch (IOException ignored) {
             // if we end up in here, then calendar was deleted by the user...
@@ -432,6 +432,7 @@ public class CalendarEngine {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
         planItCalendarID = createdCalendar.getId();
         user.setPlanItCalendarID(planItCalendarID);
         userRepo.save(user);
