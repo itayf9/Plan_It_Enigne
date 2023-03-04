@@ -47,7 +47,6 @@ public class CalendarController {
     private String CLIENT_ID;
     private String CLIENT_SECRET;
 
-
     private Set<String> holidaysDatesCurrentYear;
     private Set<String> holidaysDatesNextYear;
 

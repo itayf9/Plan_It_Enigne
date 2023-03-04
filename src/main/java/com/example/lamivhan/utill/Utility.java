@@ -127,7 +127,7 @@ public class Utility {
         // case 1 where minutes value is in between 0 and 15
         if (currentMinutes >= timeUnit1 && currentMinutes <= timeUnit2) {
             if (isRoundedForwards) {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit2);
+                result = result.withMinute(timeUnit2);
             } else {
                 return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit1);
             }
@@ -156,5 +156,6 @@ public class Utility {
                 return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit4);
             }
         }
+        return result.toInstant();
     }
 }
