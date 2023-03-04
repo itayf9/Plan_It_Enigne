@@ -129,31 +129,32 @@ public class Utility {
             if (isRoundedForwards) {
                 result = result.withMinute(timeUnit2);
             } else {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit1);
+                result = result.withMinute(timeUnit1);
             }
 
             // case 2 where minutes value is in between 15 and 30
         } else if (currentMinutes >= timeUnit2 && currentMinutes <= timeUnit3) {
             if (isRoundedForwards) {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit3);
+                result = result.withMinute(timeUnit3);
             } else {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit2);
+                result = result.withMinute(timeUnit2);
             }
 
             // case 3 where minutes value is in between 30 and 45
         } else if (currentMinutes >= timeUnit3 && currentMinutes <= timeUnit4) {
             if (isRoundedForwards) {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit4);
+                result = result.withMinute(timeUnit4);
+
             } else {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit3);
+                result = result.withMinute(timeUnit3);
             }
 
             // case 4 where minutes value is in between 45 and 0
         } else {
             if (isRoundedForwards) {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit1);
+                result = result.withMinute(timeUnit1);
             } else {
-                return Instant.ofEpochMilli(currentTime.toEpochMilli()).with(ChronoField.MINUTE_OF_HOUR, timeUnit4);
+                result = result.withMinute(timeUnit4);
             }
         }
         return result.toInstant();
