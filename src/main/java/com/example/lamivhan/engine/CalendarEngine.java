@@ -478,11 +478,11 @@ public class CalendarEngine {
     private static void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID) {
 
         // removes all previous events in the PlanIt calendar
-//        try {
-//            service.calendars().clear(planItCalendarID).execute();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
+        /*try {
+            service.calendars().clear(planItCalendarID).execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }*/
 
 
         // adds updated events to the PlanIt calendar
@@ -591,7 +591,7 @@ public class CalendarEngine {
 
             for (int j = 0; j < numberOfSessions; j++) {
 
-                if (numberOfSessionsForSubjects < j) {
+                if (numberOfSessionsForSubjects <= j) {
                     // set "test" Description in the current session
                     sessionsListOfCurrentExam.get(j).setDescription(EVENT_DESCRIPTION_PRACTISE_PREV_EXAMS);
                 } else {
