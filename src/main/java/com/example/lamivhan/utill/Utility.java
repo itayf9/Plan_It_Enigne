@@ -4,6 +4,7 @@ import com.example.lamivhan.utill.dto.DTOstartAndEndOfInterval;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 
@@ -120,7 +121,8 @@ public class Utility {
         int timeUnit3 = 30;
         int timeUnit4 = 45;
 
-        int currentMinutes = currentTime.get(ChronoField.MINUTE_OF_HOUR);
+        ZonedDateTime result = currentTime.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE));
+        int currentMinutes = result.getMinute();
 
         // case 1 where minutes value is in between 0 and 15
         if (currentMinutes >= timeUnit1 && currentMinutes <= timeUnit2) {

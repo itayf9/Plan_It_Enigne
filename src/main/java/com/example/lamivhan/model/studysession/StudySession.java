@@ -12,6 +12,7 @@ public class StudySession extends TimeSlot {
         super(start, end);
         this.courseName = "";
         this.description = "";
+        this.examToStudyFor = null;
     }
 
     public String getCourseName() {
@@ -28,5 +29,13 @@ public class StudySession extends TimeSlot {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Exam getExamToStudyFor() {
+        return examToStudyFor;
+    }
+
+    public void setExamToStudyFor(Exam examToStudyFor) {
+        this.examToStudyFor = examToStudyFor;
     }
 }

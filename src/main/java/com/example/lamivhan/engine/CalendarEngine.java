@@ -451,8 +451,8 @@ public class CalendarEngine {
         String planItCalendarID = createPlanItCalendar(service, user, userRepo);
 
 
-        // finds the proportions of each course from 100% study time
-        Map<String, Double> coursesNames2Proportions = getCoursesProportions(exams);
+        // finds the proportions of each exam from 100% study time
+        Map<Exam, Double> exam2Proportions = getExamsProportions(exams);
 
         // separates each slot in the free slots list, to a few study sessions
         // and inserts breaks
@@ -460,7 +460,7 @@ public class CalendarEngine {
 
 
         // calculates how many sessions belong to each course
-        Map<String, Integer> courseName2numberOfSessions = distributeNumberOfSessionsToCourses(coursesNames2Proportions, sessionsList.size());
+        Map<Exam, Integer> exams2numberOfSessions = distributeNumberOfSessionsToCourses(exam2Proportions, sessionsList.size());
 
         // goes from the end to the start and embed courses to sessions
         embedCoursesInSessions(courseName2numberOfSessions, sessionsList, exams);
@@ -481,11 +481,11 @@ public class CalendarEngine {
     private static void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID) {
 
         // removes all previous events in the PlanIt calendar
-        try {
-            service.calendars().clear(planItCalendarID).execute();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            service.calendars().clear(planItCalendarID).execute();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
 
 
         // adds updated events to the PlanIt calendar
@@ -537,7 +537,7 @@ public class CalendarEngine {
         // embeds the courses' names in the sessions list
         embedCoursesNamesInSessions(courseName2numberOfSessions, sessionsList, exams);
         // embeds the courses' subjects in the sessions list.
-        embedCoursesSubjectsInSessions(coursesNames2Index, sessionsList, exams);
+        embedCoursesSubjectsInSessions(exam2Index, sessionsList, exams);
 
 
     }
@@ -570,7 +570,7 @@ public class CalendarEngine {
             int numberOfSubjectsInCurrentExam = subjects.length;
             int indexOfCurrentSubject = 0;
 
-            // present the percent for study the subject for the current test.
+            // presents the percentage for study the subject for the current exam.
             double subjectsToExamsPracticeProportions = (currentExam.getCourse().getSubjectsPracticePercentage()) * 0.01; // e.g - 60% of 100%
 
             List<StudySession> sessionsListOfCurrentExam = listOfListOfStudySessions.get(i);
@@ -674,6 +674,14 @@ public class CalendarEngine {
                 currentCourseNameIndex--;
             }
 
+            /* checks if the nextExams stack is empty.
+               if empty, removes the next sessions from the sessionsList,
+               until we reach the next exam */
+            if (nextExams.isEmpty()) {
+                sessionsList.remove(i);
+                continue;
+            }
+
             // sets the session to be associated with the exam that is the closest to the session
             sessionsList.get(i).setCourseName(nextExams.peek());
 
@@ -696,8 +704,8 @@ public class CalendarEngine {
      * for every session, calculates the number of sessions, considering the proportions and the number of total sessions.
      * for each course X, the number of sessions is calculated as a rounded value of: (number of sessions * proportions of course X)
      *
-     * @param coursesNames2Proportions a map that contains values of proportions for each exam
-     * @param numOfSessions            the number of sessions available
+     * @param exam2Proportions a map that contains values of proportions for each exam
+     * @param numOfSessions    the number of sessions available
      * @return a map of string to int that represents, for each course name, the number of sessions
      */
     private static Map<String, Integer> distributeNumberOfSessionsToCourses(Map<String, Double> coursesNames2Proportions, int numOfSessions) {
@@ -707,8 +715,8 @@ public class CalendarEngine {
             String courseName = courseNameProportionMapEntry.getKey();
             Double proportion = courseNameProportionMapEntry.getValue();
 
-            // gets the number of session for thr current course
-            Integer numberOfSessionForCurrentCourse = (int) Math.round(numOfSessions * proportion);
+            // gets the number of sessions for the current exam
+            Integer numberOfSessionForCurrentExam = (int) Math.round(numOfSessions * proportion);
 
             // adds the number of courses to the map
             courseName2numberOfSessions.put(courseName, numberOfSessionForCurrentCourse);
@@ -745,7 +753,7 @@ public class CalendarEngine {
                 // add the current study session to the list
                 listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(endOfSession.toEpochMilli())));
                 // add to the endOfSession the break time
-                endOfSession.plus(breakTime, ChronoUnit.MINUTES);
+                endOfSession = endOfSession.plus(breakTime, ChronoUnit.MINUTES);
                 // initial the new startOfSession and endOfSession.
                 startOfSession = endOfSession;
                 endOfSession = startOfSession.plus(studyTimeInMinutes, ChronoUnit.MINUTES);
@@ -769,11 +777,11 @@ public class CalendarEngine {
      * @param exams a list of {@link Exam} that represents the exams that the user have
      * @return a map of string to double that represents the course names and their proportion
      */
-    private static Map<String, Double> getCoursesProportions(List<Exam> exams) {
+    private static Map<Exam, Double> getExamsProportions(List<Exam> exams) {
 
-        Map<String, Integer> courseName2TotalValue = new HashMap<>();
+        Map<Exam, Integer> exam2TotalValue = new HashMap<>();
         int sumTotalValues = 0;
-        Map<String, Double> courseName2Proportion = new HashMap<>();
+        Map<Exam, Double> exam2Proportion = new HashMap<>();
 
         for (Exam exam : exams) {
 
@@ -782,23 +790,23 @@ public class CalendarEngine {
             // gets the total value of the course ( credits + difficulty level + recommended study time)
             int currentCourseTotalValue = currentCourse.getCredits() + currentCourse.getDifficultyLevel() + currentCourse.getRecommendedStudyTime();
 
-            // adds the course to the map of total values
-            courseName2TotalValue.put(currentCourse.getCourseName(), currentCourseTotalValue);
+            // adds the exam to the map of total values
+            exam2TotalValue.put(exam, currentCourseTotalValue);
             sumTotalValues += currentCourseTotalValue;
         }
 
-        for (Map.Entry<String, Integer> courseNameTotalValueMapEntry : courseName2TotalValue.entrySet()) {
-            String currentCourseName = courseNameTotalValueMapEntry.getKey();
-            int currentCourseTotalValue = courseNameTotalValueMapEntry.getValue();
+        for (Map.Entry<Exam, Integer> examTotalValueMapEntry : exam2TotalValue.entrySet()) {
+            Exam currentExam = examTotalValueMapEntry.getKey();
+            int currentExamTotalValue = examTotalValueMapEntry.getValue();
 
-            // calculates the percentage of the course's value
-            double currentCourseProportion = ((double) currentCourseTotalValue / (double) sumTotalValues);
+            // calculates the percentage of the exam's value
+            double currentExamProportion = ((double) currentExamTotalValue / (double) sumTotalValues);
 
-            // adds the course to the map of proportions
-            courseName2Proportion.put(currentCourseName, currentCourseProportion);
+            // adds the exam to the map of proportions
+            exam2Proportion.put(currentExam, currentExamProportion);
         }
 
-        return courseName2Proportion;
+        return exam2Proportion;
     }
 
     /**

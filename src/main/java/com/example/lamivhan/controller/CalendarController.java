@@ -11,8 +11,6 @@ import com.example.lamivhan.utill.dto.DTOscanResponseToClient;
 import com.example.lamivhan.utill.dto.DTOstatus;
 import com.example.lamivhan.utill.dto.DTOuserEvents;
 import com.google.api.client.auth.oauth2.TokenResponse;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.calendar.model.Event;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
