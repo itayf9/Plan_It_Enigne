@@ -8,6 +8,7 @@ import com.example.lamivhan.model.mongo.user.User;
 import com.example.lamivhan.model.mongo.user.UserRepository;
 import com.example.lamivhan.utill.Constants;
 import com.example.lamivhan.utill.dto.DTOscanResponseToClient;
+import com.example.lamivhan.utill.dto.DTOstatus;
 import com.example.lamivhan.utill.dto.DTOuserEvents;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.json.JsonFactory;
@@ -47,10 +48,7 @@ public class CalendarController {
 
     private String CLIENT_ID;
     private String CLIENT_SECRET;
-    /**
-     * Global instance of the JSON factory.
-     */
-    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+
 
     private Set<String> holidaysDatesCurrentYear;
     private Set<String> holidaysDatesNextYear;
@@ -91,7 +89,7 @@ public class CalendarController {
 
         // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, JSON_FACTORY, courseRepo);
+        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, courseRepo);
 
         // fullDayEvents - a list of events that represents the user's full day events
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
@@ -137,7 +135,7 @@ public class CalendarController {
      * @throws GeneralSecurityException GeneralSecurityException
      */
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> generateStudyEvents(@RequestParam String email, @RequestParam String start, @RequestParam String end, @RequestBody boolean[] userDecisions) throws IOException, GeneralSecurityException {
+    public ResponseEntity<DTOstatus> generateStudyEvents(@RequestParam String email, @RequestParam String start, @RequestParam String end, @RequestBody boolean[] userDecisions) throws IOException, GeneralSecurityException {
 
         // check if user exist in DB
         Optional<User> maybeUser = userRepo.findUserByEmail(email);
@@ -153,7 +151,7 @@ public class CalendarController {
 
         // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, JSON_FACTORY, courseRepo);
+        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, courseRepo);
 
         // fullDayEvents - a list of events that represents the user's full day events
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
@@ -183,7 +181,7 @@ public class CalendarController {
         // 2# 3# 4# 5#
         CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo, start);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body("PlanIt Calendar Has Been Created Successfully Good Luck !!");
+        return ResponseEntity.status(HttpStatus.CREATED).body(new DTOstatus(true, Constants.NO_PROBLEM));
     }
 
     /**
@@ -201,8 +199,7 @@ public class CalendarController {
         if (!CalendarEngine.isAccessTokenValid(user.getExpireTimeInMilliseconds())) {
 
             // refresh the accessToken
-
-            TokenResponse tokensResponse = CalendarEngine.refreshAccessToken(user.getRefreshToken(), CLIENT_ID, CLIENT_SECRET, JSON_FACTORY);
+            TokenResponse tokensResponse = CalendarEngine.refreshAccessToken(user.getRefreshToken(), CLIENT_ID, CLIENT_SECRET);
             long expireTimeInMilliseconds = Instant.now().plusMillis(((tokensResponse.getExpiresInSeconds() - 100) * 1000)).toEpochMilli();
 
             // updates the access token of the user in the DB

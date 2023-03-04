@@ -21,6 +21,7 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.*;
@@ -38,6 +39,11 @@ import static com.example.lamivhan.utill.Constants.*;
 import static com.example.lamivhan.utill.Utility.roundInstantMinutesTime;
 
 public class CalendarEngine {
+
+    /**
+     * Global instance of the JSON factory.
+     */
+    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
     /**
      * 2# Takes out all the free time slots that can be taken out of the user events.
@@ -256,16 +262,15 @@ public class CalendarEngine {
      * Extract all the events that are in the user calendars.
      *
      * @param accessToken use for get the calenders from Google DB
-     * @param jsonFactory a {@link JsonFactory} that is used for Google's calendar service
      * @param courseRepo  a {@link CoursesRepository} which is the DB of courses
      * @return DTOuserEvents contains all the events, full day events and the exams
      * @throws GeneralSecurityException GeneralSecurityException
      * @throws IOException              IOException
      */
-    public static DTOuserEvents getEvents(String accessToken, long expireTimeInMilliSeconds, String start, String end, JsonFactory jsonFactory, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
+    public static DTOuserEvents getEvents(String accessToken, long expireTimeInMilliSeconds, String start, String end, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
         // get user's calendar service
 
-        Calendar calendarService = getCalendarService(accessToken, expireTimeInMilliSeconds, jsonFactory);
+        Calendar calendarService = getCalendarService(accessToken, expireTimeInMilliSeconds);
 
         // get user's calendar list
         List<CalendarListEntry> calendarList = getCalendarList(calendarService);
@@ -313,12 +318,11 @@ public class CalendarEngine {
      * get Google Calendar service provider.
      *
      * @param access_token User Google AccessToken
-     * @param JSON_FACTORY Json Factory Instance
      * @return Google Calendar service provider.
      * @throws GeneralSecurityException GeneralSecurityException
      * @throws IOException              IOException
      */
-    private static Calendar getCalendarService(String access_token, long expireTimeInMilliSeconds, JsonFactory JSON_FACTORY) throws GeneralSecurityException, IOException {
+    private static Calendar getCalendarService(String access_token, long expireTimeInMilliSeconds) throws GeneralSecurityException, IOException {
 
         // Build a new authorized API client service.
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
@@ -820,12 +824,11 @@ public class CalendarEngine {
      * @param refreshToken the refreshToken
      * @param clientId     client id string
      * @param clientSecret client secret string
-     * @param JSON_FACTORY JSON_FACTORY instance
      * @return TokenResponse contains new accessToken
      * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
-    public static TokenResponse refreshAccessToken(String refreshToken, String clientId, String clientSecret, JsonFactory JSON_FACTORY)
+    public static TokenResponse refreshAccessToken(String refreshToken, String clientId, String clientSecret)
             throws IOException, GeneralSecurityException {
 
         // Create a RefreshTokenRequest to get a new access token using the refresh token
