@@ -46,18 +46,16 @@ public class CalendarEngine {
      * @param user       is containing user preferences.
      * @return DTOfreetime object the return from the function adjustFreeSlotsList.
      */
-    public static DTOfreetime getFreeSlots(List<Event> userEvents, User user, List<Exam> examsFound) {
+    public static DTOfreetime getFreeSlots(List<Event> userEvents, User user, List<Exam> examsFound, String start) {
 
         Exam lastExam = examsFound.get(examsFound.size() - 1);
         long startTimeOfLastExam = lastExam.getDateTime().getValue();
         List<TimeSlot> userFreeTimeSlots = new ArrayList<>();
-        Date now = new Date();
 
         // get the free slot before the first event
         if (userEvents.size() > 0) {
-            long CurrentTimeOfPress = now.getTime();
-            long startOfCurrentEvent = userEvents.get(0).getStart().getDateTime().getValue();
-            userFreeTimeSlots.add(new TimeSlot(new DateTime(CurrentTimeOfPress), new DateTime(startOfCurrentEvent)));
+            long startOfFirstEvent = userEvents.get(0).getStart().getDateTime().getValue();
+            userFreeTimeSlots.add(new TimeSlot(new DateTime(start), new DateTime(startOfFirstEvent)));
         }
 
         // get all free time slots in the event
@@ -246,10 +244,6 @@ public class CalendarEngine {
             allEventsFromCalendars.addAll(events.getItems());
             // adds the full day events to the fullDayEvents list
             fullDayEvents.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
-        }
-
-        for (Event event : allEventsFromCalendars) {
-            System.out.println(event.getStart().getDateTime() + " : " + event.getSummary());
         }
 
         // sorts the events, so they will be ordered by start time
@@ -444,10 +438,10 @@ public class CalendarEngine {
      * @param allEvents list of the user events we found during the initial scan
      * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
      */
-    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, UserRepository userRepo) {
+    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, UserRepository userRepo, String start) {
 
         // gets the list of free slots
-        DTOfreetime dtofreetime = getFreeSlots(allEvents, user, exams);
+        DTOfreetime dtofreetime = getFreeSlots(allEvents, user, exams, start);
 
         // creates PlanIt calendar if not yet exists
         String planItCalendarID = createPlanItCalendar(service, user, userRepo);

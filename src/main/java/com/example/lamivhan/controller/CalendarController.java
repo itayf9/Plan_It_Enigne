@@ -181,7 +181,7 @@ public class CalendarController {
         }
 
         // 2# 3# 4# 5#
-        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo);
+        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo, start);
 
         return ResponseEntity.status(HttpStatus.CREATED).body("PlanIt Calendar Has Been Created Successfully Good Luck !!");
     }
