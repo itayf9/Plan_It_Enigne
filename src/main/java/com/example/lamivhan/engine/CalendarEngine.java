@@ -549,7 +549,11 @@ public class CalendarEngine {
     private static void embedCoursesSubjectsInSessions(Map<Exam, Integer> exams2IndexInListOfExams, List<StudySession> sessionsList, List<Exam> exams) {
 
         // create list of a list of study-sessions to make insertion of subjects easier later.
-        List<List<StudySession>> listOfListOfStudySessions = new ArrayList<>(Collections.nCopies(exams.size(), new ArrayList<>()));
+        List<List<StudySession>> listOfListOfStudySessions = new ArrayList<>();
+        for (Exam ignored : exams) {
+            listOfListOfStudySessions.add(new ArrayList<>());
+        }
+        //Collections.nCopies(exams.size(), new ArrayList<>())
 
         // run through the sessions list and initialize the list of lists
         for (StudySession session : sessionsList) {
