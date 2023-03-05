@@ -12,12 +12,15 @@ import java.util.List;
  */
 public class DTOuserEvents {
     private final List<Event> fullDayEvents;
+
+    private final List<Event> planItCalendarOldEvents;
     private final List<Exam> examsFound;
     private final List<Event> events;
     private final Calendar calendarService;
 
-    public DTOuserEvents(List<Event> fullDayEvents, List<Exam> examsFound, List<Event> events, Calendar calendarService) {
+    public DTOuserEvents(List<Event> fullDayEvents, List<Event> planItCalendarOldEvents, List<Exam> examsFound, List<Event> events, Calendar calendarService) {
         this.fullDayEvents = fullDayEvents;
+        this.planItCalendarOldEvents = planItCalendarOldEvents;
         this.examsFound = examsFound;
         this.events = events;
         this.calendarService = calendarService;
@@ -25,6 +28,10 @@ public class DTOuserEvents {
 
     public List<Event> getFullDayEvents() {
         return fullDayEvents;
+    }
+
+    public List<Event> getPlanItCalendarOldEvents() {
+        return planItCalendarOldEvents;
     }
 
     public List<Exam> getExamsFound() {

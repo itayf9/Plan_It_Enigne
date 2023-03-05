@@ -92,7 +92,9 @@ public class CalendarController {
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
 
         // events - a list of events that represents all the user's events
+        // planItCalendarOldEvents - a list of PlanIt calendar old events
         List<Event> events = userEvents.getEvents();
+        List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
         List<Exam> examsFound = userEvents.getExamsFound();
 
         // checks if no exams are
@@ -117,7 +119,7 @@ public class CalendarController {
 
         }
 
-        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo, start);
+        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo, start, planItCalendarOldEvents);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new DTOscanResponseToClient(true, Constants.NO_PROBLEM, new ArrayList<>()));
     }

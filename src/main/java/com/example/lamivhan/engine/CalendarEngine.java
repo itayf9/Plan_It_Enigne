@@ -516,6 +516,56 @@ public class CalendarEngine {
     }
 
     /**
+     * finds all the overlapping events from the old PlanIt calendar (from previous generating processes).
+     * the new generated sessions are compared to the old generated events.
+     *
+     * @param sessionsList            the new list of {@link StudySession} that about to be created as an events
+     * @param planItCalendarOldEvents the old list of {@link Event} that been created and to be checked if causing an overlap anywhere
+     * @return list of old {@link Event} from the PlanIt calendar that will later be deleted from the calendar.
+     */
+    private static List<Event> getOverlapOldEventsPlanItCalendar(List<StudySession> sessionsList, List<Event> planItCalendarOldEvents) {
+        List<Event> overlappingEvents = new ArrayList<>();
+        List<Integer> newSessionsIndicesToBeRemoved = new ArrayList<>();
+
+        int newSessionIndex = 0;
+        int oldEventIndex = 0;
+
+        while (newSessionIndex < sessionsList.size() && oldEventIndex < planItCalendarOldEvents.size()) {
+            StudySession newSession = sessionsList.get(newSessionIndex);
+            Event oldEvent = planItCalendarOldEvents.get(oldEventIndex);
+
+            if (newSession.getEnd().getValue() < (oldEvent.getStart().getDateTime().getValue())) {
+                // new event ends before old event starts, move to next new event
+                newSessionIndex++;
+            } else if (newSession.getStart().getValue() > (oldEvent.getEnd().getDateTime().getValue())) {
+                // new event starts after old event ends, move to next old event
+                oldEventIndex++;
+            } else if (newSession.getStart().equals(oldEvent.getStart().getDateTime())
+                    && newSession.getEnd().equals(oldEvent.getEnd().getDateTime())
+                    && (Constants.EVENT_SUMMERY_PREFIX + newSession.getCourseName()).equals(oldEvent.getSummary())
+                    && newSession.getDescription().equals(oldEvent.getDescription())) {
+                // overlap detected, but the new session is exactly the same as the old event,
+                // so add the index to the list of indices to be removed later
+                newSessionsIndicesToBeRemoved.add(newSessionIndex);
+                newSessionIndex++;
+                oldEventIndex++;
+
+            } else {
+                // overlap detected, add old event to list of overlapping events
+                overlappingEvents.add(oldEvent);
+                oldEventIndex++;
+            }
+
+            // removes all the events that are duplicates from the sessions list
+            for (Integer indexToBeRemoved : newSessionsIndicesToBeRemoved) {
+                sessionsList.remove(indexToBeRemoved.intValue());
+            }
+        }
+
+        return overlappingEvents;
+    }
+
+    /**
      * embeds the details (courses' names and subjects) in the user's sessions list.
      * embeds the courses considering exams' dates, courses' proportions, and information about courses subjects
      *
