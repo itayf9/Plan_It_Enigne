@@ -155,6 +155,9 @@ public class CalendarController {
         // fullDayEvents - a list of events that represents the user's full day events
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
 
+        // planItCalendarOldEvents - a list of PlanIt calendar old events
+        List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
+
         // events - a list of events that represents all the user's events
         List<Event> events = userEvents.getEvents();
 
@@ -178,7 +181,7 @@ public class CalendarController {
         }
 
         // 2# 3# 4# 5#
-        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo, start);
+        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo, start, planItCalendarOldEvents);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(new DTOstatus(true, Constants.NO_PROBLEM));
     }

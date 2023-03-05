@@ -201,7 +201,7 @@ public class CalendarEngine {
      * @return List of all the event's user has
      */
     public static List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
-                                                        List<Event> fullDayEvents, List<Exam> examsFound, CoursesRepository courseRepo) {
+                                                        List<Event> fullDayEvents, List<Event> planItCalendarOldEvents, List<Exam> examsFound, CoursesRepository courseRepo) {
         List<Event> allEventsFromCalendars = new ArrayList<>();
 
         List<Course> courses = courseRepo.findAll(); // get all courses from DB
@@ -240,6 +240,7 @@ public class CalendarEngine {
             // checks if calendar is the PlanIt calendar
             // ignores the PlanIt calendar in order to generate new study time slots
             if (calendar.getSummary().equals(PLANIT_CALENDAR_SUMMERY_NAME)) {
+                planItCalendarOldEvents.addAll(events.getItems());
                 continue;
             }
 
@@ -280,11 +281,13 @@ public class CalendarEngine {
         DateTime endDate = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);*/
 
         List<Event> fullDayEvents = new ArrayList<>();
+        List<Event> planItCalendarOldEvents = new ArrayList<>();
         List<Exam> examsFound = new LinkedList<>();
 
+
         // get List of user's events
-        List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, examsFound, courseRepo);
-        return new DTOuserEvents(fullDayEvents, examsFound, events, calendarService);
+        List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, planItCalendarOldEvents, examsFound, courseRepo);
+        return new DTOuserEvents(fullDayEvents, planItCalendarOldEvents, examsFound, events, calendarService);
     }
 
     /**
@@ -439,7 +442,7 @@ public class CalendarEngine {
      * @param allEvents list of the user events we found during the initial scan
      * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
      */
-    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, UserRepository userRepo, String start) {
+    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, UserRepository userRepo, String start, List<Event> planItCalendarOldEvents) {
 
         // gets the list of free slots
         DTOfreetime dtofreetime = getFreeSlots(allEvents, user, exams, start);
@@ -463,7 +466,7 @@ public class CalendarEngine {
         embedCoursesInSessions(exams2numberOfSessions, sessionsList, exams);
 
         // #5 - updates the planIt calendar
-        updatePlanItCalendar(sessionsList, service, planItCalendarID);
+        updatePlanItCalendar(sessionsList, service, planItCalendarID, planItCalendarOldEvents);
 
     }
 
@@ -475,14 +478,19 @@ public class CalendarEngine {
      * @param service          the Google's {@link Calendar} service
      * @param planItCalendarID the calendar ID of the PlanIt calendar in the user's calendar list
      */
-    private static void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID) {
+    private static void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Event> planItCalendarOldEvents) {
 
-        // removes all previous events in the PlanIt calendar
-        /*try {
-            service.calendars().clear(planItCalendarID).execute();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }*/
+        List<Event> overlapsOldEvents = getOverlapOldEventsPlanItCalendar(sessionsList, planItCalendarOldEvents);
+
+        for (Event eventToBeDeleted : overlapsOldEvents) {
+            try {
+                // removes overlap events in the PlanIt calendar
+                service.events().delete(planItCalendarID, eventToBeDeleted.getId()).execute();
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
 
         // adds updated events to the PlanIt calendar
