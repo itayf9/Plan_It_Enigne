@@ -124,8 +124,8 @@ public class Utility {
         ZonedDateTime result = currentTime.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE));
         int currentMinutes = result.getMinute();
 
-        // case 1 where minutes value is in between 0 and 15
-        if (currentMinutes >= timeUnit1 && currentMinutes <= timeUnit2) {
+        // case 1 where minutes value is in between 1 and 14
+        if (currentMinutes > timeUnit1 && currentMinutes < timeUnit2) {
             if (isRoundedForwards) {
                 result = result.withMinute(timeUnit2);
             } else {
@@ -140,8 +140,8 @@ public class Utility {
                 result = result.withMinute(timeUnit2);
             }
 
-            // case 3 where minutes value is in between 30 and 45
-        } else if (currentMinutes >= timeUnit3 && currentMinutes <= timeUnit4) {
+            // case 3 where minutes value is in between 31 and 44
+        } else if (currentMinutes > timeUnit3 && currentMinutes < timeUnit4) {
             if (isRoundedForwards) {
                 result = result.withMinute(timeUnit4);
 
@@ -149,8 +149,8 @@ public class Utility {
                 result = result.withMinute(timeUnit3);
             }
 
-            // case 4 where minutes value is in between 45 and 0
-        } else {
+            // case 4 where minutes value is in between 46 and 59
+        } else if (currentMinutes > timeUnit4 && currentMinutes < timeUnit5) {
             if (isRoundedForwards) {
                 result = result.plusHours(1).withMinute(timeUnit1);
             } else {
