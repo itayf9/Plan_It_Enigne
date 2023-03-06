@@ -564,10 +564,10 @@ public class CalendarEngine {
                 oldEventIndex++;
             }
 
-            // removes all the events that are duplicates from the sessions list
-            for (Integer indexToBeRemoved : newSessionsIndicesToBeRemoved) {
-                sessionsList.remove(indexToBeRemoved.intValue());
-            }
+        }
+        // removes all the events that are duplicates from the sessions list
+        for (int i = newSessionsIndicesToBeRemoved.size() - 1; i >= 0; i--) {
+            sessionsList.remove(newSessionsIndicesToBeRemoved.get(i).intValue());
         }
 
         return overlappingEvents;

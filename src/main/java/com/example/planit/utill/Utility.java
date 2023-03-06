@@ -120,6 +120,7 @@ public class Utility {
         int timeUnit2 = 15;
         int timeUnit3 = 30;
         int timeUnit4 = 45;
+        int timeUnit5 = 60;
 
         ZonedDateTime result = currentTime.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE));
         int currentMinutes = result.getMinute();
