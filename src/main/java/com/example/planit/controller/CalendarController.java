@@ -110,7 +110,7 @@ public class CalendarController {
 
         if (fullDayEvents.size() != 0) {
 
-            fullDayEvents = CalendarEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
+            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
                     , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
 
             // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
@@ -171,7 +171,7 @@ public class CalendarController {
         // check if fullDayEvents List is empty (which doesn't suppose to be)
         if (fullDayEvents.size() != 0) {
 
-            fullDayEvents = CalendarEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
+            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
                     , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
 
             // go through the list

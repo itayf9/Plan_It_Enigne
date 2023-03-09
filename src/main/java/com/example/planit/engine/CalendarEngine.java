@@ -45,6 +45,262 @@ public class CalendarEngine {
      */
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
+    /* Public methods */
+
+    /**
+     * Extract all the events that are in the user calendars.
+     *
+     * @param accessToken use for get the calenders from Google DB
+     * @param courseRepo  a {@link CoursesRepository} which is the DB of courses
+     * @return DTOuserEvents contains all the events, full day events and the exams
+     * @throws GeneralSecurityException GeneralSecurityException
+     * @throws IOException              IOException
+     */
+    public static DTOuserCalendarsInformation getUserCalendarsInformation(String accessToken, long expireTimeInMilliSeconds, String start, String end, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
+        // get user's calendar service
+
+        Calendar calendarService = getCalendarService(accessToken, expireTimeInMilliSeconds);
+
+        // get user's calendar list
+        List<CalendarListEntry> calendarList = getCalendarList(calendarService);
+
+        DateTime startDate = new DateTime(start);
+        DateTime endDate = new DateTime(end);
+
+
+        /*DateTime startDate = new DateTime(Instant.parse(start).toEpochMilli());
+        DateTime endDate = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);*/
+
+        List<Event> fullDayEvents = new ArrayList<>();
+        List<Event> planItCalendarOldEvents = new ArrayList<>();
+        List<Exam> examsFound = new LinkedList<>();
+
+
+        // get List of user's events
+        List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, planItCalendarOldEvents, examsFound, courseRepo);
+        return new DTOuserCalendarsInformation(fullDayEvents, planItCalendarOldEvents, examsFound, events, calendarService);
+    }
+
+    /**
+     * @param allEvents list of the user events we found during the initial scan
+     * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
+     */
+    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, UserRepository userRepo, String start, List<Event> planItCalendarOldEvents) {
+
+        // gets the list of free slots
+        DTOfreetime dtofreetime = getFreeSlots(allEvents, user, exams, start);
+
+        // creates PlanIt calendar if not yet exists
+        String planItCalendarID = createPlanItCalendar(service, user, userRepo);
+
+
+        // finds the proportions of each exam from 100% study time
+        Map<Exam, Double> exam2Proportions = getExamsProportions(exams);
+
+        // separates each slot in the free slots list, to a few study sessions
+        // and inserts breaks
+        List<StudySession> sessionsList = separateSlotsToSessions(user, dtofreetime.getFreeTimeSlots());
+
+
+        // calculates how many sessions belong to each course
+        Map<Exam, Integer> exams2numberOfSessions = distributeNumberOfSessionsToCourses(exam2Proportions, sessionsList.size());
+
+        // goes from the end to the start and embed courses to sessions
+        embedCoursesInSessions(exams2numberOfSessions, sessionsList, exams);
+
+        // #5 - updates the planIt calendar
+        updatePlanItCalendar(sessionsList, service, planItCalendarID, planItCalendarOldEvents);
+
+    }
+
+    /**
+     * check if accessToken is still valid.
+     * the function compares the expiration time with the current time.
+     * the expiration time is related to an accessToken.
+     *
+     * @param expirationTime a long that represents the expiration time (in milliseconds)
+     * @return true if the token is valid, false otherwise
+     */
+    public static boolean isAccessTokenValid(long expirationTime) {
+        Instant expirationInstant = Instant.ofEpochMilli(expirationTime); // e.g. 1781874521 representing the time of 2023-05-17 - 14:30
+
+        /* we add extra 5 minutes to make sure if token is about to be expired will be refreshed sooner */
+        Instant now = Instant.now().plus(5, ChronoUnit.MINUTES);
+
+        return expirationInstant.isAfter(now); // true if expire date is before the current time 2023-05-17 - 14:40
+    }
+
+    /**
+     * get a new accessToken with the refresh token
+     *
+     * @param refreshToken the refreshToken
+     * @param clientId     client id string
+     * @param clientSecret client secret string
+     * @return TokenResponse contains new accessToken
+     * @throws IOException              IOException
+     * @throws GeneralSecurityException GeneralSecurityException
+     */
+    public static TokenResponse refreshAccessToken(String refreshToken, String clientId, String clientSecret)
+            throws IOException, GeneralSecurityException {
+
+        // Create a RefreshTokenRequest to get a new access token using the refresh token
+        RefreshTokenRequest refreshTokenRequest = new GoogleRefreshTokenRequest(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                JSON_FACTORY,
+                refreshToken,
+                clientId,
+                clientSecret);
+
+        // Execute the RefreshTokenRequest to get a new Credential object with the updated access token
+        return refreshTokenRequest.execute();
+    }
+
+    /* Private methods */
+
+    /**
+     * get Google Calendar service provider.
+     *
+     * @param access_token User Google AccessToken
+     * @return Google Calendar service provider.
+     * @throws GeneralSecurityException GeneralSecurityException
+     * @throws IOException              IOException
+     */
+    private static Calendar getCalendarService(String access_token, long expireTimeInMilliSeconds) throws GeneralSecurityException, IOException {
+
+        // Build a new authorized API client service.
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        Date expireDate = new Date(expireTimeInMilliSeconds);
+
+        AccessToken accessToken = new AccessToken(access_token, expireDate);
+        GoogleCredentials credential = new GoogleCredentials(accessToken);
+        HttpRequestInitializer httpRequestInitializer = new HttpCredentialsAdapter(credential);
+
+        return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, httpRequestInitializer)
+                .setApplicationName(Constants.APPLICATION_NAME)
+                .build();
+    }
+
+    /**
+     * get a List of all the User Google Calendars
+     *
+     * @param calendarService Google Calendar service provider.
+     * @return List of all the User Google Calendars
+     */
+    private static List<CalendarListEntry> getCalendarList(Calendar calendarService) {
+        String pageToken = null;
+        List<CalendarListEntry> calendars = new ArrayList<>();
+        do {
+            CalendarList calendarList;
+            try {
+                calendarList = calendarService.calendarList().list().setPageToken(pageToken).execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            calendars.addAll(calendarList.getItems());
+
+            pageToken = calendarList.getNextPageToken();
+        } while (pageToken != null);
+
+        return calendars;
+    }
+
+    /**
+     * 1# get List of all the event's user has
+     *
+     * @param calendarService Google Calendar service provider.
+     * @param calendarList    List of all the User Google Calendars
+     * @param start           the time to start scan of events
+     * @param end             the time to end scan of events
+     * @param fullDayEvents   list of full day events found
+     * @return List of all the event's user has
+     */
+    private static List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
+                                                         List<Event> fullDayEvents, List<Event> planItCalendarOldEvents, List<Exam> examsFound, CoursesRepository courseRepo) {
+        List<Event> allEventsFromCalendars = new ArrayList<>();
+
+        List<Course> courses = courseRepo.findAll(); // get all courses from DB
+
+        for (CalendarListEntry calendar : calendarList) {
+            Events events;
+            try {
+                events = calendarService.events().list(calendar.getId())
+                        .setTimeMin(start)
+                        .setOrderBy("startTime")
+                        .setTimeMax(end)
+                        .setSingleEvents(true)
+                        .execute();
+            } catch (GoogleJsonResponseException e) {
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+
+            }
+            // check if calendar is the exams calendar
+            if (calendar.getSummary().equals("יומן אישי מתחנת המידע")) {
+                // scan events to find exams
+                for (Event event : events.getItems()) {
+                    // check if event is an exam
+                    if (event.getSummary().contains("מבחן")) {
+                        // get exam/course name
+                        Optional<Course> maybeFoundCourse = extractCourseFromExam(event.getSummary(), courses);
+
+                        // add to list of found exams
+                        maybeFoundCourse.ifPresent(course -> examsFound.add(new Exam(course, event.getStart().getDateTime())));
+                    }
+                }
+
+            }
+
+            // checks if calendar is the PlanIt calendar
+            // ignores the PlanIt calendar in order to generate new study time slots
+            if (calendar.getSummary().equals(PLANIT_CALENDAR_SUMMERY_NAME)) {
+                planItCalendarOldEvents.addAll(events.getItems());
+                continue;
+            }
+
+            // adds the events, including the full day events, from the calendar to the list
+            allEventsFromCalendars.addAll(events.getItems());
+            // adds the full day events to the fullDayEvents list
+            fullDayEvents.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
+        }
+
+        // sorts the events, so they will be ordered by start time
+        allEventsFromCalendars.sort(new EventComparator());
+        fullDayEvents.sort(new EventComparator());
+        return allEventsFromCalendars;
+    }
+
+    /**
+     * find the name of the course, from the String that contains the event summery of an exam event.
+     * e.g מבחן מועד 1 ציון בחינה - פרונטלי גב' אריאן שלומית חישוביות
+     * return "חישוביות"
+     */
+    private static Optional<Course> extractCourseFromExam(String summary, List<Course> courses) { // TO DO
+        String[] courseName = {""}; // init empty array
+
+        // find course name from the string of the exam
+        String[] summeryInWords = summary.split(" ");
+        Optional<Course> maybeFoundCourse = Optional.empty();
+
+        // scan through the String array to add words that finally will add up to a course name from the DB
+        for (int i = summeryInWords.length - 1; i >= 0; i--) {
+
+            // assign the new word to the start of the current course-name concatenation
+            courseName[0] = (summeryInWords[i] + " " + courseName[0]).trim();
+
+            // try to get a Course from the list of courses in the DB
+            maybeFoundCourse = courses.stream().filter(Course -> Course.getCourseName().equals(courseName[0])).findFirst();
+
+            // check if found course is not a null
+            if (maybeFoundCourse.isPresent()) {
+                break;
+            }
+        }
+
+        return maybeFoundCourse;
+    }
+
+
     /**
      * 2# Takes out all the free time slots that can be taken out of the user events.
      *

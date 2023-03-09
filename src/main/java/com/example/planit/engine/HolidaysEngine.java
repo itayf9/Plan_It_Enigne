@@ -2,12 +2,15 @@ package com.example.planit.engine;
 
 import com.example.planit.holidays.Holiday;
 import com.example.planit.holidays.HolidaysResponse;
+import com.google.api.services.calendar.model.Event;
 import com.google.gson.Gson;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class HolidaysEngine {
@@ -63,6 +66,29 @@ public class HolidaysEngine {
         return allHolidays;
     }
 
+    public static List<Event> handleHolidaysInFullDaysEvents(List<Event> fullDayEvents, List<Event> events
+            , boolean isStudyOnHolyDays, Set<String> holidaysDatesCurrentYear, Set<String> holidaysDatesNextYear) {
+        List<Event> copyOfFullDayEvents = new ArrayList<>(fullDayEvents);
+        // scan through the list and check if an event is a holiday.
+        for (Event fullDayEvent : fullDayEvents) {
+            if (holidaysDatesCurrentYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())
+                    || holidaysDatesNextYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())) {
+
+                // check if user want to study on holidays
+                if (isStudyOnHolyDays) {
+
+                    // remove the holiday from the list of events
+                    events.remove(fullDayEvent);
+                }
+
+                // remove the event from the copy of list of fullDayEvents and the events list
+                copyOfFullDayEvents.remove(fullDayEvent);
+            }
+        }
+
+        return copyOfFullDayEvents;
+    }
+
     /**
      * get the country and the year and return in url the full url to get request form "calendarific" server.
      *
@@ -73,5 +99,6 @@ public class HolidaysEngine {
     private static String createUrlForCurrentCountryAndYear(String holidaysApiKey, String country, int year) {
         return UrlRequest + "?" + "api_key=" + holidaysApiKey + "&country=" + country + "&year=" + year;
     }
+
 
 }
