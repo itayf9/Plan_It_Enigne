@@ -9,7 +9,7 @@ import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOscanResponseToClient;
 import com.example.planit.utill.dto.DTOstatus;
-import com.example.planit.utill.dto.DTOuserEvents;
+import com.example.planit.utill.dto.DTOuserCalendarsInformation;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.services.calendar.model.Event;
 import jakarta.annotation.PostConstruct;
@@ -74,6 +74,8 @@ public class CalendarController {
 
         long s = System.currentTimeMillis();
 
+        //CalendarEngine.scan
+
         // check if user exist in DB
         Optional<User> maybeUser = userRepo.findUserByEmail(email);
         if (maybeUser.isEmpty()) {
@@ -88,7 +90,7 @@ public class CalendarController {
 
         // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, courseRepo);
+        DTOuserCalendarsInformation userEvents = CalendarEngine.getUserCalendarsInformation(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, courseRepo);
 
         // fullDayEvents - a list of events that represents the user's full day events
         List<Event> fullDayEvents = userEvents.getFullDayEvents();
@@ -155,7 +157,7 @@ public class CalendarController {
 
         // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserEvents userEvents = CalendarEngine.getEvents(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, courseRepo);
+        DTOuserCalendarsInformation userEvents = CalendarEngine.getUserCalendarsInformation(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, courseRepo);
 
         // fullDayEvents - a list of events that represents the user's full day events
         List<Event> fullDayEvents = userEvents.getFullDayEvents();

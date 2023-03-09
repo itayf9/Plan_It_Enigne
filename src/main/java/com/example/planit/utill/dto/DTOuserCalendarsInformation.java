@@ -10,7 +10,7 @@ import java.util.List;
  * DTO that holds of the events the user have + the user exams that were found + full day events + Calendar Service.
  * is using to help us in scan, generate function.
  */
-public class DTOuserEvents {
+public class DTOuserCalendarsInformation {
     private final List<Event> fullDayEvents;
 
     private final List<Event> planItCalendarOldEvents;
@@ -18,7 +18,7 @@ public class DTOuserEvents {
     private final List<Event> events;
     private final Calendar calendarService;
 
-    public DTOuserEvents(List<Event> fullDayEvents, List<Event> planItCalendarOldEvents, List<Exam> examsFound, List<Event> events, Calendar calendarService) {
+    public DTOuserCalendarsInformation(List<Event> fullDayEvents, List<Event> planItCalendarOldEvents, List<Exam> examsFound, List<Event> events, Calendar calendarService) {
         this.fullDayEvents = fullDayEvents;
         this.planItCalendarOldEvents = planItCalendarOldEvents;
         this.examsFound = examsFound;

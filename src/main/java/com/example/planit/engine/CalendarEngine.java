@@ -12,7 +12,7 @@ import com.example.planit.utill.EventComparator;
 import com.example.planit.utill.Utility;
 import com.example.planit.utill.dto.DTOfreetime;
 import com.example.planit.utill.dto.DTOstartAndEndOfInterval;
-import com.example.planit.utill.dto.DTOuserEvents;
+import com.example.planit.utill.dto.DTOuserCalendarsInformation;
 import com.google.api.client.auth.oauth2.RefreshTokenRequest;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
@@ -52,7 +52,7 @@ public class CalendarEngine {
      * @param user       is containing user preferences.
      * @return DTOfreetime object the return from the function adjustFreeSlotsList.
      */
-    public static DTOfreetime getFreeSlots(List<Event> userEvents, User user, List<Exam> examsFound, String start) {
+    private static DTOfreetime getFreeSlots(List<Event> userEvents, User user, List<Exam> examsFound, String start) {
 
         Exam lastExam = examsFound.get(examsFound.size() - 1);
         long startTimeOfLastExam = lastExam.getDateTime().getValue();
@@ -160,183 +160,6 @@ public class CalendarEngine {
         return new DTOfreetime(adjustedUserFreeSlots, totalFreeTime);
     }
 
-    /**
-     * find the name of the course, from the String that contains the event summery of an exam event.
-     * e.g מבחן מועד 1 ציון בחינה - פרונטלי גב' אריאן שלומית חישוביות
-     * return "חישוביות"
-     */
-    public static Optional<Course> extractCourseFromExam(String summary, List<Course> courses) { // TO DO
-        String[] courseName = {""}; // init empty array
-
-        // find course name from the string of the exam
-        String[] summeryInWords = summary.split(" ");
-        Optional<Course> maybeFoundCourse = Optional.empty();
-
-        // scan through the String array to add words that finally will add up to a course name from the DB
-        for (int i = summeryInWords.length - 1; i >= 0; i--) {
-
-            // assign the new word to the start of the current course-name concatenation
-            courseName[0] = (summeryInWords[i] + " " + courseName[0]).trim();
-
-            // try to get a Course from the list of courses in the DB
-            maybeFoundCourse = courses.stream().filter(Course -> Course.getCourseName().equals(courseName[0])).findFirst();
-
-            // check if found course is not a null
-            if (maybeFoundCourse.isPresent()) {
-                break;
-            }
-        }
-
-        return maybeFoundCourse;
-    }
-
-    /**
-     * 1# get List of all the event's user has
-     *
-     * @param calendarService Google Calendar service provider.
-     * @param calendarList    List of all the User Google Calendars
-     * @param start           the time to start scan of events
-     * @param end             the time to end scan of events
-     * @param fullDayEvents   list of full day events found
-     * @return List of all the event's user has
-     */
-    public static List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
-                                                        List<Event> fullDayEvents, List<Event> planItCalendarOldEvents, List<Exam> examsFound, CoursesRepository courseRepo) {
-        List<Event> allEventsFromCalendars = new ArrayList<>();
-
-        List<Course> courses = courseRepo.findAll(); // get all courses from DB
-
-        for (CalendarListEntry calendar : calendarList) {
-            Events events;
-            try {
-                events = calendarService.events().list(calendar.getId())
-                        .setTimeMin(start)
-                        .setOrderBy("startTime")
-                        .setTimeMax(end)
-                        .setSingleEvents(true)
-                        .execute();
-            } catch (GoogleJsonResponseException e) {
-                throw new RuntimeException(e);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-
-            }
-            // check if calendar is the exams calendar
-            if (calendar.getSummary().equals("יומן אישי מתחנת המידע")) {
-                // scan events to find exams
-                for (Event event : events.getItems()) {
-                    // check if event is an exam
-                    if (event.getSummary().contains("מבחן")) {
-                        // get exam/course name
-                        Optional<Course> maybeFoundCourse = extractCourseFromExam(event.getSummary(), courses);
-
-                        // add to list of found exams
-                        maybeFoundCourse.ifPresent(course -> examsFound.add(new Exam(course, event.getStart().getDateTime())));
-                    }
-                }
-
-            }
-
-            // checks if calendar is the PlanIt calendar
-            // ignores the PlanIt calendar in order to generate new study time slots
-            if (calendar.getSummary().equals(PLANIT_CALENDAR_SUMMERY_NAME)) {
-                planItCalendarOldEvents.addAll(events.getItems());
-                continue;
-            }
-
-            // adds the events, including the full day events, from the calendar to the list
-            allEventsFromCalendars.addAll(events.getItems());
-            // adds the full day events to the fullDayEvents list
-            fullDayEvents.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
-        }
-
-        // sorts the events, so they will be ordered by start time
-        allEventsFromCalendars.sort(new EventComparator());
-        fullDayEvents.sort(new EventComparator());
-        return allEventsFromCalendars;
-    }
-
-    /**
-     * Extract all the events that are in the user calendars.
-     *
-     * @param accessToken use for get the calenders from Google DB
-     * @param courseRepo  a {@link CoursesRepository} which is the DB of courses
-     * @return DTOuserEvents contains all the events, full day events and the exams
-     * @throws GeneralSecurityException GeneralSecurityException
-     * @throws IOException              IOException
-     */
-    public static DTOuserEvents getEvents(String accessToken, long expireTimeInMilliSeconds, String start, String end, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
-        // get user's calendar service
-
-        Calendar calendarService = getCalendarService(accessToken, expireTimeInMilliSeconds);
-
-        // get user's calendar list
-        List<CalendarListEntry> calendarList = getCalendarList(calendarService);
-
-        DateTime startDate = new DateTime(start);
-        DateTime endDate = new DateTime(end);
-
-
-        /*DateTime startDate = new DateTime(Instant.parse(start).toEpochMilli());
-        DateTime endDate = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);*/
-
-        List<Event> fullDayEvents = new ArrayList<>();
-        List<Event> planItCalendarOldEvents = new ArrayList<>();
-        List<Exam> examsFound = new LinkedList<>();
-
-
-        // get List of user's events
-        List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, planItCalendarOldEvents, examsFound, courseRepo);
-        return new DTOuserEvents(fullDayEvents, planItCalendarOldEvents, examsFound, events, calendarService);
-    }
-
-    /**
-     * get a List of all the User Google Calendars
-     *
-     * @param calendarService Google Calendar service provider.
-     * @return List of all the User Google Calendars
-     */
-    public static List<CalendarListEntry> getCalendarList(Calendar calendarService) {
-        String pageToken = null;
-        List<CalendarListEntry> calendars = new ArrayList<>();
-        do {
-            CalendarList calendarList;
-            try {
-                calendarList = calendarService.calendarList().list().setPageToken(pageToken).execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            calendars.addAll(calendarList.getItems());
-
-            pageToken = calendarList.getNextPageToken();
-        } while (pageToken != null);
-
-        return calendars;
-    }
-
-    /**
-     * get Google Calendar service provider.
-     *
-     * @param access_token User Google AccessToken
-     * @return Google Calendar service provider.
-     * @throws GeneralSecurityException GeneralSecurityException
-     * @throws IOException              IOException
-     */
-    private static Calendar getCalendarService(String access_token, long expireTimeInMilliSeconds) throws GeneralSecurityException, IOException {
-
-        // Build a new authorized API client service.
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        Date expireDate = new Date(expireTimeInMilliSeconds);
-
-        AccessToken accessToken = new AccessToken(access_token, expireDate);
-        GoogleCredentials credential = new GoogleCredentials(accessToken);
-        HttpRequestInitializer httpRequestInitializer = new HttpCredentialsAdapter(credential);
-
-        return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, httpRequestInitializer)
-                .setApplicationName(Constants.APPLICATION_NAME)
-                .build();
-    }
-
     /*public String test(AccessToken accessToken) throws GeneralSecurityException, IOException {
 
         // 1. get access_token from DB / request body / need to think about it...
@@ -438,139 +261,112 @@ public class CalendarEngine {
         return planItCalendarID;
     }
 
+
     /**
-     * @param allEvents list of the user events we found during the initial scan
-     * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
+     * calculates the proportions of the courses that the user has.
+     * for each course, the proportion is determined by a double (e.g. 0.995 is 99.5%)
+     *
+     * @param exams a list of {@link Exam} that represents the exams that the user have
+     * @return a map of string to double that represents the course names and their proportion
      */
-    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, UserRepository userRepo, String start, List<Event> planItCalendarOldEvents) {
+    private static Map<Exam, Double> getExamsProportions(List<Exam> exams) {
 
-        // gets the list of free slots
-        DTOfreetime dtofreetime = getFreeSlots(allEvents, user, exams, start);
+        Map<Exam, Integer> exam2TotalValue = new HashMap<>();
+        int sumTotalValues = 0;
+        Map<Exam, Double> exam2Proportion = new HashMap<>();
 
-        // creates PlanIt calendar if not yet exists
-        String planItCalendarID = createPlanItCalendar(service, user, userRepo);
+        for (Exam exam : exams) {
 
+            Course currentCourse = exam.getCourse();
 
-        // finds the proportions of each exam from 100% study time
-        Map<Exam, Double> exam2Proportions = getExamsProportions(exams);
+            // gets the total value of the course ( credits + difficulty level + recommended study time)
+            int currentCourseTotalValue = currentCourse.getCredits() + currentCourse.getDifficultyLevel() + currentCourse.getRecommendedStudyTime();
 
-        // separates each slot in the free slots list, to a few study sessions
-        // and inserts breaks
-        List<StudySession> sessionsList = separateSlotsToSessions(user, dtofreetime.getFreeTimeSlots());
+            // adds the exam to the map of total values
+            exam2TotalValue.put(exam, currentCourseTotalValue);
+            sumTotalValues += currentCourseTotalValue;
+        }
 
+        for (Map.Entry<Exam, Integer> examTotalValueMapEntry : exam2TotalValue.entrySet()) {
+            Exam currentExam = examTotalValueMapEntry.getKey();
+            int currentExamTotalValue = examTotalValueMapEntry.getValue();
 
-        // calculates how many sessions belong to each course
-        Map<Exam, Integer> exams2numberOfSessions = distributeNumberOfSessionsToCourses(exam2Proportions, sessionsList.size());
+            // calculates the percentage of the exam's value
+            double currentExamProportion = ((double) currentExamTotalValue / (double) sumTotalValues);
 
-        // goes from the end to the start and embed courses to sessions
-        embedCoursesInSessions(exams2numberOfSessions, sessionsList, exams);
+            // adds the exam to the map of proportions
+            exam2Proportion.put(currentExam, currentExamProportion);
+        }
 
-        // #5 - updates the planIt calendar
-        updatePlanItCalendar(sessionsList, service, planItCalendarID, planItCalendarOldEvents);
-
+        return exam2Proportion;
     }
 
     /**
-     * updates the PlanIt calendar with the new sessions list.
-     * clears the calendar and create new Google {@link Event} for each study session
+     * separate the free time slots to study sessions.
      *
-     * @param sessionsList     a list of {@link StudySession} that represents the user's study sessions
-     * @param service          the Google's {@link Calendar} service
-     * @param planItCalendarID the calendar ID of the PlanIt calendar in the user's calendar list
+     * @param user          use for get user preferences.
+     * @param freeTimeSlots have all the free time slots.
+     * @return list of study session
      */
-    private static void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Event> planItCalendarOldEvents) {
+    private static List<StudySession> separateSlotsToSessions(User user, List<TimeSlot> freeTimeSlots) {
 
-        List<Event> overlapsOldEvents = getOverlapOldEventsPlanItCalendar(sessionsList, planItCalendarOldEvents);
+        List<StudySession> listOfStudySessions = new ArrayList<>();
+        long breakTime = user.getUserPreferences().getUserBreakTime();
+        int studyTimeInMinutes = user.getUserPreferences().getStudySessionTime();
 
-        for (Event eventToBeDeleted : overlapsOldEvents) {
-            try {
-                // removes overlap events in the PlanIt calendar
-                service.events().delete(planItCalendarID, eventToBeDeleted.getId()).execute();
+        // go through the slots list
+        for (TimeSlot timeSlot : freeTimeSlots) {
+            // initial the startOfSession and endOfSession.
+            // the sessions are rounded to 15 minutes intervals
+            Instant startOfSession = roundInstantMinutesTime(Instant.ofEpochMilli(timeSlot.getStart().getValue()), true);
+            Instant endOfSession = startOfSession.plus(studyTimeInMinutes, ChronoUnit.MINUTES);
 
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            // while "endOfSession" is in the range of the slot
+            while (endOfSession.toEpochMilli() <= timeSlot.getEnd().getValue()) {
+                // add the current study session to the list
+                listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(endOfSession.toEpochMilli())));
+                // add to the endOfSession the break time
+                endOfSession = endOfSession.plus(breakTime, ChronoUnit.MINUTES);
+                // initial the new startOfSession and endOfSession.
+                startOfSession = endOfSession;
+                endOfSession = startOfSession.plus(studyTimeInMinutes, ChronoUnit.MINUTES);
+            }
+
+            // if the "startOfSession" is in the range and the "endOfSession" is out of range,
+            // adds the session from "startOfSession" to the end of range.
+            if (startOfSession.toEpochMilli() < timeSlot.getEnd().getValue()) {
+                Instant endOfSlot = roundInstantMinutesTime(Instant.ofEpochMilli(timeSlot.getEnd().getValue()), false);
+                listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(endOfSlot.toEpochMilli())));
             }
         }
 
-
-        // adds updated events to the PlanIt calendar
-        // goes through the sessions and adds to the PlanIt calendar
-        for (StudySession session : sessionsList) {
-
-            // creates a new Google Event
-            Event event = new Event()
-                    .setSummary(Constants.EVENT_SUMMERY_PREFIX + session.getCourseName())
-                    .setDescription(session.getDescription())
-                    .setStart(new EventDateTime()
-                            .setDateTime(session.getStart())
-                            .setTimeZone(ISRAEL_TIME_ZONE))
-                    .setEnd(new EventDateTime()
-                            .setDateTime(session.getEnd())
-                            .setTimeZone(ISRAEL_TIME_ZONE));
-
-            // inserts the new Google Event to the PlanIt calendar
-            try {
-                service.events().insert(planItCalendarID, event).execute();
-
-            } catch (GoogleJsonResponseException e) {
-                System.out.println(e.getDetails());
-                System.out.println(e.getStatusCode());
-                System.out.println(e.getMessage());
-                throw new RuntimeException();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        return listOfStudySessions;
     }
 
     /**
-     * finds all the overlapping events from the old PlanIt calendar (from previous generating processes).
-     * the new generated sessions are compared to the old generated events.
+     * for every session, calculates the number of sessions, considering the proportions and the number of total sessions.
+     * for each course X, the number of sessions is calculated as a rounded value of: (number of sessions * proportions of course X)
      *
-     * @param sessionsList            the new list of {@link StudySession} that about to be created as an events
-     * @param planItCalendarOldEvents the old list of {@link Event} that been created and to be checked if causing an overlap anywhere
-     * @return list of old {@link Event} from the PlanIt calendar that will later be deleted from the calendar.
+     * @param exam2Proportions a map that contains values of proportions for each exam
+     * @param numOfSessions    the number of sessions available
+     * @return a map of string to int that represents, for each course name, the number of sessions
      */
-    private static List<Event> getOverlapOldEventsPlanItCalendar(List<StudySession> sessionsList, List<Event> planItCalendarOldEvents) {
-        List<Event> overlappingEvents = new ArrayList<>();
-        List<Integer> newSessionsIndicesToBeRemoved = new ArrayList<>();
+    private static Map<Exam, Integer> distributeNumberOfSessionsToCourses(Map<Exam, Double> exam2Proportions, int numOfSessions) {
+        Map<Exam, Integer> exams2numberOfSessions = new HashMap<>();
 
-        int newSessionIndex = 0;
-        int oldEventIndex = 0;
+        for (Map.Entry<Exam, Double> examProportionMapEntry : exam2Proportions.entrySet()) {
+            Exam exam = examProportionMapEntry.getKey();
+            Double proportion = examProportionMapEntry.getValue();
 
-        while (newSessionIndex < sessionsList.size() && oldEventIndex < planItCalendarOldEvents.size()) {
-            StudySession newSession = sessionsList.get(newSessionIndex);
-            Event oldEvent = planItCalendarOldEvents.get(oldEventIndex);
+            // gets the number of sessions for the current exam
+            Integer numberOfSessionForCurrentExam = (int) Math.round(numOfSessions * proportion);
 
-            if (newSession.getEnd().getValue() < (oldEvent.getStart().getDateTime().getValue())) {
-                // new event ends before old event starts, move to next new event
-                newSessionIndex++;
-            } else if (newSession.getStart().getValue() > (oldEvent.getEnd().getDateTime().getValue())) {
-                // new event starts after old event ends, move to next old event
-                oldEventIndex++;
-            } else if (newSession.getStart().equals(oldEvent.getStart().getDateTime())
-                    && newSession.getEnd().equals(oldEvent.getEnd().getDateTime())
-                    && (Constants.EVENT_SUMMERY_PREFIX + newSession.getCourseName()).equals(oldEvent.getSummary())
-                    && newSession.getDescription().equals(oldEvent.getDescription())) {
-                // overlap detected, but the new session is exactly the same as the old event,
-                // so add the index to the list of indices to be removed later
-                newSessionsIndicesToBeRemoved.add(newSessionIndex);
-                newSessionIndex++;
-                oldEventIndex++;
-
-            } else {
-                // overlap detected, add old event to list of overlapping events
-                overlappingEvents.add(oldEvent);
-                oldEventIndex++;
-            }
-
-        }
-        // removes all the events that are duplicates from the sessions list
-        for (int i = newSessionsIndicesToBeRemoved.size() - 1; i >= 0; i--) {
-            sessionsList.remove(newSessionsIndicesToBeRemoved.get(i).intValue());
+            // adds the number of sessions to the map
+            exams2numberOfSessions.put(exam, numberOfSessionForCurrentExam);
         }
 
-        return overlappingEvents;
+        return exams2numberOfSessions;
+
     }
 
     /**
@@ -595,6 +391,59 @@ public class CalendarEngine {
         embedCoursesSubjectsInSessions(exam2Index, sessionsList, exams);
 
 
+    }
+
+    /**
+     * embeds the courses names in the sessions, considering the exams dates and the number of sessions required for each course.
+     *
+     * @param exams2numberOfSessions a map of string to int that represents, for each course name, the required number of sessions
+     * @param sessionsList           a list of {@link StudySession} that represents the user's created study sessions
+     * @param exams                  a list of {@link Exam} that represents the user's exams
+     */
+    private static void embedCoursesNamesInSessions(Map<Exam, Integer> exams2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
+
+        Stack<Exam> nextExams = new Stack<>();
+        int currentExamIndex = exams.size() - 1;
+
+        // initiate the set with the last dated exam in the exams period
+        nextExams.push(exams.get(currentExamIndex));
+        currentExamIndex--;
+
+        // goes through the sessions from the end to the start
+        for (int i = sessionsList.size() - 1; i >= 0; i--) {
+
+            // if the current session starts before the following exam to be seen
+            // e.g. if 08:00-10:00 of 09/07 is before the 10/07
+            if (currentExamIndex > -1 && sessionsList.get(i).getStart().getValue() < exams.get(currentExamIndex).getDateTime().getValue()) {
+                nextExams.push(exams.get(currentExamIndex));
+                currentExamIndex--;
+            }
+
+            /* checks if the nextExams stack is empty.
+               if empty, removes the next sessions from the sessionsList,
+               until we reach the next exam */
+            if (nextExams.isEmpty()) {
+                sessionsList.remove(i);
+                continue;
+            }
+
+            // sets the session to be associated with the exam that is the closest to the session
+            sessionsList.get(i).setCourseName(nextExams.peek().getCourse().getCourseName());
+            sessionsList.get(i).setExamToStudyFor(nextExams.peek());
+
+            // extract course name and sessions-count values
+            Exam exam = nextExams.peek();
+            int numOfSessionsPerExam = exams2numberOfSessions.get(nextExams.peek());
+
+            // update session count value and save new value to the map
+            numOfSessionsPerExam -= 1;
+
+            if (numOfSessionsPerExam != 0) { // if there are more session left to insert, updates the value in the map
+                exams2numberOfSessions.put(exam, numOfSessionsPerExam);
+            } else { // if no more sessions left to insert, removes exam from stack
+                nextExams.pop();
+            }
+        }
     }
 
     /**
@@ -708,228 +557,106 @@ public class CalendarEngine {
     }
 
     /**
-     * embeds the courses names in the sessions, considering the exams dates and the number of sessions required for each course.
+     * updates the PlanIt calendar with the new sessions list.
+     * clears the calendar and create new Google {@link Event} for each study session
      *
-     * @param exams2numberOfSessions a map of string to int that represents, for each course name, the required number of sessions
-     * @param sessionsList           a list of {@link StudySession} that represents the user's created study sessions
-     * @param exams                  a list of {@link Exam} that represents the user's exams
+     * @param sessionsList     a list of {@link StudySession} that represents the user's study sessions
+     * @param service          the Google's {@link Calendar} service
+     * @param planItCalendarID the calendar ID of the PlanIt calendar in the user's calendar list
      */
-    private static void embedCoursesNamesInSessions(Map<Exam, Integer> exams2numberOfSessions, List<StudySession> sessionsList, List<Exam> exams) {
+    private static void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Event> planItCalendarOldEvents) {
 
-        Stack<Exam> nextExams = new Stack<>();
-        int currentExamIndex = exams.size() - 1;
+        List<Event> overlapsOldEvents = getOverlapOldEventsPlanItCalendar(sessionsList, planItCalendarOldEvents);
 
-        // initiate the set with the last dated exam in the exams period
-        nextExams.push(exams.get(currentExamIndex));
-        currentExamIndex--;
+        for (Event eventToBeDeleted : overlapsOldEvents) {
+            try {
+                // removes overlap events in the PlanIt calendar
+                service.events().delete(planItCalendarID, eventToBeDeleted.getId()).execute();
 
-        // goes through the sessions from the end to the start
-        for (int i = sessionsList.size() - 1; i >= 0; i--) {
-
-            // if the current session starts before the following exam to be seen
-            // e.g. if 08:00-10:00 of 09/07 is before the 10/07
-            if (currentExamIndex > -1 && sessionsList.get(i).getStart().getValue() < exams.get(currentExamIndex).getDateTime().getValue()) {
-                nextExams.push(exams.get(currentExamIndex));
-                currentExamIndex--;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
+        }
 
-            /* checks if the nextExams stack is empty.
-               if empty, removes the next sessions from the sessionsList,
-               until we reach the next exam */
-            if (nextExams.isEmpty()) {
-                sessionsList.remove(i);
-                continue;
-            }
 
-            // sets the session to be associated with the exam that is the closest to the session
-            sessionsList.get(i).setCourseName(nextExams.peek().getCourse().getCourseName());
-            sessionsList.get(i).setExamToStudyFor(nextExams.peek());
+        // adds updated events to the PlanIt calendar
+        // goes through the sessions and adds to the PlanIt calendar
+        for (StudySession session : sessionsList) {
 
-            // extract course name and sessions-count values
-            Exam exam = nextExams.peek();
-            int numOfSessionsPerExam = exams2numberOfSessions.get(nextExams.peek());
+            // creates a new Google Event
+            Event event = new Event()
+                    .setSummary(Constants.EVENT_SUMMERY_PREFIX + session.getCourseName())
+                    .setDescription(session.getDescription())
+                    .setStart(new EventDateTime()
+                            .setDateTime(session.getStart())
+                            .setTimeZone(ISRAEL_TIME_ZONE))
+                    .setEnd(new EventDateTime()
+                            .setDateTime(session.getEnd())
+                            .setTimeZone(ISRAEL_TIME_ZONE));
 
-            // update session count value and save new value to the map
-            numOfSessionsPerExam -= 1;
+            // inserts the new Google Event to the PlanIt calendar
+            try {
+                service.events().insert(planItCalendarID, event).execute();
 
-            if (numOfSessionsPerExam != 0) { // if there are more session left to insert, updates the value in the map
-                exams2numberOfSessions.put(exam, numOfSessionsPerExam);
-            } else { // if no more sessions left to insert, removes exam from stack
-                nextExams.pop();
+            } catch (GoogleJsonResponseException e) {
+                System.out.println(e.getDetails());
+                System.out.println(e.getStatusCode());
+                System.out.println(e.getMessage());
+                throw new RuntimeException();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }
 
     /**
-     * for every session, calculates the number of sessions, considering the proportions and the number of total sessions.
-     * for each course X, the number of sessions is calculated as a rounded value of: (number of sessions * proportions of course X)
+     * finds all the overlapping events from the old PlanIt calendar (from previous generating processes).
+     * the new generated sessions are compared to the old generated events.
      *
-     * @param exam2Proportions a map that contains values of proportions for each exam
-     * @param numOfSessions    the number of sessions available
-     * @return a map of string to int that represents, for each course name, the number of sessions
+     * @param sessionsList            the new list of {@link StudySession} that about to be created as an events
+     * @param planItCalendarOldEvents the old list of {@link Event} that been created and to be checked if causing an overlap anywhere
+     * @return list of old {@link Event} from the PlanIt calendar that will later be deleted from the calendar.
      */
-    private static Map<Exam, Integer> distributeNumberOfSessionsToCourses(Map<Exam, Double> exam2Proportions, int numOfSessions) {
-        Map<Exam, Integer> exams2numberOfSessions = new HashMap<>();
+    private static List<Event> getOverlapOldEventsPlanItCalendar(List<StudySession> sessionsList, List<Event> planItCalendarOldEvents) {
+        List<Event> overlappingEvents = new ArrayList<>();
+        List<Integer> newSessionsIndicesToBeRemoved = new ArrayList<>();
 
-        for (Map.Entry<Exam, Double> examProportionMapEntry : exam2Proportions.entrySet()) {
-            Exam exam = examProportionMapEntry.getKey();
-            Double proportion = examProportionMapEntry.getValue();
+        int newSessionIndex = 0;
+        int oldEventIndex = 0;
 
-            // gets the number of sessions for the current exam
-            Integer numberOfSessionForCurrentExam = (int) Math.round(numOfSessions * proportion);
+        while (newSessionIndex < sessionsList.size() && oldEventIndex < planItCalendarOldEvents.size()) {
+            StudySession newSession = sessionsList.get(newSessionIndex);
+            Event oldEvent = planItCalendarOldEvents.get(oldEventIndex);
 
-            // adds the number of sessions to the map
-            exams2numberOfSessions.put(exam, numberOfSessionForCurrentExam);
-        }
+            if (newSession.getEnd().getValue() < (oldEvent.getStart().getDateTime().getValue())) {
+                // new event ends before old event starts, move to next new event
+                newSessionIndex++;
+            } else if (newSession.getStart().getValue() > (oldEvent.getEnd().getDateTime().getValue())) {
+                // new event starts after old event ends, move to next old event
+                oldEventIndex++;
+            } else if (newSession.getStart().equals(oldEvent.getStart().getDateTime())
+                    && newSession.getEnd().equals(oldEvent.getEnd().getDateTime())
+                    && (Constants.EVENT_SUMMERY_PREFIX + newSession.getCourseName()).equals(oldEvent.getSummary())
+                    && newSession.getDescription().equals(oldEvent.getDescription())) {
+                // overlap detected, but the new session is exactly the same as the old event,
+                // so add the index to the list of indices to be removed later
+                newSessionsIndicesToBeRemoved.add(newSessionIndex);
+                newSessionIndex++;
+                oldEventIndex++;
 
-        return exams2numberOfSessions;
-
-    }
-
-    /**
-     * separate the free time slots to study sessions.
-     *
-     * @param user          use for get user preferences.
-     * @param freeTimeSlots have all the free time slots.
-     * @return list of study session
-     */
-    private static List<StudySession> separateSlotsToSessions(User user, List<TimeSlot> freeTimeSlots) {
-
-        List<StudySession> listOfStudySessions = new ArrayList<>();
-        long breakTime = user.getUserPreferences().getUserBreakTime();
-        int studyTimeInMinutes = user.getUserPreferences().getStudySessionTime();
-
-        // go through the slots list
-        for (TimeSlot timeSlot : freeTimeSlots) {
-            // initial the startOfSession and endOfSession.
-            // the sessions are rounded to 15 minutes intervals
-            Instant startOfSession = roundInstantMinutesTime(Instant.ofEpochMilli(timeSlot.getStart().getValue()), true);
-            Instant endOfSession = startOfSession.plus(studyTimeInMinutes, ChronoUnit.MINUTES);
-
-            // while "endOfSession" is in the range of the slot
-            while (endOfSession.toEpochMilli() <= timeSlot.getEnd().getValue()) {
-                // add the current study session to the list
-                listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(endOfSession.toEpochMilli())));
-                // add to the endOfSession the break time
-                endOfSession = endOfSession.plus(breakTime, ChronoUnit.MINUTES);
-                // initial the new startOfSession and endOfSession.
-                startOfSession = endOfSession;
-                endOfSession = startOfSession.plus(studyTimeInMinutes, ChronoUnit.MINUTES);
+            } else {
+                // overlap detected, add old event to list of overlapping events
+                overlappingEvents.add(oldEvent);
+                oldEventIndex++;
             }
 
-            // if the "startOfSession" is in the range and the "endOfSession" is out of range,
-            // adds the session from "startOfSession" to the end of range.
-            if (startOfSession.toEpochMilli() < timeSlot.getEnd().getValue()) {
-                Instant endOfSlot = roundInstantMinutesTime(Instant.ofEpochMilli(timeSlot.getEnd().getValue()), false);
-                listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(endOfSlot.toEpochMilli())));
-            }
+        }
+        // removes all the events that are duplicates from the sessions list
+        for (int i = newSessionsIndicesToBeRemoved.size() - 1; i >= 0; i--) {
+            sessionsList.remove(newSessionsIndicesToBeRemoved.get(i).intValue());
         }
 
-        return listOfStudySessions;
-    }
-
-    /**
-     * calculates the proportions of the courses that the user has.
-     * for each course, the proportion is determined by a double (e.g. 0.995 is 99.5%)
-     *
-     * @param exams a list of {@link Exam} that represents the exams that the user have
-     * @return a map of string to double that represents the course names and their proportion
-     */
-    private static Map<Exam, Double> getExamsProportions(List<Exam> exams) {
-
-        Map<Exam, Integer> exam2TotalValue = new HashMap<>();
-        int sumTotalValues = 0;
-        Map<Exam, Double> exam2Proportion = new HashMap<>();
-
-        for (Exam exam : exams) {
-
-            Course currentCourse = exam.getCourse();
-
-            // gets the total value of the course ( credits + difficulty level + recommended study time)
-            int currentCourseTotalValue = currentCourse.getCredits() + currentCourse.getDifficultyLevel() + currentCourse.getRecommendedStudyTime();
-
-            // adds the exam to the map of total values
-            exam2TotalValue.put(exam, currentCourseTotalValue);
-            sumTotalValues += currentCourseTotalValue;
-        }
-
-        for (Map.Entry<Exam, Integer> examTotalValueMapEntry : exam2TotalValue.entrySet()) {
-            Exam currentExam = examTotalValueMapEntry.getKey();
-            int currentExamTotalValue = examTotalValueMapEntry.getValue();
-
-            // calculates the percentage of the exam's value
-            double currentExamProportion = ((double) currentExamTotalValue / (double) sumTotalValues);
-
-            // adds the exam to the map of proportions
-            exam2Proportion.put(currentExam, currentExamProportion);
-        }
-
-        return exam2Proportion;
-    }
-
-    /**
-     * check if accessToken is still valid.
-     * the function compares the expiration time with the current time.
-     * the expiration time is related to an accessToken.
-     *
-     * @param expirationTime a long that represents the expiration time (in milliseconds)
-     * @return true if the token is valid, false otherwise
-     */
-    public static boolean isAccessTokenValid(long expirationTime) {
-        Instant expirationInstant = Instant.ofEpochMilli(expirationTime); // e.g. 1781874521 representing the time of 2023-05-17 - 14:30
-
-        /* we add extra 5 minutes to make sure if token is about to be expired will be refreshed sooner */
-        Instant now = Instant.now().plus(5, ChronoUnit.MINUTES);
-
-        return expirationInstant.isAfter(now); // true if expire date is before the current time 2023-05-17 - 14:40
-    }
-
-    /**
-     * get a new accessToken with the refresh token
-     *
-     * @param refreshToken the refreshToken
-     * @param clientId     client id string
-     * @param clientSecret client secret string
-     * @return TokenResponse contains new accessToken
-     * @throws IOException              IOException
-     * @throws GeneralSecurityException GeneralSecurityException
-     */
-    public static TokenResponse refreshAccessToken(String refreshToken, String clientId, String clientSecret)
-            throws IOException, GeneralSecurityException {
-
-        // Create a RefreshTokenRequest to get a new access token using the refresh token
-        RefreshTokenRequest refreshTokenRequest = new GoogleRefreshTokenRequest(
-                GoogleNetHttpTransport.newTrustedTransport(),
-                JSON_FACTORY,
-                refreshToken,
-                clientId,
-                clientSecret);
-
-        // Execute the RefreshTokenRequest to get a new Credential object with the updated access token
-        return refreshTokenRequest.execute();
-    }
-
-    public static List<Event> handleHolidaysInFullDaysEvents(List<Event> fullDayEvents, List<Event> events
-            , boolean isStudyOnHolyDays, Set<String> holidaysDatesCurrentYear, Set<String> holidaysDatesNextYear) {
-        List<Event> copyOfFullDayEvents = new ArrayList<>(fullDayEvents);
-        // scan through the list and check if an event is a holiday.
-        for (Event fullDayEvent : fullDayEvents) {
-            if (holidaysDatesCurrentYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())
-                    || holidaysDatesNextYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())) {
-
-                // check if user want to study on holidays
-                if (isStudyOnHolyDays) {
-
-                    // remove the holiday from the list of events
-                    events.remove(fullDayEvent);
-                }
-
-                // remove the event from the copy of list of fullDayEvents and the events list
-                copyOfFullDayEvents.remove(fullDayEvent);
-            }
-        }
-
-        return copyOfFullDayEvents;
+        return overlappingEvents;
     }
 
 }
