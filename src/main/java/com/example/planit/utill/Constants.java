@@ -8,6 +8,8 @@ public class Constants {
 
     public static final int MILLIS_TO_HOUR = 3600000;
 
+    public static final long MINUTES_TO_MILLIS = 60000;
+
     /**
      * Application name.
      */
