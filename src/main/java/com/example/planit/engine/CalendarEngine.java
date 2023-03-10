@@ -590,7 +590,8 @@ public class CalendarEngine {
 
             // if the "startOfSession" is in the range and the "endOfSession" is out of range,
             // adds the session from "startOfSession" to the end of range.
-            if (startOfSession.toEpochMilli() < timeSlot.getEnd().getValue()) {
+            if (startOfSession.toEpochMilli() < timeSlot.getEnd().getValue()
+                    && timeSlot.getEnd().getValue() - startOfSession.toEpochMilli() >= (long) studyTimeInMinutes * MINUTES_TO_MILLIS) {
                 Instant endOfSlot = roundInstantMinutesTime(Instant.ofEpochMilli(timeSlot.getEnd().getValue()), false);
                 listOfStudySessions.add(new StudySession(new DateTime(startOfSession.toEpochMilli()), new DateTime(endOfSlot.toEpochMilli())));
             }
