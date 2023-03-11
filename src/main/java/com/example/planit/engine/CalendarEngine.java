@@ -40,12 +40,35 @@ import static com.example.planit.utill.Utility.roundInstantMinutesTime;
 
 public class CalendarEngine {
 
+    private final CoursesRepository courseRepo;
+
+    private final UserRepository userRepo;
+
+    private final String CLIENT_ID;
+    private final String CLIENT_SECRET;
+
+    private final Set<String> holidaysDatesCurrentYear;
+    private final Set<String> holidaysDatesNextYear;
+
+
     /**
      * Global instance of the JSON factory.
      */
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
-    /* Public methods */
+    public CalendarEngine(String CLIENT_ID, String CLIENT_SECRET, UserRepository userRepo, CoursesRepository courseRepo,
+                          Set<String> holidaysDatesCurrentYear, Set<String> holidaysDatesNextYear) {
+        this.CLIENT_ID = CLIENT_ID;
+        this.CLIENT_SECRET = CLIENT_SECRET;
+        this.userRepo = userRepo;
+        this.courseRepo = courseRepo;
+        this.holidaysDatesCurrentYear = holidaysDatesCurrentYear;
+        this.holidaysDatesNextYear = holidaysDatesNextYear;
+    }
+
+    /**
+     * Public methods
+     */
 
     /**
      * Extract all the events that are in the user calendars.
@@ -56,28 +79,26 @@ public class CalendarEngine {
      * @throws GeneralSecurityException GeneralSecurityException
      * @throws IOException              IOException
      */
-    public static DTOuserCalendarsInformation getUserCalendarsInformation(String accessToken, long expireTimeInMilliSeconds, String start, String end, CoursesRepository courseRepo) throws GeneralSecurityException, IOException {
-        // get user's calendar service
+    public DTOuserCalendarsInformation getUserCalendarsInformation(User user, String start, String end) throws GeneralSecurityException, IOException {
 
-        Calendar calendarService = getCalendarService(accessToken, expireTimeInMilliSeconds);
+        validateAccessToken(user);
+
+        // get user's calendar service
+        Calendar calendarService = getCalendarService(user.getAccessToken(), user.getExpireTimeInMilliseconds());
 
         // get user's calendar list
         List<CalendarListEntry> calendarList = getCalendarList(calendarService);
-
-        DateTime startDate = new DateTime(start);
-        DateTime endDate = new DateTime(end);
-
-
-        /*DateTime startDate = new DateTime(Instant.parse(start).toEpochMilli());
-        DateTime endDate = new DateTime(System.currentTimeMillis() + Constants.ONE_MONTH_IN_MILLIS);*/
 
         List<Event> fullDayEvents = new ArrayList<>();
         List<Event> planItCalendarOldEvents = new ArrayList<>();
         List<Exam> examsFound = new LinkedList<>();
 
 
+        // validate token
+        validateAccessToken(user);
+
         // get List of user's events
-        List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, startDate, endDate, fullDayEvents, planItCalendarOldEvents, examsFound, courseRepo);
+        List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, new DateTime(start), new DateTime(end), fullDayEvents, planItCalendarOldEvents, examsFound);
         return new DTOuserCalendarsInformation(fullDayEvents, planItCalendarOldEvents, examsFound, events, calendarService);
     }
 
@@ -85,22 +106,20 @@ public class CalendarEngine {
      * @param allEvents list of the user events we found during the initial scan
      * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
      */
-    public static void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, UserRepository userRepo, String start, List<Event> planItCalendarOldEvents) {
+    public void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, String start, List<Event> planItCalendarOldEvents)
+            throws GeneralSecurityException {
 
         // gets the list of free slots
         DTOfreetime dtofreetime = getFreeSlots(allEvents, user, exams, start);
 
         // creates PlanIt calendar if not yet exists
-        String planItCalendarID = createPlanItCalendar(service, user, userRepo);
-
+        String planItCalendarID = createPlanItCalendar(service, user);
 
         // finds the proportions of each exam from 100% study time
         Map<Exam, Double> exam2Proportions = getExamsProportions(exams);
 
-        // separates each slot in the free slots list, to a few study sessions
-        // and inserts breaks
+        // separates each slot in the free slots list, to a few study sessions and inserts breaks
         List<StudySession> sessionsList = separateSlotsToSessions(user, dtofreetime.getFreeTimeSlots());
-
 
         // calculates how many sessions belong to each course
         Map<Exam, Integer> exams2numberOfSessions = distributeNumberOfSessionsToCourses(exam2Proportions, sessionsList.size());
@@ -109,7 +128,7 @@ public class CalendarEngine {
         embedCoursesInSessions(exams2numberOfSessions, sessionsList, exams);
 
         // #5 - updates the planIt calendar
-        updatePlanItCalendar(sessionsList, service, planItCalendarID, planItCalendarOldEvents);
+        updatePlanItCalendar(sessionsList, service, planItCalendarID, planItCalendarOldEvents, user);
 
     }
 
@@ -155,7 +174,34 @@ public class CalendarEngine {
         return refreshTokenRequest.execute();
     }
 
-    /* Private methods */
+    /**
+     * checks the access token of the user.
+     * if not valid, refreshes the access token
+     * also, updates the user's new access token in the DB
+     *
+     * @param user a {@link User} represents the user
+     * @throws IOException              IOException
+     * @throws GeneralSecurityException GeneralSecurityException
+     */
+    public void validateAccessToken(User user) throws IOException, GeneralSecurityException {
+
+        // checks if the access token is not valid yet
+        if (!CalendarEngine.isAccessTokenValid(user.getExpireTimeInMilliseconds())) {
+
+            // refresh the accessToken
+            TokenResponse tokensResponse = CalendarEngine.refreshAccessToken(user.getRefreshToken(), CLIENT_ID, CLIENT_SECRET);
+            long expireTimeInMilliseconds = Instant.now().plusMillis(((tokensResponse.getExpiresInSeconds() - 100) * 1000)).toEpochMilli();
+
+            // updates the access token of the user in the DB
+            user.setAccessToken(tokensResponse.getAccessToken());
+            user.setExpireTimeInMilliseconds(expireTimeInMilliseconds);
+            userRepo.save(user);
+        }
+    }
+
+    /**
+     * Private methods
+     */
 
     /**
      * get Google Calendar service provider.
@@ -229,11 +275,8 @@ public class CalendarEngine {
                         .setTimeMax(end)
                         .setSingleEvents(true)
                         .execute();
-            } catch (GoogleJsonResponseException e) {
-                throw new RuntimeException(e);
             } catch (IOException e) {
                 throw new RuntimeException(e);
-
             }
             // check if calendar is the exams calendar
             if (calendar.getSummary().equals("יומן אישי מתחנת המידע")) {
@@ -416,66 +459,6 @@ public class CalendarEngine {
         return new DTOfreetime(adjustedUserFreeSlots, totalFreeTime);
     }
 
-    /*public String test(AccessToken accessToken) throws GeneralSecurityException, IOException {
-
-        // 1. get access_token from DB / request body / need to think about it...
-
-
-        // 2. Build a new authorized API client service.
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        GoogleCredential credential = new GoogleCredential().setAccessToken(accessToken.getAccessToken());
-        Calendar service =
-                new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-                        .setApplicationName(Constants.APPLICATION_NAME)
-                        .build();
-        // Iterate through entries in calendar list
-        String pageToken = null;
-        do {
-            CalendarList calendarList = service.calendarList().list().setPageToken(pageToken).execute();
-            List<CalendarListEntry> items = calendarList.getItems();
-
-            for (CalendarListEntry calendarListEntry : items) {
-                System.out.println(calendarListEntry.getSummary() + " " + calendarListEntry.getId());
-            }
-            pageToken = calendarList.getNextPageToken();
-        } while (pageToken != null);
-
-        // List the next 10 events from the primary calendar.
-        DateTime now = new DateTime(System.currentTimeMillis());
-        Events events = service.events().list("ggjkjd2dvspjiirkp5e9sv2566ujt1bh@import.calendar.google.com")
-                .setMaxResults(10)
-                .setTimeMin(now)
-                .setOrderBy("startTime")
-                .setSingleEvents(true)
-                .execute();
-        List<Event> items = events.getItems();
-        StringBuilder tenEventsBuilder = new StringBuilder();
-
-        if (items.isEmpty()) {
-            System.out.println("No upcoming events found.");
-        } else {
-            System.out.println("Upcoming events");
-            FileWriter myWriter = new FileWriter("filename.txt");
-            for (Event event : items) {
-                DateTime start = event.getStart().getDateTime();
-                if (start == null) {
-                    start = event.getStart().getDate();
-                }
-                DateTime end = event.getEnd().getDateTime();
-                if (end == null) {
-                    end = event.getEnd().getDate();
-                }
-
-                System.out.printf("%s (%s) [%s]\n", event.getSummary(), start, end);
-                myWriter.write("" + event.getSummary() + " (" + start + ") [" + end + "] \n");
-                tenEventsBuilder.append(event.getSummary()).append(" (").append(start).append(") [").append(end).append("] \n");
-            }
-            myWriter.close();
-        }
-
-        return tenEventsBuilder.toString();
-    }*/
-
     /**
      * 3# creates the Plan-It calendar and adds it the user's calendar list
      *
@@ -484,15 +467,15 @@ public class CalendarEngine {
     private static String createPlanItCalendar(Calendar calendarService, User user, UserRepository userRepo) {
 
         String planItCalendarID;
-
         String planItCalendarIdFromDB = user.getPlanItCalendarID();
 
         // checks if the calendar already exists in DB
         try {
+            validateAccessToken(user);
             if (planItCalendarIdFromDB != null && calendarService.calendars().get(planItCalendarIdFromDB).execute() != null) {
                 return planItCalendarIdFromDB;
             }
-        } catch (IOException ignored) {
+        } catch (IOException | GeneralSecurityException ignored) {
             // if we end up in here, then calendar was deleted by the user...
         }
 
@@ -505,8 +488,9 @@ public class CalendarEngine {
         // Insert the new calendar
         com.google.api.services.calendar.model.Calendar createdCalendar;
         try {
+            validateAccessToken(user);
             createdCalendar = calendarService.calendars().insert(calendar).execute();
-        } catch (IOException e) {
+        } catch (IOException | GeneralSecurityException e) {
             throw new RuntimeException(e);
         }
 
@@ -717,7 +701,6 @@ public class CalendarEngine {
         for (Exam ignored : exams) {
             listOfListOfStudySessions.add(new ArrayList<>());
         }
-        //Collections.nCopies(exams.size(), new ArrayList<>())
 
         // run through the sessions list and initialize the list of lists
         for (StudySession session : sessionsList) {
@@ -821,12 +804,13 @@ public class CalendarEngine {
      * @param service          the Google's {@link Calendar} service
      * @param planItCalendarID the calendar ID of the PlanIt calendar in the user's calendar list
      */
-    private static void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Event> planItCalendarOldEvents) {
+    private void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Event> planItCalendarOldEvents, User user) throws GeneralSecurityException {
 
         List<Event> overlapsOldEvents = getOverlapOldEventsPlanItCalendar(sessionsList, planItCalendarOldEvents);
 
         for (Event eventToBeDeleted : overlapsOldEvents) {
             try {
+                validateAccessToken(user);
                 // removes overlap events in the PlanIt calendar
                 service.events().delete(planItCalendarID, eventToBeDeleted.getId()).execute();
 
@@ -835,9 +819,8 @@ public class CalendarEngine {
             }
         }
 
-
-        // adds updated events to the PlanIt calendar
-        // goes through the sessions and adds to the PlanIt calendar
+        // add updated events to the PlanIt calendar
+        // this loop goes through the sessions and adds them to the PlanIt calendar
         for (StudySession session : sessionsList) {
 
             // creates a new Google Event
@@ -853,6 +836,7 @@ public class CalendarEngine {
 
             // inserts the new Google Event to the PlanIt calendar
             try {
+                validateAccessToken(user);
                 service.events().insert(planItCalendarID, event).execute();
 
             } catch (GoogleJsonResponseException e) {

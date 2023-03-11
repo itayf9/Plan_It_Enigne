@@ -4,15 +4,17 @@ import static com.example.planit.utill.defaults.Defaults.*;
 
 public class Preferences {
 
-    private int userStudyStartTime;
-    private int userStudyEndTime;
+    private int userStudyStartTime; // 0800 will be converted to 8 to represent 08:00 in the morning
+    private int userStudyEndTime; // 2200 will be converted to 22 to represent 22:00 at night
     private int userBreakTime; // in minutes e.g. 15 minutes
-    private int studySessionTime;
+    private int studySessionTime; // in minutes e.g. 120 minutes ~ 2 hours
     private boolean isStudyOnHolyDays;
+    private boolean isStudyOnWeekends;
 
     public Preferences() {
         this.studySessionTime = DEFAULT_USER_STUDY_SESSION_TIME;
         this.isStudyOnHolyDays = false;
+        this.isStudyOnWeekends = false;
         this.userBreakTime = DEFAULT_USER_BREAK_TIME;
         this.userStudyStartTime = DEFAULT_USER_STUDY_START_TIME;
         this.userStudyEndTime = DEFAULT_USER_STUDY_END_TIME;
@@ -52,6 +54,14 @@ public class Preferences {
 
     public void setStudySessionTime(int studySessionTime) {
         this.studySessionTime = studySessionTime;
+    }
+
+    public boolean isStudyOnWeekends() {
+        return isStudyOnWeekends;
+    }
+
+    public void setStudyOnWeekends(boolean studyOnWeekends) {
+        isStudyOnWeekends = studyOnWeekends;
     }
 
     public void setStudyOnHolyDays(boolean studyOnHolyDays) {

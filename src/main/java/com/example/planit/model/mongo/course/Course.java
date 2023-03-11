@@ -13,7 +13,7 @@ public class Course {
     @Field(name = "credits")
     private int credits;
     @Field(name = "study-time")
-    private int recommendedStudyTime;
+    private int recommendedStudyTime; // in days e.g - 2 for 2 days
 
     @Field(name = "subjects")
     private String[] courseSubjects;

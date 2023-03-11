@@ -50,11 +50,17 @@ public class CalendarController {
     private Set<String> holidaysDatesCurrentYear;
     private Set<String> holidaysDatesNextYear;
 
+    private CalendarEngine calendarEngine;
+
     @PostConstruct
     private void init() {
 
+        // get CLIENT_ID & CLIENT_SECRET values from environment
         CLIENT_ID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
         CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
+
+        // initialize CalendarEngine
+        this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidaysDatesCurrentYear, holidaysDatesNextYear);
 
         // extract the holidays dates as iso format and return it in a set of string(iso format) (for current year and the next year).
         holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear());
@@ -74,61 +80,15 @@ public class CalendarController {
 
         long s = System.currentTimeMillis();
 
-        //CalendarEngine.scan
-
-        // check if user exist in DB
-        Optional<User> maybeUser = userRepo.findUserByEmail(email);
-        if (maybeUser.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-
-        // get instance of the user
-        User user = maybeUser.get();
-
-        // check if accessToken is already invalid
-        validateAccessToken(user);
-
-        // 1# get List of user's events
-        // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserCalendarsInformation userEvents = CalendarEngine.getUserCalendarsInformation(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, courseRepo);
-
-        // fullDayEvents - a list of events that represents the user's full day events
-        List<Event> fullDayEvents = userEvents.getFullDayEvents();
-
-        // events - a list of events that represents all the user's events
-        // planItCalendarOldEvents - a list of PlanIt calendar old events
-        List<Event> events = userEvents.getEvents();
-        List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
-        List<Exam> examsFound = userEvents.getExamsFound();
-
-        // checks if no exams are
-        if (examsFound.size() <= 0) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new DTOscanResponseToClient(false, Constants.ERROR_NO_EXAMS_FOUND, fullDayEvents));
-        }
-
-
-        if (fullDayEvents.size() != 0) {
-
-            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
-                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
-
-            // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
-            if (fullDayEvents.size() != 0) {
-
-                // return the user with the updated list of fullDayEvents.
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(new DTOscanResponseToClient(false, Constants.UNHANDLED_FULL_DAY_EVENTS, fullDayEvents));
-            }
-
-        }
-
-        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo, start, planItCalendarOldEvents);
+        DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(email, start, end);
 
         long t = System.currentTimeMillis();
         System.out.println(t - s + " ms");
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new DTOscanResponseToClient(true, Constants.NO_PROBLEM, new ArrayList<>()));
+
+        return ResponseEntity.status(scanResponseToController.getHttpStatus())
+                .body(new DTOscanResponseToClient(scanResponseToController.isSucceed(),
+                        scanResponseToController.getDetails(),
+                        scanResponseToController.getFullDayEvents()));
     }
 
     /**
@@ -143,78 +103,10 @@ public class CalendarController {
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<DTOstatus> generateStudyEvents(@RequestParam String email, @RequestParam String start, @RequestParam String end, @RequestBody boolean[] userDecisions) throws IOException, GeneralSecurityException {
 
-        // check if user exist in DB
-        Optional<User> maybeUser = userRepo.findUserByEmail(email);
-        if (maybeUser.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
+        DTOgenerateResponseToController generateResponseToController = calendarEngine.generateStudyEvents(email, start, end, userDecisions);
 
-        // get instance of the user
-        User user = maybeUser.get();
-
-        // check if accessToken is already invalid
-        validateAccessToken(user);
-
-        // 1# get List of user's events
-        // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserCalendarsInformation userEvents = CalendarEngine.getUserCalendarsInformation(user.getAccessToken(), user.getExpireTimeInMilliseconds(), start, end, courseRepo);
-
-        // fullDayEvents - a list of events that represents the user's full day events
-        List<Event> fullDayEvents = userEvents.getFullDayEvents();
-
-        // planItCalendarOldEvents - a list of PlanIt calendar old events
-        List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
-
-        // events - a list of events that represents all the user's events
-        List<Event> events = userEvents.getEvents();
-
-        // check if fullDayEvents List is empty (which doesn't suppose to be)
-        if (fullDayEvents.size() != 0) {
-
-            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
-                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
-
-            // go through the list
-            for (int i = 0; i < fullDayEvents.size(); i++) {
-
-                boolean userWantToStudyAtCurrentFullDayEvent = userDecisions[i];
-                Event currentFullDayEvent = fullDayEvents.get(i);
-
-                // check if user want to study at the current fullDayEvent
-                if (userWantToStudyAtCurrentFullDayEvent) {
-                    events.remove(currentFullDayEvent); // remove event element from the list of all events.
-                }
-            }
-        }
-
-        // 2# 3# 4# 5#
-        CalendarEngine.generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), userRepo, start, planItCalendarOldEvents);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(new DTOstatus(true, Constants.NO_PROBLEM));
-    }
-
-    /**
-     * checks the access token of the user.
-     * if not valid, refreshes the access token
-     * also, updates the user's new access token in the DB
-     *
-     * @param user a {@link User} represents the user
-     * @throws IOException              IOException
-     * @throws GeneralSecurityException GeneralSecurityException
-     */
-    private void validateAccessToken(User user) throws IOException, GeneralSecurityException {
-
-        // checks if the access token is not valid yet
-        if (!CalendarEngine.isAccessTokenValid(user.getExpireTimeInMilliseconds())) {
-
-            // refresh the accessToken
-            TokenResponse tokensResponse = CalendarEngine.refreshAccessToken(user.getRefreshToken(), CLIENT_ID, CLIENT_SECRET);
-            long expireTimeInMilliseconds = Instant.now().plusMillis(((tokensResponse.getExpiresInSeconds() - 100) * 1000)).toEpochMilli();
-
-            // updates the access token of the user in the DB
-            user.setAccessToken(tokensResponse.getAccessToken());
-            user.setExpireTimeInMilliseconds(expireTimeInMilliseconds);
-            userRepo.save(user);
-        }
+        return ResponseEntity.status(generateResponseToController.getHttpStatus())
+                .body(new DTOstatus(generateResponseToController.isSucceed(),
+                        generateResponseToController.getDetails()));
     }
 }
