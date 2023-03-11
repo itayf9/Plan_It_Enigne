@@ -30,4 +30,6 @@ public class Constants {
     public static final String NO_PROBLEM = "No Problem Found";
 
     public static final String UNHANDLED_FULL_DAY_EVENTS = "Unhandled Full Days Events.";
+
+    public static final String ERROR_USER_NOT_FOUND = "The User Is Not Found";
 }

@@ -10,9 +10,7 @@ import com.example.planit.model.timeslot.TimeSlot;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.EventComparator;
 import com.example.planit.utill.Utility;
-import com.example.planit.utill.dto.DTOfreetime;
-import com.example.planit.utill.dto.DTOstartAndEndOfInterval;
-import com.example.planit.utill.dto.DTOuserCalendarsInformation;
+import com.example.planit.utill.dto.*;
 import com.google.api.client.auth.oauth2.RefreshTokenRequest;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
@@ -28,6 +26,7 @@ import com.google.api.services.calendar.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
+import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -73,8 +72,6 @@ public class CalendarEngine {
     /**
      * Extract all the events that are in the user calendars.
      *
-     * @param accessToken use for get the calenders from Google DB
-     * @param courseRepo  a {@link CoursesRepository} which is the DB of courses
      * @return DTOuserEvents contains all the events, full day events and the exams
      * @throws GeneralSecurityException GeneralSecurityException
      * @throws IOException              IOException
@@ -260,8 +257,8 @@ public class CalendarEngine {
      * @param fullDayEvents   list of full day events found
      * @return List of all the event's user has
      */
-    private static List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
-                                                         List<Event> fullDayEvents, List<Event> planItCalendarOldEvents, List<Exam> examsFound, CoursesRepository courseRepo) {
+    private List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
+                                                  List<Event> fullDayEvents, List<Event> planItCalendarOldEvents, List<Exam> examsFound) {
         List<Event> allEventsFromCalendars = new ArrayList<>();
 
         List<Course> courses = courseRepo.findAll(); // get all courses from DB
@@ -464,7 +461,7 @@ public class CalendarEngine {
      *
      * @param calendarService a calendar service of the user
      */
-    private static String createPlanItCalendar(Calendar calendarService, User user, UserRepository userRepo) {
+    private String createPlanItCalendar(Calendar calendarService, User user) {
 
         String planItCalendarID;
         String planItCalendarIdFromDB = user.getPlanItCalendarID();
@@ -900,6 +897,132 @@ public class CalendarEngine {
         return overlappingEvents;
     }
 
+
+    /**
+     * performs a scan on the user events and gather some information.
+     * if no full day events found, performs generate PlanIt calendar
+     *
+     * @param email the user's email
+     * @param start the user's preferred start time to generate from (in ISO format)
+     * @param end   the user's preferred end time to generate to (in ISO format)
+     * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
+     * @throws IOException
+     * @throws GeneralSecurityException
+     */
+    public DTOscanResponseToController scanUserEvents(String email, String start, String end) throws IOException, GeneralSecurityException {
+
+
+        // check if user exist in DB
+        Optional<User> maybeUser = userRepo.findUserByEmail(email);
+        if (maybeUser.isEmpty()) {
+            return new DTOscanResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.UNAUTHORIZED, new ArrayList<>());
+        }
+
+        // get instance of the user
+        User user = maybeUser.get();
+
+        // 1# get List of user's events
+        // perform a scan on the user's Calendar to get all of his events at the time interval
+        DTOuserCalendarsInformation userEvents = getUserCalendarsInformation(user, start, end);
+
+        // fullDayEvents - a list of events that represents the user's full day events
+        List<Event> fullDayEvents = userEvents.getFullDayEvents();
+
+        // events - a list of events that represents all the user's events
+        // planItCalendarOldEvents - a list of PlanIt calendar old events
+        List<Event> events = userEvents.getEvents();
+        List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
+        List<Exam> examsFound = userEvents.getExamsFound();
+
+        // checks if no exams are
+        if (examsFound.size() == 0) {
+            return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
+        }
+
+
+        if (fullDayEvents.size() != 0) {
+
+            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
+                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
+
+            // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
+            if (fullDayEvents.size() != 0) {
+
+                // return the user with the updated list of fullDayEvents.
+                return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.CONFLICT, fullDayEvents);
+            }
+
+        }
+
+        generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), start, planItCalendarOldEvents);
+
+
+        return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, new ArrayList<>());
+
+    }
+
+    /**
+     * performs a scan on the user events and gather some information.
+     * then, performs generate PlanIt calendar after handling full days events' user's decisions
+     *
+     * @param email         the user's email
+     * @param start         the user's preferred start time to generate from (in ISO format)
+     * @param end           the user's preferred end time to generate to (in ISO format)
+     * @param userDecisions an array of boolean that represents the full day events' user's decisions
+     * @return a {@link DTOgenerateResponseToController} represents the information that should be returned to the scan controller
+     * @throws IOException
+     * @throws GeneralSecurityException
+     */
+    public DTOgenerateResponseToController generateStudyEvents(String email, String start, String end, boolean[] userDecisions) throws IOException, GeneralSecurityException {
+
+
+        // check if user exist in DB
+        Optional<User> maybeUser = userRepo.findUserByEmail(email);
+        if (maybeUser.isEmpty()) {
+            return new DTOgenerateResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.UNAUTHORIZED);
+        }
+
+        // get instance of the user
+        User user = maybeUser.get();
+
+        // 1# get List of user's events
+        // perform a scan on the user's Calendar to get all of his events at the time interval
+        DTOuserCalendarsInformation userEvents = getUserCalendarsInformation(user, start, end);
+
+        // fullDayEvents - a list of events that represents the user's full day events
+        List<Event> fullDayEvents = userEvents.getFullDayEvents();
+
+        // planItCalendarOldEvents - a list of PlanIt calendar old events
+        List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
+
+        // events - a list of events that represents all the user's events
+        List<Event> events = userEvents.getEvents();
+
+        // check if fullDayEvents List is empty (which doesn't suppose to be)
+        if (fullDayEvents.size() != 0) {
+
+            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
+                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
+
+            // go through the list
+            for (int i = 0; i < fullDayEvents.size(); i++) {
+
+                boolean userWantToStudyAtCurrentFullDayEvent = userDecisions[i];
+                Event currentFullDayEvent = fullDayEvents.get(i);
+
+                // check if user want to study at the current fullDayEvent
+                if (userWantToStudyAtCurrentFullDayEvent) {
+                    events.remove(currentFullDayEvent); // remove event element from the list of all events.
+                }
+            }
+        }
+
+        // 2# 3# 4# 5#
+        generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), start, planItCalendarOldEvents);
+
+        return new DTOgenerateResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED);
+
+    }
 }
 
 /*

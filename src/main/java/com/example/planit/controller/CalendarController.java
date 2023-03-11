@@ -2,31 +2,22 @@ package com.example.planit.controller;
 
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.engine.HolidaysEngine;
-import com.example.planit.model.exam.Exam;
 import com.example.planit.model.mongo.course.CoursesRepository;
-import com.example.planit.model.mongo.user.User;
 import com.example.planit.model.mongo.user.UserRepository;
-import com.example.planit.utill.Constants;
+import com.example.planit.utill.dto.DTOgenerateResponseToController;
 import com.example.planit.utill.dto.DTOscanResponseToClient;
+import com.example.planit.utill.dto.DTOscanResponseToController;
 import com.example.planit.utill.dto.DTOstatus;
-import com.example.planit.utill.dto.DTOuserCalendarsInformation;
-import com.google.api.client.auth.oauth2.TokenResponse;
-import com.google.api.services.calendar.model.Event;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
