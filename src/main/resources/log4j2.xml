@@ -10,9 +10,9 @@
             <PatternLayout pattern="${LOG_PATTERN}" />
         </Console>
 
-        <RollingFile name="fileRollAppender"
-                     fileName="./logs/SpringBoot2App/application.log"
-                     filePattern="./logs/SpringBoot2App/application-%d{yyyy-MM-dd}-%i.log">
+        <RollingFile name="calendarRollingFileAppender"
+                     fileName="./logs/SpringBoot2App/calendar-controller.log"
+                     filePattern="./logs/SpringBoot2App/calendar-controller-%d{yyyy-MM-dd}-%i.log">
             <PatternLayout pattern="${LOG_PATTERN}" />
             <Policies>
                 <SizeBasedTriggeringPolicy size="19500KB" />
@@ -20,28 +20,23 @@
             <DefaultRolloverStrategy max="1" />
         </RollingFile>
 
-        <File name="fileAppender" fileName="./logs/requests.log" append="false">
+        <File name="applicationFileAppender" fileName="./logs/SpringBoot2App/application.log" append="false">
             <PatternLayout>
                 <Pattern>${LOG_PATTERN}</Pattern>
             </PatternLayout>
         </File>
 
-        <File name="testfileAppender" fileName="C:\temp" append="false">
-            <PatternLayout>
-                <Pattern>${LOG_PATTERN}</Pattern>
-            </PatternLayout>
-        </File>
 
     </Appenders>
     <Loggers>
 
         <Logger name="calendar-logger" level="INFO" additivity="false">
-            <AppenderRef ref="testfileAppender" />
+            <AppenderRef ref="calendarRollingFileAppender" />
         </Logger>
 
         <Root level="info">
             <AppenderRef ref="consoleAppender" />
-            <AppenderRef ref="fileAppender" />
+            <AppenderRef ref="applicationFileAppender" />
         </Root>
     </Loggers>
 </Configuration>
