@@ -9,6 +9,8 @@ import com.example.planit.utill.dto.DTOscanResponseToClient;
 import com.example.planit.utill.dto.DTOscanResponseToController;
 import com.example.planit.utill.dto.DTOstatus;
 import jakarta.annotation.PostConstruct;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
@@ -34,6 +36,8 @@ public class CalendarController {
 
     @Autowired
     private UserRepository userRepo;
+
+    public static Logger calendarLogger = LogManager.getLogger(Constants.CALENDAR_LOGGER_NAME);
 
     private String CLIENT_ID;
     private String CLIENT_SECRET;
@@ -74,7 +78,11 @@ public class CalendarController {
         DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(email, start, end);
 
         long t = System.currentTimeMillis();
-        System.out.println(t - s + " ms");
+        //System.out.println(t - s + " ms");
+
+        long res = t - s;
+
+        calendarLogger.info("scan time is " + res + " ms");
 
         return ResponseEntity.status(scanResponseToController.getHttpStatus())
                 .body(new DTOscanResponseToClient(scanResponseToController.isSucceed(),
