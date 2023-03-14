@@ -2,7 +2,7 @@
 <Configuration status="WARN" monitorInterval="5">
     <Properties>
         <Property name="LOG_PATTERN">%d{dd-MM-yyyy HH:mm:ss.SSS} %level: %msg%n</Property>
-        <Property name="APP_LOG_ROOT">C:\temp</Property>
+        <Property name="APP_LOG_ROOT">./logs</Property>
     </Properties>
     <Appenders>
 
