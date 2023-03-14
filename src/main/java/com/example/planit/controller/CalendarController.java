@@ -4,6 +4,7 @@ import com.example.planit.engine.CalendarEngine;
 import com.example.planit.engine.HolidaysEngine;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.user.UserRepository;
+import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOgenerateResponseToController;
 import com.example.planit.utill.dto.DTOscanResponseToClient;
 import com.example.planit.utill.dto.DTOscanResponseToController;
@@ -75,6 +76,7 @@ public class CalendarController {
 
         long s = System.currentTimeMillis();
 
+        calendarLogger.info("User " + email + " has requested scan");
         DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(email, start, end);
 
         long t = System.currentTimeMillis();
