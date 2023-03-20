@@ -119,7 +119,7 @@ public class CalendarEngine {
         List<StudySession> sessionsList = separateSlotsToSessions(user, dtofreetime.getFreeTimeSlots());
 
         // calculates how many sessions belong to each course
-        Map<Exam, Integer> exams2numberOfSessions = distributeNumberOfSessionsToCourses(exam2Proportions, sessionsList.size());
+        Map<Exam, Integer> exams2numberOfSessions = distributeNumberOfSessionsToCourses(exam2Proportions, sessionsList.size(), user);
 
         // goes from the end to the start and embed courses to sessions
         embedCoursesInSessions(exams2numberOfSessions, sessionsList, exams);
@@ -589,7 +589,7 @@ public class CalendarEngine {
      * @param numOfSessions    the number of sessions available
      * @return a map of string to int that represents, for each course name, the number of sessions
      */
-    private static Map<Exam, Integer> distributeNumberOfSessionsToCourses(Map<Exam, Double> exam2Proportions, int numOfSessions) {
+    private static Map<Exam, Integer> distributeNumberOfSessionsToCourses(Map<Exam, Double> exam2Proportions, int numOfSessions, User user) {
         Map<Exam, Integer> exams2numberOfSessions = new HashMap<>();
 
         // goes through the exams' proportions and calculates the number of sessions
