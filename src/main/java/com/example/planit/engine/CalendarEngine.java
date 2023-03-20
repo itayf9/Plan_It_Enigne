@@ -592,6 +592,7 @@ public class CalendarEngine {
     private static Map<Exam, Integer> distributeNumberOfSessionsToCourses(Map<Exam, Double> exam2Proportions, int numOfSessions) {
         Map<Exam, Integer> exams2numberOfSessions = new HashMap<>();
 
+        // goes through the exams' proportions and calculates the number of sessions
         for (Map.Entry<Exam, Double> examProportionMapEntry : exam2Proportions.entrySet()) {
             Exam exam = examProportionMapEntry.getKey();
             Double proportion = examProportionMapEntry.getValue();
@@ -603,8 +604,42 @@ public class CalendarEngine {
             exams2numberOfSessions.put(exam, numberOfSessionForCurrentExam);
         }
 
+        // adjusts the number of sessions to the recommended value
+        adjustTheNumberOfSessionsToRecommendedValue(exams2numberOfSessions, user);
+
         return exams2numberOfSessions;
 
+    }
+
+    /**
+     * adjusts for each exam, the number of sessions needed.
+     * considers the recommended study time for each exam, selects  the min( calculated number of sessions, recommended study time)
+     * e.g. let A be a course with the following parameters: exam: X, recommendedStudyTime: 10
+     * let exams2numberOfSessions.get(X) be 40
+     * the adjusted study time is 10
+     *
+     * @param exams2numberOfSessions the map that contains {@link Exam} as keys and Integer representing the number of sessions to generate per exam
+     */
+    private static void adjustTheNumberOfSessionsToRecommendedValue(Map<Exam, Integer> exams2numberOfSessions, User user) {
+
+        int userStudySessionTime = user.getUserPreferences().getStudySessionTime();
+
+        int userStudyIntervalInMinutes = Utility.getTotalMinutesOfStudyInDay(user.getUserPreferences().getUserStudyStartTime(), user.getUserPreferences().getUserStudyEndTime());
+
+        // goes through the exams2numberOfSessions map and updates the number of sessions
+        for (Map.Entry<Exam, Integer> entry : exams2numberOfSessions.entrySet()) {
+
+            int recommendedStudyTimeOfCourseInTheMap = entry.getKey().getCourse().getRecommendedStudyTime();
+            int oldNumberOfSessions = entry.getValue();
+
+            int totalMinutesUserIsRecommendedToStudy = recommendedStudyTimeOfCourseInTheMap * userStudyIntervalInMinutes;
+
+            int newNumberOfSessions = totalMinutesUserIsRecommendedToStudy / userStudySessionTime;
+
+            newNumberOfSessions = Math.min(newNumberOfSessions, oldNumberOfSessions);
+
+            exams2numberOfSessions.put(entry.getKey(), newNumberOfSessions);
+        }
     }
 
     /**
