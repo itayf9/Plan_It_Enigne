@@ -80,7 +80,7 @@ public class Utility {
      * @param userStudyTime is an int that represents user study time (e.g. 800 is 8:00).
      * @return a long number that represents only the hours from user study time.
      */
-    private static int convertUserStudyTimeToHours(int userStudyTime) {
+    public static int convertUserStudyTimeToHours(int userStudyTime) {
         int hours;
 
         hours = userStudyTime / 100;
@@ -98,7 +98,7 @@ public class Utility {
      * @param userStudyTime is an int that represents user study time (e.g. 800 is 8:00).
      * @return a long number that represents only the minutes from user study time.
      */
-    private static int convertUserStudyTimeToMinute(int userStudyTime) {
+    public static int convertUserStudyTimeToMinute(int userStudyTime) {
         int minute;
 
         minute = userStudyTime % 100;
@@ -107,6 +107,30 @@ public class Utility {
             throw new IllegalArgumentException();
         }
         return minute;
+    }
+
+    /**
+     * get the start and end of the study time form the user and return the total minutes.
+     *
+     * @param userStartStudyTime get the start study time of the user
+     * @param userEndStudyTime   get the end study time of the user
+     * @return return the total minutes of the study time the user set.
+     */
+    public static int getTotalMinutesOfStudyInDay(int userStartStudyTime, int userEndStudyTime) {
+        int startHourStudy = convertUserStudyTimeToHours(userStartStudyTime);
+        int startMinutesStudy = convertUserStudyTimeToMinute(userStartStudyTime);
+
+        int endHourStudy = convertUserStudyTimeToHours(userEndStudyTime);
+        int endMinutesStudy = convertUserStudyTimeToMinute(userEndStudyTime);
+
+        if (endMinutesStudy - startMinutesStudy < 0) {
+            endMinutesStudy = endMinutesStudy + 60;
+            endHourStudy = endHourStudy - 1;
+        }
+        int totalMinutes = endMinutesStudy - startMinutesStudy;
+        int totalHours = endHourStudy - startHourStudy;
+
+        return totalMinutes + totalHours * 60;
     }
 
     /**
