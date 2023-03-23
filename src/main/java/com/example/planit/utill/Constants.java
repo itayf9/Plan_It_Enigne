@@ -1,5 +1,7 @@
 package com.example.planit.utill;
 
+import com.example.planit.controller.CalendarController;
+
 public class Constants {
 
     public static final long ONE_MONTH_IN_MILLIS = 2592000000L;
@@ -32,4 +34,6 @@ public class Constants {
     public static final String UNHANDLED_FULL_DAY_EVENTS = "Unhandled Full Days Events.";
 
     public static final String ERROR_USER_NOT_FOUND = "The User Is Not Found";
+
+    public static final String CALENDAR_LOGGER_NAME = "calendar-logger";
 }
