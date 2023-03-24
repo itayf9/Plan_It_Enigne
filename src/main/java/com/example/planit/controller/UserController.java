@@ -39,7 +39,7 @@ public class UserController {
     UserRepository userRepo;
 
     /**
-     * login endpoint
+     * login endpoint : this endpoint will check if user signed up before pressing the login
      */
     @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/login")
@@ -195,12 +195,12 @@ public class UserController {
     /**
      * register a user end-point
      *
-     * @param code auth-code of the user
+     * @param authCode auth-code of the user
      * @return response entity with status message
      */
    /* @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/sign-up")
-    public ResponseEntity<String> signUp(@RequestParam String code) throws IOException {
+    public ResponseEntity<String> signUp(@RequestParam String authCode) throws IOException {
 
 //        authCode = URLDecoder.decode(authCode, StandardCharsets.UTF_8);
 //        // DTOtokens tokens = getGoogleTokensFromAuthCode(authCode);
@@ -229,7 +229,7 @@ public class UserController {
      * @return DTO contains access tokens, Refresh token & user Email
      * @throws IOException exception
      */
-    private DTOtokens getEmailAndTokensFromAuthCode(String code) throws IOException {
+    private GoogleTokenResponse getGoogleTokensFromAuthCode(String code) throws IOException {
         HttpTransport httpTransport = new NetHttpTransport();
         JsonFactory jsonFactory = GsonFactory.getDefaultInstance();
         String REDIRECT_URI = "http://localhost:3000";

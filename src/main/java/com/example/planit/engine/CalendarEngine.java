@@ -664,8 +664,6 @@ public class CalendarEngine {
         embedCoursesNamesInSessions(exams2numberOfSessions, sessionsList, exams);
         // embeds the courses' subjects in the sessions list.
         embedCoursesSubjectsInSessions(exam2Index, sessionsList, exams);
-
-
     }
 
     /**
