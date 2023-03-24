@@ -42,12 +42,17 @@ public class User {
     public User() {
     }
 
-    public User(String email, String accessToken, long expireTimeInMilliseconds, String refreshToken) {
+    public User(String subjectId, String email, String name, String pictureUrl, String accessToken, long expireTimeInMilliseconds, String refreshToken) {
+        this.subjectId = subjectId;
+        this.email = email;
+        this.name = name;
+        this.pictureUrl = pictureUrl;
         this.userPreferences = new Preferences();
         this.planItCalendarID = null;
         this.accessToken = accessToken;
         this.expireTimeInMilliseconds = expireTimeInMilliseconds;
-        this.planItCalendarID = null;
+        this.refreshToken = refreshToken;
+
     }
 
     public String getSubjectId() {

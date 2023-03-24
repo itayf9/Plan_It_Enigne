@@ -236,7 +236,7 @@ public class UserController {
         String CLIENT_ID = Objects.requireNonNull(env.getProperty("spring.security.oauth2.client.registration.google.client-id"));
         String CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
-        GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
+        return new GoogleAuthorizationCodeTokenRequest(
                 httpTransport,
                 jsonFactory,
                 CLIENT_ID,
@@ -244,6 +244,7 @@ public class UserController {
                 code,
                 REDIRECT_URI
         ).execute();
+
 
         /*String email = tokenResponse.parseIdToken().getPayload().getEmail();
 
@@ -253,7 +254,10 @@ public class UserController {
         long expireTimeInMilliseconds = Instant.now().plusMillis(((tokenResponse.getExpiresInSeconds() - 100) * 1000)).toEpochMilli();
 
         String refreshToken = tokenResponse.getRefreshToken();
-        return new DTOtokens(accessToken, expireTimeInMilliseconds, refreshToken, email);
+
+        String subjectId = tokenResponse.parseIdToken().getPayload().getSubject();
+
+        return new DTOtokens(accessToken, expireTimeInMilliseconds, refreshToken, email, subjectId);*/
     }
 
     /**

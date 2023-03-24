@@ -26,6 +26,8 @@ import com.google.api.services.calendar.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
@@ -38,6 +40,8 @@ import static com.example.planit.utill.Constants.*;
 import static com.example.planit.utill.Utility.roundInstantMinutesTime;
 
 public class CalendarEngine {
+
+    public static Logger calendarLogger = LogManager.getLogger(Constants.CALENDAR_LOGGER_NAME);
 
     private final CoursesRepository courseRepo;
 
@@ -196,6 +200,7 @@ public class CalendarEngine {
             user.setExpireTimeInMilliseconds(expireTimeInMilliseconds);
             userRepo.save(user);
         }
+
     }
 
     /**
