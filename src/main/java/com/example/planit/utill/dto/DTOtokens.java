@@ -29,7 +29,8 @@ public class DTOtokens {
         return expireTimeInMilliseconds;
     }
 
-    public String getUserEmail() {
-        return userEmail;
+
+    public String getSubjectId() {
+        return SubjectId;
     }
 }

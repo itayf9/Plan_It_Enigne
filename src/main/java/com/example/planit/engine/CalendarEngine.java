@@ -167,6 +167,8 @@ public class CalendarEngine {
                 clientId,
                 clientSecret);
 
+        refreshTokenRequest.setGrantType("refresh_token");
+
         // Execute the RefreshTokenRequest to get a new Credential object with the updated access token
         return refreshTokenRequest.execute();
     }

@@ -11,8 +11,17 @@ public class User {
     @Id
     private String id;
 
+    @Field(name = "subject_id")
+    private String subjectId;
+
     @Field(name = "email")
     private String email;
+
+    @Field(name = "name")
+    private String name;
+
+    @Field(name = "picture_url")
+    private String pictureUrl;
 
     @Field(name = "user_preferences")
     private Preferences userPreferences;
@@ -35,23 +44,42 @@ public class User {
 
     public User(String email, String accessToken, long expireTimeInMilliseconds, String refreshToken) {
         this.userPreferences = new Preferences();
+        this.planItCalendarID = null;
         this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        this.email = email;
         this.expireTimeInMilliseconds = expireTimeInMilliseconds;
         this.planItCalendarID = null;
+    }
+
+    public String getSubjectId() {
+        return subjectId;
+    }
+
+    public void setSubjectId(String subjectId) {
+        this.subjectId = subjectId;
     }
 
     public String getEmail() {
         return email;
     }
 
-    public String getAccessToken() {
-        return accessToken;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
-    public String getRefreshToken() {
-        return refreshToken;
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getPictureUrl() {
+        return pictureUrl;
+    }
+
+    public void setPictureUrl(String pictureUrl) {
+        this.pictureUrl = pictureUrl;
     }
 
     public Preferences getUserPreferences() {
@@ -61,6 +89,16 @@ public class User {
     public void setUserPreferences(Preferences userPreferences) {
         this.userPreferences = userPreferences;
     }
+
+
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
 
     public String getPlanItCalendarID() {
         return planItCalendarID;
@@ -85,4 +123,6 @@ public class User {
     public void setExpireTimeInMilliseconds(long expireTimeInMilliseconds) {
         this.expireTimeInMilliseconds = expireTimeInMilliseconds;
     }
+
+
 }
