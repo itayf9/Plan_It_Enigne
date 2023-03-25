@@ -43,7 +43,7 @@ public class UserController {
      */
     @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/login")
-    public ResponseEntity<DTOloginResponseToClient> signUpOrLogin(@RequestParam String authCode) {
+    public ResponseEntity<DTOloginResponseToClient> signUpOrLogin(@RequestParam(value = "code") String authCode) {
 
         // decode auth  (e.g. %2F to /)
         authCode = URLDecoder.decode(authCode, StandardCharsets.UTF_8);
