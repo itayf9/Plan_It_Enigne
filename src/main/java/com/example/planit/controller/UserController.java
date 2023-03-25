@@ -48,7 +48,7 @@ public class UserController {
         // decode auth  (e.g. %2F to /)
         authCode = URLDecoder.decode(authCode, StandardCharsets.UTF_8);
 
-        GoogleTokenResponse googleTokenResponse = null;
+        GoogleTokenResponse googleTokenResponse;
 
         //
         try {
@@ -76,43 +76,14 @@ public class UserController {
             throw new RuntimeException(e);
             // return http response "the auth code is not valid",
         }
-
-
-
-        /*
-
-        - addUserToDB ( name, email, picture, refreshToken, sub )
-
-        - verifyIDToken ?
-
-        - signUpOrIn ( authCode ) {
-            // decode to get IDToken
-            // ? verify IDToken
-            // ?  if valid:
-            //      fetch sub
-            //      if user no in DB:
-            //          fetch user info
-            //          save access and refresh in DB
-            //          create new user and save in DB
-            //          return 201 register the user (with the subject id)
-            //      else:
-            //          save access and refresh in DB
-            //          return 200 the user is in the db and update the tokens (with subject id)
-        }
-
-        - remove login endpoint
-
-        - validateAccessToken : add exception handlers for refreshAccessToken
-
-         */
     }
 
     /**
      * update the access and refresh token in the DB for the user we get by the subject id in the googleTokenResponse
      *
      * @param googleTokenResponse google object that contain access and refresh token, subject id.
-     * @throws IOException
-     * @throws NoSuchElementException
+     * @throws IOException            IOException
+     * @throws NoSuchElementException NoSuchElementException
      */
     private String updateAuthorizationTokens(GoogleTokenResponse googleTokenResponse) throws IOException, NoSuchElementException {
         DTOtokens tokens = getSubjectIdAndTokens(googleTokenResponse);
@@ -148,7 +119,7 @@ public class UserController {
      * then, adds th user to the DB
      *
      * @param googleTokenResponse a {@link GoogleTokenResponse} to retrieve the information from
-     * @throws IOException
+     * @throws IOException IOException
      */
     private String createNewUserAndSaveToDB(GoogleTokenResponse googleTokenResponse) throws IOException {
 
@@ -176,7 +147,7 @@ public class UserController {
      *
      * @param googleTokenResponse
      * @return DTOtokens that contain the Subject id, access and refresh tokens and the expires time to the access token.
-     * @throws IOException
+     * @throws IOException IOException
      */
     private DTOtokens getSubjectIdAndTokens(GoogleTokenResponse googleTokenResponse) throws IOException {
         String subjectId = googleTokenResponse.parseIdToken().getPayload().getSubject();
@@ -190,37 +161,6 @@ public class UserController {
 
         return new DTOtokens(accessToken, expireTimeInMilliseconds, refreshToken, subjectId);
     }
-
-
-    /**
-     * register a user end-point
-     *
-     * @param authCode auth-code of the user
-     * @return response entity with status message
-     */
-   /* @CrossOrigin(origins = "http://localhost:3000")
-    @PostMapping(value = "/sign-up")
-    public ResponseEntity<String> signUp(@RequestParam String authCode) throws IOException {
-
-//        authCode = URLDecoder.decode(authCode, StandardCharsets.UTF_8);
-//        // DTOtokens tokens = getGoogleTokensFromAuthCode(authCode);
-//
-//        String email = tokens.getUserEmail();
-//        String subjectId = tokens.getSubjectId();
-////
-////
-//
-//        // check if user is new and not already exist in DB
-//        if (userRepo.findUserBySubjectId(subjectId).isEmpty()) {
-//            // 1. create Java user-object
-//            // 2. save user to DB with userRepo
-//            userRepo.save(new User(email, tokens.getAccessToken(), tokens.getExpireTimeInMilliseconds()
-//                    , tokens.getRefreshToken(), tokens.getSubjectId()));
-//            return ResponseEntity.status(HttpStatus.OK).body("User saved successfully");
-//
-//        }
-//        return ResponseEntity.status(HttpStatus.CONFLICT).body("User already exist please log-in");
-    }*/
 
     /**
      * extract the user's email and access tokens, from the auth code sent by the front-end.
@@ -278,11 +218,4 @@ public class UserController {
             throw new Exception("No User Found with this email");
         }
     }
-
-    @GetMapping(value = "/logout")
-    public void logout() {
-
-        // 1. ???
-    }
-
 }
