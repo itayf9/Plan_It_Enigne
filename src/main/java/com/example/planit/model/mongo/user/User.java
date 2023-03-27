@@ -9,10 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 public class User {
 
     @Id
-    private String id;
-
-    @Field(name = "subject_id")
-    private String subjectId;
+    private String subjectID;
 
     @Field(name = "email")
     private String email;
@@ -43,7 +40,7 @@ public class User {
     }
 
     public User(String subjectId, String email, String name, String pictureUrl, String accessToken, long expireTimeInMilliseconds, String refreshToken) {
-        this.subjectId = subjectId;
+        this.subjectID = subjectId;
         this.email = email;
         this.name = name;
         this.pictureUrl = pictureUrl;
@@ -56,17 +53,19 @@ public class User {
     }
 
     public String getSubjectId() {
-        return subjectId;
+        return subjectID;
     }
 
+    // user cant change is subject id, remove this
     public void setSubjectId(String subjectId) {
-        this.subjectId = subjectId;
+        this.subjectID = subjectId;
     }
 
     public String getEmail() {
         return email;
     }
 
+    // user cant change is email, remove this
     public void setEmail(String email) {
         this.email = email;
     }
@@ -75,6 +74,7 @@ public class User {
         return name;
     }
 
+    // user cant change is name (in our app at least), remove this
     public void setName(String name) {
         this.name = name;
     }
@@ -83,6 +83,7 @@ public class User {
         return pictureUrl;
     }
 
+    // we won't change google stuff, remove this
     public void setPictureUrl(String pictureUrl) {
         this.pictureUrl = pictureUrl;
     }
