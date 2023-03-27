@@ -12,6 +12,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -85,7 +86,7 @@ public class UserController {
      * @return User object with preferences.
      */
     @CrossOrigin(origins = "http://localhost:3000")
-    @GetMapping(value = "/profile")
+    @GetMapping(value = "/profile", produces = {MediaType.APPLICATION_JSON_VALUE})
     public User getUserPreferencesFromDB(@RequestParam String sub) throws Exception {
 
         // assuming user exist and subjectID will be found when this endpoint will be called.

@@ -38,4 +38,5 @@ public class Constants {
     public static final String REGISTER = "Register";
 
     public static final String LOGIN = "Login";
+    public static final String ERROR_UNAUTHORIZED_USER = "The user is unauthorized";
 }
