@@ -3,8 +3,10 @@ package com.example.planit.controller;
 import com.example.planit.engine.UserEngine;
 import com.example.planit.model.mongo.user.User;
 import com.example.planit.model.mongo.user.UserRepository;
+import com.example.planit.model.preferences.Preferences;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOloginResponseToClient;
+import com.example.planit.utill.dto.DTOstatus;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,6 +95,32 @@ public class UserController {
             return maybeUser.get();
         } else {
             throw new Exception("No User Found with this email");
+        }
+    }
+
+    /**
+     *
+     */
+    @CrossOrigin(origins = "http://localhost:3000")
+    @PostMapping(value = "/profile", consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<DTOstatus> updateUserPreferencesInDB(@RequestBody Preferences preferences, @RequestParam String sub) {
+
+        // assuming user exist and subjectID will be found when this endpoint will be called.
+        Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+
+        if (maybeUser.isPresent()) {
+            User user = maybeUser.get();
+
+            user.setUserPreferences(preferences);
+
+            userRepo.save(user);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new DTOstatus(true, Constants.NO_PROBLEM));
+
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new DTOstatus(false, Constants.ERROR_UNAUTHORIZED_USER));
         }
     }
 }

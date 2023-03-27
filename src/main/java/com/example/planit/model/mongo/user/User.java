@@ -56,37 +56,18 @@ public class User {
         return subjectID;
     }
 
-    // user cant change is subject id, remove this
-    public void setSubjectId(String subjectId) {
-        this.subjectID = subjectId;
-    }
-
     public String getEmail() {
         return email;
-    }
-
-    // user cant change is email, remove this
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public String getName() {
         return name;
     }
 
-    // user cant change is name (in our app at least), remove this
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getPictureUrl() {
         return pictureUrl;
     }
 
-    // we won't change google stuff, remove this
-    public void setPictureUrl(String pictureUrl) {
-        this.pictureUrl = pictureUrl;
-    }
 
     public Preferences getUserPreferences() {
         return userPreferences;
