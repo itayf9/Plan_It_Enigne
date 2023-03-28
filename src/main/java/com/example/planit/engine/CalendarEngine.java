@@ -942,7 +942,7 @@ public class CalendarEngine {
      * performs a scan on the user events and gather some information.
      * if no full day events found, performs generate PlanIt calendar
      *
-     * @param email the user's email
+     * @param email the user's sub value
      * @param start the user's preferred start time to generate from (in ISO format)
      * @param end   the user's preferred end time to generate to (in ISO format)
      * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
