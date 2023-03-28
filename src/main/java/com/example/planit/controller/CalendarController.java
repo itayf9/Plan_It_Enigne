@@ -75,13 +75,23 @@ public class CalendarController {
      * @throws GeneralSecurityException GeneralSecurityException
      */
     @PostMapping(value = "/scan")
-    public ResponseEntity<DTOscanResponseToClient> scanUserEvents(@RequestParam String email, @RequestParam String start, @RequestParam String end) throws IOException, GeneralSecurityException {
+    public ResponseEntity<DTOscanResponseToClient> scanUserEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end) throws IOException, GeneralSecurityException {
 
         long s = System.currentTimeMillis();
 
-        calendarLogger.info("User " + email + " has requested scan");
-        DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(email, start, end);
+        calendarLogger.info("User " + sub + " has requested scan");
 
+        DTOscanResponseToController scanResponseToController = null;
+
+        try {
+            scanResponseToController = calendarEngine.scanUserEvents(sub, start, end);
+        } catch (TokenResponseException e) {
+            // e.g. when the refresh token has expired
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new DTOscanResponseToClient(false, Constants.ERROR_INVALID_GRANT, new ArrayList<>()));
+            }
+        }
         long t = System.currentTimeMillis();
         //System.out.println(t - s + " ms");
 

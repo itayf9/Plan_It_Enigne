@@ -39,4 +39,7 @@ public class Constants {
 
     public static final String LOGIN = "Login";
     public static final String ERROR_UNAUTHORIZED_USER = "The user is unauthorized";
+
+    public static final String ERROR_NO_CALENDAR_SCOPE_GRANTED = "Calendar scope could not be found.";
+    public static final String ERROR_INVALID_GRANT = "Invalid Grant";
 }

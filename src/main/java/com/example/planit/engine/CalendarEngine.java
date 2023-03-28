@@ -26,8 +26,13 @@ import com.google.api.services.calendar.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
@@ -217,6 +222,8 @@ public class CalendarEngine {
      */
     private static Calendar getCalendarService(String access_token, long expireTimeInMilliSeconds) throws GeneralSecurityException, IOException {
 
+        //first check if scopes for "https://www.googleapis.com/auth/calendar" is still valid
+
         // Build a new authorized API client service.
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         Date expireDate = new Date(expireTimeInMilliSeconds);
@@ -346,7 +353,6 @@ public class CalendarEngine {
 
         return maybeFoundCourse;
     }
-
 
     /**
      * 2# Takes out all the free time slots that can be taken out of the user events.
@@ -504,7 +510,6 @@ public class CalendarEngine {
 
         return planItCalendarID;
     }
-
 
     /**
      * calculates the proportions of the courses that the user has.
@@ -937,7 +942,6 @@ public class CalendarEngine {
         return overlappingEvents;
     }
 
-
     /**
      * performs a scan on the user events and gather some information.
      * if no full day events found, performs generate PlanIt calendar
@@ -949,17 +953,25 @@ public class CalendarEngine {
      * @throws IOException
      * @throws GeneralSecurityException
      */
-    public DTOscanResponseToController scanUserEvents(String email, String start, String end) throws IOException, GeneralSecurityException {
+    public DTOscanResponseToController scanUserEvents(String subjectID, String start, String end) throws IOException, GeneralSecurityException {
 
 
         // check if user exist in DB
-        Optional<User> maybeUser = userRepo.findUserByEmail(email);
+        Optional<User> maybeUser = userRepo.findUserBySubjectID(subjectID);
         if (maybeUser.isEmpty()) {
             return new DTOscanResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.UNAUTHORIZED, new ArrayList<>());
         }
 
         // get instance of the user
         User user = maybeUser.get();
+
+        // refresh access_token before making api call
+        validateAccessToken(user);
+
+        // check if access_token still have scope for Google calendar
+        if (!hasCalendarScope(user.getAccessToken())) {
+            return new DTOscanResponseToController(false, Constants.ERROR_NO_CALENDAR_SCOPE_GRANTED, HttpStatus.UNAUTHORIZED, new ArrayList<>());
+        }
 
         // 1# get List of user's events
         // perform a scan on the user's Calendar to get all of his events at the time interval
@@ -1062,6 +1074,24 @@ public class CalendarEngine {
 
         return new DTOgenerateResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED);
 
+    }
+
+    public static boolean hasCalendarScope(String access_token) throws IOException {
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url("https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=" + access_token)
+                .build();
+        Response response = client.newCall(request).execute();
+        String responseBody = response.body().string();
+        JSONObject jsonObject = new JSONObject(responseBody);
+        JSONArray scopes = jsonObject.getJSONArray("scope");
+        for (int i = 0; i < scopes.length(); i++) {
+            String scope = scopes.getString(i);
+            if (scope.equals("https://www.googleapis.com/auth/calendar")) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
