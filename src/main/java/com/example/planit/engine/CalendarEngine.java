@@ -31,7 +31,6 @@ import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 
@@ -87,7 +86,7 @@ public class CalendarEngine {
      */
     public DTOuserCalendarsInformation getUserCalendarsInformation(User user, String start, String end) throws GeneralSecurityException, IOException {
 
-        validateAccessToken(user);
+        validateAccessTokenExpireTime(user);
 
         // get user's calendar service
         Calendar calendarService = getCalendarService(user.getAccessToken(), user.getExpireTimeInMilliseconds());
@@ -101,7 +100,7 @@ public class CalendarEngine {
 
 
         // validate token
-        validateAccessToken(user);
+        validateAccessTokenExpireTime(user);
 
         // get List of user's events
         List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, new DateTime(start), new DateTime(end), fullDayEvents, planItCalendarOldEvents, examsFound);
@@ -191,7 +190,7 @@ public class CalendarEngine {
      * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
-    public void validateAccessToken(User user) throws IOException, GeneralSecurityException {
+    public void validateAccessTokenExpireTime(User user) throws IOException, GeneralSecurityException {
 
         // checks if the access token is not valid yet
         if (!CalendarEngine.isAccessTokenValid(user.getExpireTimeInMilliseconds())) {
@@ -481,7 +480,7 @@ public class CalendarEngine {
 
         // checks if the calendar already exists in DB
         try {
-            validateAccessToken(user);
+            validateAccessTokenExpireTime(user);
             if (planItCalendarIdFromDB != null && calendarService.calendars().get(planItCalendarIdFromDB).execute() != null) {
                 return planItCalendarIdFromDB;
             }
@@ -498,7 +497,7 @@ public class CalendarEngine {
         // Insert the new calendar
         com.google.api.services.calendar.model.Calendar createdCalendar;
         try {
-            validateAccessToken(user);
+            validateAccessTokenExpireTime(user);
             createdCalendar = calendarService.calendars().insert(calendar).execute();
         } catch (IOException | GeneralSecurityException e) {
             throw new RuntimeException(e);
@@ -852,7 +851,7 @@ public class CalendarEngine {
 
         for (Event eventToBeDeleted : overlapsOldEvents) {
             try {
-                validateAccessToken(user);
+                validateAccessTokenExpireTime(user);
                 // removes overlap events in the PlanIt calendar
                 service.events().delete(planItCalendarID, eventToBeDeleted.getId()).execute();
 
@@ -878,7 +877,7 @@ public class CalendarEngine {
 
             // inserts the new Google Event to the PlanIt calendar
             try {
-                validateAccessToken(user);
+                validateAccessTokenExpireTime(user);
                 service.events().insert(planItCalendarID, event).execute();
 
             } catch (GoogleJsonResponseException e) {
@@ -946,12 +945,12 @@ public class CalendarEngine {
      * performs a scan on the user events and gather some information.
      * if no full day events found, performs generate PlanIt calendar
      *
-     * @param email the user's sub value
-     * @param start the user's preferred start time to generate from (in ISO format)
-     * @param end   the user's preferred end time to generate to (in ISO format)
+     * @param subjectID the user's sub value
+     * @param start     the user's preferred start time to generate from (in ISO format)
+     * @param end       the user's preferred end time to generate to (in ISO format)
      * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
-     * @throws IOException
-     * @throws GeneralSecurityException
+     * @throws IOException              IOException
+     * @throws GeneralSecurityException GeneralSecurityException
      */
     public DTOscanResponseToController scanUserEvents(String subjectID, String start, String end) throws IOException, GeneralSecurityException {
 
@@ -966,11 +965,11 @@ public class CalendarEngine {
         User user = maybeUser.get();
 
         // refresh access_token before making api call
-        validateAccessToken(user);
+        validateAccessTokenExpireTime(user);
 
         // check if access_token still have scope for Google calendar
-        if (!hasCalendarScope(user.getAccessToken())) {
-            return new DTOscanResponseToController(false, Constants.ERROR_NO_CALENDAR_SCOPE_GRANTED, HttpStatus.UNAUTHORIZED, new ArrayList<>());
+        if (!hasAuthorizeScopesStillValid(user.getAccessToken())) {
+            return new DTOscanResponseToController(false, Constants.ERROR_NO_VALID_ACCESS_TOKEN, HttpStatus.UNAUTHORIZED, new ArrayList<>());
         }
 
         // 1# get List of user's events
@@ -1022,8 +1021,8 @@ public class CalendarEngine {
      * @param end           the user's preferred end time to generate to (in ISO format)
      * @param userDecisions an array of boolean that represents the full day events' user's decisions
      * @return a {@link DTOgenerateResponseToController} represents the information that should be returned to the scan controller
-     * @throws IOException
-     * @throws GeneralSecurityException
+     * @throws IOException              IOException
+     * @throws GeneralSecurityException GeneralSecurityException
      */
     public DTOgenerateResponseToController generateStudyEvents(String email, String start, String end, boolean[] userDecisions) throws IOException, GeneralSecurityException {
 
@@ -1076,7 +1075,7 @@ public class CalendarEngine {
 
     }
 
-    public static boolean hasCalendarScope(String access_token) throws IOException {
+    public static boolean hasAuthorizeScopesStillValid(String access_token) throws IOException {
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url("https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=" + access_token)
@@ -1084,14 +1083,21 @@ public class CalendarEngine {
         Response response = client.newCall(request).execute();
         String responseBody = response.body().string();
         JSONObject jsonObject = new JSONObject(responseBody);
-        JSONArray scopes = jsonObject.getJSONArray("scope");
-        for (int i = 0; i < scopes.length(); i++) {
-            String scope = scopes.getString(i);
-            if (scope.equals("https://www.googleapis.com/auth/calendar")) {
-                return true;
+
+        // if response is >= 200 && < 300
+        if (response.isSuccessful()) {
+
+            // continue to check for required scope
+            String scopes = (String) jsonObject.get("scope");
+            String[] scopesArray = scopes.split(" ");
+
+            for (String scope : scopesArray) {
+                if (scope.equals("https://www.googleapis.com/auth/calendar")) {
+                    return true; // found scope
+                }
             }
         }
-        return false;
+        return false; // scope was not found or response wasn't successful
     }
 }
 

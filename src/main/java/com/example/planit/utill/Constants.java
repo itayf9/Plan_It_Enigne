@@ -42,4 +42,5 @@ public class Constants {
 
     public static final String ERROR_NO_CALENDAR_SCOPE_GRANTED = "Calendar scope could not be found.";
     public static final String ERROR_INVALID_GRANT = "Invalid Grant";
+    public static String ERROR_NO_VALID_ACCESS_TOKEN = "Access Token not valid anymore.";
 }

@@ -43,9 +43,6 @@ public class CalendarController {
 
     public static Logger calendarLogger = LogManager.getLogger(Constants.CALENDAR_LOGGER_NAME);
 
-    private String CLIENT_ID;
-    private String CLIENT_SECRET;
-
     private Set<String> holidaysDatesCurrentYear;
     private Set<String> holidaysDatesNextYear;
 
@@ -55,8 +52,8 @@ public class CalendarController {
     private void init() {
 
         // get CLIENT_ID & CLIENT_SECRET values from environment
-        CLIENT_ID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
-        CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
+        String CLIENT_ID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
+        String CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
         // initialize CalendarEngine
         this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidaysDatesCurrentYear, holidaysDatesNextYear);
@@ -69,7 +66,7 @@ public class CalendarController {
     /**
      * Scan the user's Calendar to get list of events and check to see if user has fullDayEvents existed.
      *
-     * @param email user's email address to search the User on DB & get preferences.
+     * @param sub user's sub value to search the User on DB & get preferences.
      * @return ResponseEntity<List < Event>> we return list of events in a case of full day events found, otherwise we generate the calendar.
      * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
