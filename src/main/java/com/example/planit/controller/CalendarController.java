@@ -75,9 +75,7 @@ public class CalendarController {
     public ResponseEntity<DTOscanResponseToClient> scanUserEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end) throws IOException, GeneralSecurityException {
 
         long s = System.currentTimeMillis();
-
         calendarLogger.info("User " + sub + " has requested scan");
-
         DTOscanResponseToController scanResponseToController = null;
 
         try {
@@ -90,10 +88,7 @@ public class CalendarController {
             }
         }
         long t = System.currentTimeMillis();
-        //System.out.println(t - s + " ms");
-
         long res = t - s;
-
         calendarLogger.info("scan time is " + res + " ms");
 
         return ResponseEntity.status(scanResponseToController.getHttpStatus())

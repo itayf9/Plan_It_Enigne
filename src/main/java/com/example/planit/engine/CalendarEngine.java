@@ -1007,7 +1007,6 @@ public class CalendarEngine {
 
         generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), start, planItCalendarOldEvents);
 
-
         return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, new ArrayList<>());
 
     }

@@ -2,8 +2,8 @@ package com.example.planit.utill.dto;
 
 public class DTOstatus {
 
-    private boolean isSucceed;
-    private String details;
+    private final boolean isSucceed;
+    private final String details;
 
     public DTOstatus(boolean isSucceed, String details) {
         this.isSucceed = isSucceed;

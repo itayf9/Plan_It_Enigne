@@ -6,8 +6,8 @@ import org.springframework.http.HttpStatus;
 import java.util.List;
 
 public class DTOscanResponseToController extends DTOstatus {
-    private HttpStatus httpStatus;
-    private List<Event> fullDayEvents;
+    private final HttpStatus httpStatus;
+    private final List<Event> fullDayEvents;
 
     public DTOscanResponseToController(boolean isSucceed, String details, HttpStatus httpStatus, List<Event> fullDayEvents) {
         super(isSucceed, details);
