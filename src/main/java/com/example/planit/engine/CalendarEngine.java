@@ -1170,7 +1170,7 @@ public class CalendarEngine {
 
                 // check if user want to study at the current fullDayEvent
                 if (userWantToStudyAtCurrentFullDayEvent) {
-                    events.remove(currentFullDayEvent); // remove event element from the list of all events.
+                    events.remove(fullDayEvent); // remove event element from the list of all events.
                 }
             }
         }
