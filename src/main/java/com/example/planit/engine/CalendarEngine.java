@@ -388,16 +388,16 @@ public class CalendarEngine {
                 }
             }
         }
-        /*
+
         DTOfreetime dtoFreeSlotsAfterAdjust = adjustFreeSlotsList(userFreeTimeSlots, user);
         boolean isUserStudyInWeekend = user.getUserPreferences().isStudyOnWeekends();
 
         if (!isUserStudyInWeekend) {
-            // adjustFreeSlotListByWeekend(dtoFreeSlotsAfterAdjust,user);
+           dtoFreeSlotsAfterAdjust = adjustFreeSlotListByWeekend(dtoFreeSlotsAfterAdjust);
         }
 
-        return dtoFreeSlotsAfterAdjust;*/
-        return adjustFreeSlotsList(userFreeTimeSlots, user);
+        return dtoFreeSlotsAfterAdjust;
+        //return adjustFreeSlotsList(userFreeTimeSlots, user);
     }
 
     /**
@@ -478,7 +478,13 @@ public class CalendarEngine {
         return new DTOfreetime(adjustedUserFreeSlots, totalFreeTime);
     }
 
-    private static DTOfreetime adjustFreeSlotListByWeekend(DTOfreetime dtoFreeSlotsAfterAdjust, User user) {
+    /**
+     * adjust the list and total time in the DTOfreetime without the weekend in the list of the free time.
+     *
+     * @param dtoFreeSlotsAfterAdjust provide the free time slots and the total time with the weekend include.
+     * @return DTOfreetime with a new list of free slots and total time without the weekend
+     */
+    private static DTOfreetime adjustFreeSlotListByWeekend(DTOfreetime dtoFreeSlotsAfterAdjust) {
         List<TimeSlot> freeSlotList = dtoFreeSlotsAfterAdjust.getFreeTimeSlots();
         List<TimeSlot> freeSlotListAfterAdjust = new ArrayList<>();
         int updateTotalTime = 0;
@@ -505,8 +511,19 @@ public class CalendarEngine {
                     } else // end after 16:00
                     {
                         // update the userFreeTimeSlot end time to 16:00
+
+                        endOfCurrentSlot = endOfCurrentSlot
+                                .atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE))
+                                .withHour(16)
+                                .withMinute(0)
+                                .withSecond(0)
+                                .withNano(0)
+                                .toInstant();
+
                         // add to freeSlotListAfterAdjust
+                        freeSlotListAfterAdjust.add(new TimeSlot(new DateTime(startOfCurrentSlot.toEpochMilli()), new DateTime(endOfCurrentSlot.toEpochMilli())));
                         // add to updateTotalTime the update free time
+                        updateTotalTime += (endOfCurrentSlot.toEpochMilli() - startOfCurrentSlot.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
                     }
                 }
                 // else throw start and end in the weekend
@@ -518,8 +535,17 @@ public class CalendarEngine {
                     if (endOfCurrentSlotHour >= 20) // end after 20:00
                     {
                         // update the userFreeTimeSlot start time to 20:00
+                        startOfCurrentSlot = startOfCurrentSlot
+                                .atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE))
+                                .withHour(20)
+                                .withMinute(0)
+                                .withSecond(0)
+                                .withNano(0)
+                                .toInstant();
                         // add to freeSlotListAfterAdjust
+                        freeSlotListAfterAdjust.add(new TimeSlot(new DateTime(startOfCurrentSlot.toEpochMilli()), new DateTime(endOfCurrentSlot.toEpochMilli())));
                         // add to updateTotalTime the update free time
+                        updateTotalTime += (endOfCurrentSlot.toEpochMilli() - startOfCurrentSlot.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
                     }
                     // else throw start and end in the weekend
                 } else {
