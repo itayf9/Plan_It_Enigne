@@ -13,6 +13,7 @@ import com.example.planit.utill.Utility;
 import com.example.planit.utill.dto.*;
 import com.google.api.client.auth.oauth2.RefreshTokenRequest;
 import com.google.api.client.auth.oauth2.TokenResponse;
+import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
@@ -37,6 +38,7 @@ import org.springframework.http.HttpStatus;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -955,57 +957,73 @@ public class CalendarEngine {
     public DTOscanResponseToController scanUserEvents(String subjectID, String start, String end) throws IOException, GeneralSecurityException {
 
 
-        // check if user exist in DB
-        Optional<User> maybeUser = userRepo.findUserBySubjectID(subjectID);
-        if (maybeUser.isEmpty()) {
-            return new DTOscanResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.UNAUTHORIZED, new ArrayList<>());
-        }
+        try {
 
-        // get instance of the user
-        User user = maybeUser.get();
-
-        // refresh access_token before making api call
-        validateAccessTokenExpireTime(user);
-
-        // check if access_token still have scope for Google calendar
-        if (!hasAuthorizeScopesStillValid(user.getAccessToken())) {
-            return new DTOscanResponseToController(false, Constants.ERROR_NO_VALID_ACCESS_TOKEN, HttpStatus.UNAUTHORIZED, new ArrayList<>());
-        }
-
-        // 1# get List of user's events
-        // perform a scan on the user's Calendar to get all of his events at the time interval
-        DTOuserCalendarsInformation userEvents = getUserCalendarsInformation(user, start, end);
-
-        // fullDayEvents - a list of events that represents the user's full day events
-        List<Event> fullDayEvents = userEvents.getFullDayEvents();
-
-        // events - a list of events that represents all the user's events
-        // planItCalendarOldEvents - a list of PlanIt calendar old events
-        List<Event> events = userEvents.getEvents();
-        List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
-        List<Exam> examsFound = userEvents.getExamsFound();
-
-        // checks if no exams are
-        if (examsFound.size() == 0) {
-            return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
-        }
-
-
-        if (fullDayEvents.size() != 0) {
-
-            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
-                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
-
-            // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
-            if (fullDayEvents.size() != 0) {
-
-                // return the user with the updated list of fullDayEvents.
-                return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.CONFLICT, fullDayEvents);
+            // check if user exist in DB
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(subjectID);
+            if (maybeUser.isEmpty()) {
+                return new DTOscanResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.UNAUTHORIZED, new ArrayList<>());
             }
 
+            // get instance of the user
+            User user = maybeUser.get();
+
+            // refresh access_token before making api call
+            validateAccessTokenExpireTime(user);
+
+            // check if access_token still have scope for Google calendar
+            if (!hasAuthorizeScopesStillValid(user.getAccessToken())) {
+                return new DTOscanResponseToController(false, Constants.ERROR_NO_VALID_ACCESS_TOKEN, HttpStatus.UNAUTHORIZED, new ArrayList<>());
+            }
+
+            // 1# get List of user's events
+            // perform a scan on the user's Calendar to get all of his events at the time interval
+            DTOuserCalendarsInformation userEvents = getUserCalendarsInformation(user, start, end);
+
+            // fullDayEvents - a list of events that represents the user's full day events
+            List<Event> fullDayEvents = userEvents.getFullDayEvents();
+
+            // events - a list of events that represents all the user's events
+            // planItCalendarOldEvents - a list of PlanIt calendar old events
+            List<Event> events = userEvents.getEvents();
+            List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
+            List<Exam> examsFound = userEvents.getExamsFound();
+
+            // checks if no exams are
+            if (examsFound.size() == 0) {
+                return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
+            }
+
+
+            if (fullDayEvents.size() != 0) {
+
+                fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
+                        , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
+
+                // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
+                if (fullDayEvents.size() != 0) {
+
+                    // return the user with the updated list of fullDayEvents.
+                    return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.CONFLICT, fullDayEvents);
+                }
+
+            }
+
+            generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), start, planItCalendarOldEvents);
+
+        } catch (TokenResponseException e) {
+            // e.g. when the refresh token has expired
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
+                return new DTOscanResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST, new ArrayList<>());
+            }
+        } catch (IOException e) {
+            // e.g. when we call Google API with execute() method
+            return new DTOscanResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR, new ArrayList<>());
+        } catch (GeneralSecurityException e) {
+            // e.g. could not create HTTP secure connection
+            return new DTOscanResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, new ArrayList<>());
         }
 
-        generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), start, planItCalendarOldEvents);
 
         return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, new ArrayList<>());
 
