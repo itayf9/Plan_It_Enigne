@@ -388,7 +388,15 @@ public class CalendarEngine {
                 }
             }
         }
+        /*
+        DTOfreetime dtoFreeSlotsAfterAdjust = adjustFreeSlotsList(userFreeTimeSlots, user);
+        boolean isUserStudyInWeekend = user.getUserPreferences().isStudyOnWeekends();
 
+        if (!isUserStudyInWeekend) {
+            // adjustFreeSlotListByWeekend(dtoFreeSlotsAfterAdjust,user);
+        }
+
+        return dtoFreeSlotsAfterAdjust;*/
         return adjustFreeSlotsList(userFreeTimeSlots, user);
     }
 
@@ -468,6 +476,63 @@ public class CalendarEngine {
             }
         }
         return new DTOfreetime(adjustedUserFreeSlots, totalFreeTime);
+    }
+
+    private static DTOfreetime adjustFreeSlotListByWeekend(DTOfreetime dtoFreeSlotsAfterAdjust, User user) {
+        List<TimeSlot> freeSlotList = dtoFreeSlotsAfterAdjust.getFreeTimeSlots();
+        List<TimeSlot> freeSlotListAfterAdjust = new ArrayList<>();
+        int updateTotalTime = 0;
+
+        for (TimeSlot userFreeTimeSlot : freeSlotList) {
+            // gets current slot end and start
+            Instant startOfCurrentSlot = Instant.ofEpochMilli(userFreeTimeSlot.getStart().getValue());
+            Instant endOfCurrentSlot = Instant.ofEpochMilli(userFreeTimeSlot.getEnd().getValue());
+            // get the day of the week in the instant start
+            int startOfCurrentSlotDayInWeek = startOfCurrentSlot.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE)).getDayOfWeek().getValue();
+            int startOfCurrentSlotHour = startOfCurrentSlot.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE)).getHour();
+            // get the day of the week in the instant end
+            int endOfCurrentSlotDayInWeek = endOfCurrentSlot.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE)).getDayOfWeek().getValue();
+            int endOfCurrentSlotHour = endOfCurrentSlot.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE)).getHour();
+
+            // the day is Friday (start - 16:00)
+            if (startOfCurrentSlotDayInWeek == 5) {
+                if (startOfCurrentSlotHour < 16) // start before 16:00
+                {
+                    if (endOfCurrentSlotHour <= 16) // end before 16:00
+                    {
+                        freeSlotListAfterAdjust.add(userFreeTimeSlot);
+                        updateTotalTime += (endOfCurrentSlot.toEpochMilli() - startOfCurrentSlot.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
+                    } else // end after 16:00
+                    {
+                        // update the userFreeTimeSlot end time to 16:00
+                        // add to freeSlotListAfterAdjust
+                        // add to updateTotalTime the update free time
+                    }
+                }
+                // else throw start and end in the weekend
+            }
+            // the day is Saturday (20:00 - end)
+            else if (startOfCurrentSlotDayInWeek == 6) {
+                if (startOfCurrentSlotHour < 20) // start after 20:00
+                {
+                    if (endOfCurrentSlotHour >= 20) // end after 20:00
+                    {
+                        // update the userFreeTimeSlot start time to 20:00
+                        // add to freeSlotListAfterAdjust
+                        // add to updateTotalTime the update free time
+                    }
+                    // else throw start and end in the weekend
+                } else {
+                    freeSlotListAfterAdjust.add(userFreeTimeSlot);
+                    updateTotalTime += (endOfCurrentSlot.toEpochMilli() - startOfCurrentSlot.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
+                }
+            } else {
+                freeSlotListAfterAdjust.add(userFreeTimeSlot);
+                updateTotalTime += (endOfCurrentSlot.toEpochMilli() - startOfCurrentSlot.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
+            }
+
+        }
+        return new DTOfreetime(freeSlotListAfterAdjust, updateTotalTime);
     }
 
     /**
