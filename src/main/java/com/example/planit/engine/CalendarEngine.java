@@ -1069,7 +1069,7 @@ public class CalendarEngine {
                 if (fullDayEvents.size() != 0) {
 
                     // return the user with the updated list of fullDayEvents.
-                    return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.CONFLICT, fullDayEvents);
+                    return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents);
                 }
 
             }
