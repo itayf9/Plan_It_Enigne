@@ -393,7 +393,7 @@ public class CalendarEngine {
         boolean isUserStudyInWeekend = user.getUserPreferences().isStudyOnWeekends();
 
         if (!isUserStudyInWeekend) {
-           dtoFreeSlotsAfterAdjust = adjustFreeSlotListByWeekend(dtoFreeSlotsAfterAdjust);
+            dtoFreeSlotsAfterAdjust = adjustFreeSlotListByWeekend(dtoFreeSlotsAfterAdjust);
         }
 
         return dtoFreeSlotsAfterAdjust;
@@ -1088,8 +1088,8 @@ public class CalendarEngine {
 
             if (fullDayEvents.size() != 0) {
 
-                fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
-                        , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
+            /*fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
+                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);*/
 
                 // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
                 if (fullDayEvents.size() != 0) {
@@ -1124,7 +1124,7 @@ public class CalendarEngine {
      * performs a scan on the user events and gather some information.
      * then, performs generate PlanIt calendar after handling full days events' user's decisions
      *
-     * @param email         the user's email
+     * @param sub           the user's sub value
      * @param start         the user's preferred start time to generate from (in ISO format)
      * @param end           the user's preferred end time to generate to (in ISO format)
      * @param userDecisions an array of boolean that represents the full day events' user's decisions
@@ -1132,11 +1132,11 @@ public class CalendarEngine {
      * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
-    public DTOgenerateResponseToController generateStudyEvents(String email, String start, String end, boolean[] userDecisions) throws IOException, GeneralSecurityException {
+    public DTOgenerateResponseToController generateStudyEvents(String sub, String start, String end, Map<Long, Boolean> userDecisions) throws IOException, GeneralSecurityException {
 
 
         // check if user exist in DB
-        Optional<User> maybeUser = userRepo.findUserByEmail(email);
+        Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
         if (maybeUser.isEmpty()) {
             return new DTOgenerateResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.UNAUTHORIZED);
         }
@@ -1160,14 +1160,13 @@ public class CalendarEngine {
         // check if fullDayEvents List is empty (which doesn't suppose to be)
         if (fullDayEvents.size() != 0) {
 
-            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
-                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
+//            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
+//                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
 
             // go through the list
-            for (int i = 0; i < fullDayEvents.size(); i++) {
+            for (Event fullDayEvent : fullDayEvents) {
 
-                boolean userWantToStudyAtCurrentFullDayEvent = userDecisions[i];
-                Event currentFullDayEvent = fullDayEvents.get(i);
+                boolean userWantToStudyAtCurrentFullDayEvent = userDecisions.get(fullDayEvent.getStart().getDate().getValue());
 
                 // check if user want to study at the current fullDayEvent
                 if (userWantToStudyAtCurrentFullDayEvent) {

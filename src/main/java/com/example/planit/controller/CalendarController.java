@@ -100,17 +100,16 @@ public class CalendarController {
     /**
      * this endpoint re-scan the user Calendar events, deals with the full days events that has been found and generates the plan it calendar.
      *
-     * @param email         user's email address to search the User on DB & get preferences
-     * @param userDecisions array of boolean values representing
+     * @param sub       user's sub value to search the User on DB & get preferences
+     * @param decisions array of boolean values representing
      * @return ResponseEntity<String> this method not suppose to fail unless it's been called externally
      * @throws IOException              IOException
      * @throws GeneralSecurityException GeneralSecurityException
      */
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<DTOstatus> generateStudyEvents(@RequestParam String email, @RequestParam String start, @RequestParam String end, @RequestBody boolean[] userDecisions) throws IOException, GeneralSecurityException {
+    public ResponseEntity<DTOstatus> generateStudyEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end, @RequestBody Map<Long, Boolean> decisions) throws IOException, GeneralSecurityException {
 
-        DTOgenerateResponseToController generateResponseToController = calendarEngine.generateStudyEvents(email, start, end, userDecisions);
-
+        DTOgenerateResponseToController generateResponseToController = calendarEngine.generateStudyEvents(sub, start, end, decisions);
         return ResponseEntity.status(generateResponseToController.getHttpStatus())
                 .body(new DTOstatus(generateResponseToController.isSucceed(),
                         generateResponseToController.getDetails()));
