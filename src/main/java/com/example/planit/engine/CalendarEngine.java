@@ -136,7 +136,6 @@ public class CalendarEngine {
 
         // #5 - updates the planIt calendar
         updatePlanItCalendar(sessionsList, service, planItCalendarID, planItCalendarOldEvents, user);
-
     }
 
     /**
@@ -397,7 +396,6 @@ public class CalendarEngine {
         }
 
         return dtoFreeSlotsAfterAdjust;
-        //return adjustFreeSlotsList(userFreeTimeSlots, user);
     }
 
     /**
