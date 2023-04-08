@@ -1,6 +1,8 @@
 package com.example.planit.utill;
 
 import com.example.planit.utill.dto.DTOstartAndEndOfInterval;
+import com.google.api.client.util.DateTime;
+import com.google.api.services.calendar.model.Event;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -183,5 +185,25 @@ public class Utility {
             }
         }
         return result.toInstant();
+    }
+
+    /**
+     * converts a full day event to a regular event, by setting the DateTime field to the original Date field value.
+     *
+     * @param fullDayEventToBeConverted a {@link Event} that is a full day event and should be converted to a regular event
+     * @return a {@link Event} that is the converted event
+     */
+    public static Event convertFullDayEventToRegularEvent(Event fullDayEventToBeConverted) {
+
+        DateTime startDateOfFullDayEvent = fullDayEventToBeConverted.getStart().getDate();// 00:00
+        DateTime endDateOfFullDayEvent = fullDayEventToBeConverted.getEnd().getDate();// 00:00
+
+        fullDayEventToBeConverted.getStart().setDateTime(startDateOfFullDayEvent);
+        fullDayEventToBeConverted.getEnd().setDateTime(endDateOfFullDayEvent);
+
+        fullDayEventToBeConverted.getStart().setDate(null);
+        fullDayEventToBeConverted.getEnd().setDate(null);
+
+        return fullDayEventToBeConverted;
     }
 }

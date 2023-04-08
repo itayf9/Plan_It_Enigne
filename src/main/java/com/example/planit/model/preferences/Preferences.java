@@ -8,7 +8,7 @@ public class Preferences {
     private int userStudyEndTime; // 2200 will be converted to 22 to represent 22:00 at night
     private int userBreakTime; // in minutes e.g. 15 minutes
     private int studySessionTime; // in minutes e.g. 120 minutes ~ 2 hours
-    private boolean isStudyOnHolyDays;
+    private boolean isStudyOnHolidays;
     private boolean isStudyOnWeekends;
 
     public Preferences() {
@@ -36,8 +36,8 @@ public class Preferences {
         return studySessionTime;
     }
 
-    public boolean isStudyOnHolyDays() {
-        return isStudyOnHolyDays;
+    public boolean isStudyOnHolidays() {
+        return isStudyOnHolidays;
     }
 
     public void setUserStudyStartTime(int userStudyStartTime) {
@@ -64,7 +64,7 @@ public class Preferences {
         isStudyOnWeekends = studyOnWeekends;
     }
 
-    public void setStudyOnHolyDays(boolean studyOnHolyDays) {
-        isStudyOnHolyDays = studyOnHolyDays;
+    public void setStudyOnHolidays(boolean studyOnHolidays) {
+        isStudyOnHolidays = studyOnHolidays;
     }
 }

@@ -264,16 +264,16 @@ public class CalendarEngine {
     /**
      * 1# get List of all the event's user has
      *
-     * @param calendarService Google Calendar service provider.
-     * @param calendarList    List of all the User Google Calendars
-     * @param start           the time to start scan of events
-     * @param end             the time to end scan of events
-     * @param fullDayEvents   list of full day events found
+     * @param calendarService               Google Calendar service provider.
+     * @param calendarList                  List of all the User Google Calendars
+     * @param start                         the time to start scan of events
+     * @param end                           the time to end scan of events
+     * @param fullDayEventsFromAllCalendars list of full day events found
      * @return List of all the event's user has
      */
     private List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
-                                                  List<Event> fullDayEvents, List<Event> planItCalendarOldEvents, List<Exam> examsFound) {
-        List<Event> allEventsFromCalendars = new ArrayList<>();
+                                                  List<Event> fullDayEventsFromAllCalendars, List<Event> planItCalendarOldEvents, List<Exam> examsFound) {
+        List<Event> regularEventsFromAllCalendars = new ArrayList<>();
 
         List<Course> courses = courseRepo.findAll(); // get all courses from DB
 
@@ -315,13 +315,13 @@ public class CalendarEngine {
             // adds the events, including the full day events, from the calendar to the list
             allEventsFromCalendars.addAll(events.getItems());
             // adds the full day events to the fullDayEvents list
-            fullDayEvents.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
+            fullDayEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
         }
 
         // sorts the events, so they will be ordered by start time
-        allEventsFromCalendars.sort(new EventComparator());
-        fullDayEvents.sort(new EventComparator());
-        return allEventsFromCalendars;
+        regularEventsFromAllCalendars.sort(new EventComparator());
+        fullDayEventsFromAllCalendars.sort(new EventComparator());
+        return regularEventsFromAllCalendars;
     }
 
     /**
@@ -1056,7 +1056,6 @@ public class CalendarEngine {
 
             // get instance of the user
             User user = maybeUser.get();
-
             // refresh access_token before making api call
             validateAccessTokenExpireTime(user);
 
@@ -1074,7 +1073,7 @@ public class CalendarEngine {
 
             // events - a list of events that represents all the user's events
             // planItCalendarOldEvents - a list of PlanIt calendar old events
-            List<Event> events = userEvents.getEvents();
+            List<Event> regularEvents = userEvents.getEvents();
             List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
             List<Exam> examsFound = userEvents.getExamsFound();
 
@@ -1098,7 +1097,7 @@ public class CalendarEngine {
 
             }
 
-            generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), start, planItCalendarOldEvents);
+            generatePlanItCalendar(regularEvents, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), start, planItCalendarOldEvents);
 
         } catch (TokenResponseException e) {
             // e.g. when the refresh token has expired
@@ -1153,7 +1152,7 @@ public class CalendarEngine {
         List<Event> planItCalendarOldEvents = userEvents.getPlanItCalendarOldEvents();
 
         // events - a list of events that represents all the user's events
-        List<Event> events = userEvents.getEvents();
+        List<Event> regularEvents = userEvents.getEvents();
 
         // check if fullDayEvents List is empty (which doesn't suppose to be)
         if (fullDayEvents.size() != 0) {
@@ -1161,20 +1160,24 @@ public class CalendarEngine {
 //            fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
 //                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
 
-            // go through the list
+            // go through the list of full day events
             for (Event fullDayEvent : fullDayEvents) {
 
                 boolean userWantToStudyAtCurrentFullDayEvent = userDecisions.get(fullDayEvent.getStart().getDate().getValue());
 
                 // check if user want to study at the current fullDayEvent
-                if (userWantToStudyAtCurrentFullDayEvent) {
-                    events.remove(fullDayEvent); // remove event element from the list of all events.
+                if (!userWantToStudyAtCurrentFullDayEvent) {
+                    // change the full day event to regular event and add it to the regularEvents
+                    Event convertedFullDayEvent = Utility.convertFullDayEventToRegularEvent(fullDayEvent);
+                    regularEvents.add(convertedFullDayEvent);
                 }
             }
+
+            regularEvents.sort(new EventComparator());
         }
 
         // 2# 3# 4# 5#
-        generatePlanItCalendar(events, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), start, planItCalendarOldEvents);
+        generatePlanItCalendar(regularEvents, userEvents.getExamsFound(), maybeUser.get(), userEvents.getCalendarService(), start, planItCalendarOldEvents);
 
         return new DTOgenerateResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED);
 
