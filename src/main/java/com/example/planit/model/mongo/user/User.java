@@ -1,6 +1,6 @@
 package com.example.planit.model.mongo.user;
 
-import com.example.planit.model.preferences.Preferences;
+import com.example.planit.model.mongo.user.preferences.Preferences;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;

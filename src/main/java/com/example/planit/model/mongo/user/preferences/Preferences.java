@@ -1,4 +1,4 @@
-package com.example.planit.model.preferences;
+package com.example.planit.model.mongo.user.preferences;
 
 import static com.example.planit.utill.defaults.Defaults.*;
 

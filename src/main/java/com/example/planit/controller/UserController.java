@@ -3,7 +3,7 @@ package com.example.planit.controller;
 import com.example.planit.engine.UserEngine;
 import com.example.planit.model.mongo.user.User;
 import com.example.planit.model.mongo.user.UserRepository;
-import com.example.planit.model.preferences.Preferences;
+import com.example.planit.model.mongo.user.preferences.Preferences;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOloginResponseToClient;
 import com.example.planit.utill.dto.DTOstatus;
