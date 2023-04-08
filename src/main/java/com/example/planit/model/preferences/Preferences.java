@@ -13,8 +13,8 @@ public class Preferences {
 
     public Preferences() {
         this.studySessionTime = DEFAULT_USER_STUDY_SESSION_TIME;
-        this.isStudyOnHolyDays = false;
-        this.isStudyOnWeekends = false;
+        this.isStudyOnHolidays = DEFAULT_USER_IS_STUDY_ON_HOLIDAYS;
+        this.isStudyOnWeekends = DEFAULT_USER_IS_STUDY_ON_WEEKENDS;
         this.userBreakTime = DEFAULT_USER_BREAK_TIME;
         this.userStudyStartTime = DEFAULT_USER_STUDY_START_TIME;
         this.userStudyEndTime = DEFAULT_USER_STUDY_END_TIME;

@@ -312,8 +312,8 @@ public class CalendarEngine {
                 continue;
             }
 
-            // adds the events, including the full day events, from the calendar to the list
-            allEventsFromCalendars.addAll(events.getItems());
+            // adds the events, excluding the full day events, from the calendar to the list
+            regularEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() == null).toList());
             // adds the full day events to the fullDayEvents list
             fullDayEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
         }

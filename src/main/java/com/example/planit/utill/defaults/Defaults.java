@@ -9,4 +9,8 @@ public class Defaults {
     public static final int DEFAULT_USER_BREAK_TIME = 30; // in minutes
 
     public static final int DEFAULT_USER_STUDY_SESSION_TIME = 120; // in minutes
+
+    public static final boolean DEFAULT_USER_IS_STUDY_ON_HOLIDAYS = true;
+
+    public static final boolean DEFAULT_USER_IS_STUDY_ON_WEEKENDS = true;
 }
