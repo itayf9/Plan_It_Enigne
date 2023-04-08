@@ -6,8 +6,8 @@ import com.google.api.client.util.DateTime;
 import java.util.Objects;
 
 public class Exam {
-    private Course course;
-    private DateTime dateTime;
+    private final Course course;
+    private final DateTime dateTime;
 
     public Exam(Course course, DateTime dateTime) {
         this.course = course;
