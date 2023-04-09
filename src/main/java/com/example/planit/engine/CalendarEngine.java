@@ -91,7 +91,7 @@ public class CalendarEngine {
         validateAccessTokenExpireTime(user);
 
         // get user's calendar service
-        Calendar calendarService = getCalendarService(user.getAccessToken(), user.getExpireTimeInMilliseconds());
+        Calendar calendarService = getCalendarService(user.getAuth().getAccessToken(), user.getAuth().getExpireTimeInMilliseconds());
 
         // get user's calendar list
         List<CalendarListEntry> calendarList = getCalendarList(calendarService);
@@ -194,15 +194,15 @@ public class CalendarEngine {
     public void validateAccessTokenExpireTime(User user) throws IOException, GeneralSecurityException {
 
         // checks if the access token is not valid yet
-        if (!CalendarEngine.isAccessTokenValid(user.getExpireTimeInMilliseconds())) {
+        if (!CalendarEngine.isAccessTokenValid(user.getAuth().getExpireTimeInMilliseconds())) {
 
             // refresh the accessToken
-            TokenResponse tokensResponse = CalendarEngine.refreshAccessToken(user.getRefreshToken(), CLIENT_ID, CLIENT_SECRET);
+            TokenResponse tokensResponse = CalendarEngine.refreshAccessToken(user.getAuth().getRefreshToken(), CLIENT_ID, CLIENT_SECRET);
             long expireTimeInMilliseconds = Instant.now().plusMillis(((tokensResponse.getExpiresInSeconds() - 100) * 1000)).toEpochMilli();
 
             // updates the access token of the user in the DB
-            user.setAccessToken(tokensResponse.getAccessToken());
-            user.setExpireTimeInMilliseconds(expireTimeInMilliseconds);
+            user.getAuth().setAccessToken(tokensResponse.getAccessToken());
+            user.getAuth().setExpireTimeInMilliseconds(expireTimeInMilliseconds);
             userRepo.save(user);
         }
 
@@ -1060,7 +1060,7 @@ public class CalendarEngine {
             validateAccessTokenExpireTime(user);
 
             // check if access_token still have scope for Google calendar
-            if (!hasAuthorizeScopesStillValid(user.getAccessToken())) {
+            if (!hasAuthorizeScopesStillValid(user.getAuth().getAccessToken())) {
                 return new DTOscanResponseToController(false, Constants.ERROR_NO_VALID_ACCESS_TOKEN, HttpStatus.UNAUTHORIZED, new ArrayList<>());
             }
 

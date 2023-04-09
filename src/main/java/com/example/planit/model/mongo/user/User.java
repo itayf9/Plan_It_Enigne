@@ -11,14 +11,8 @@ public class User {
     @Id
     private String subjectID;
 
-    @Field(name = "email")
-    private String email;
-
-    @Field(name = "name")
-    private String name;
-
-    @Field(name = "picture_url")
-    private String pictureUrl;
+    @Field(name = "profile")
+    private Profile profile;
 
     @Field(name = "user_preferences")
     private Preferences userPreferences;
@@ -26,14 +20,12 @@ public class User {
     @Field(name = "planIt_calendar_ID")
     private String planItCalendarID;
 
-    @Field(name = "access_token")
-    private String accessToken;
+    @Field(name = "auth")
+    private Auth auth;
 
-    @Field(name = "expires_in")
-    private long expireTimeInMilliseconds;
+    @Field(name = "latest_study_plan")
+    private StudyPlan latestStudyPlan;
 
-    @Field(name = "refresh_token")
-    private String refreshToken;
 
     // need empty ctor for mongo reflection stuff
     public User() {
@@ -41,33 +33,28 @@ public class User {
 
     public User(String subjectId, String email, String name, String pictureUrl, String accessToken, long expireTimeInMilliseconds, String refreshToken) {
         this.subjectID = subjectId;
-        this.email = email;
-        this.name = name;
-        this.pictureUrl = pictureUrl;
+        this.profile = new Profile(email, name, pictureUrl);
         this.userPreferences = new Preferences();
         this.planItCalendarID = null;
-        this.accessToken = accessToken;
-        this.expireTimeInMilliseconds = expireTimeInMilliseconds;
-        this.refreshToken = refreshToken;
-
+        this.auth = new Auth(accessToken, expireTimeInMilliseconds, refreshToken);
+        this.latestStudyPlan = new StudyPlan();
     }
 
     public String getSubjectId() {
         return subjectID;
     }
 
-    public String getEmail() {
-        return email;
+    public Profile getProfile() {
+        return profile;
     }
 
-    public String getName() {
-        return name;
+    public Auth getAuth() {
+        return auth;
     }
 
-    public String getPictureUrl() {
-        return pictureUrl;
+    public StudyPlan getLatestStudyPlan() {
+        return latestStudyPlan;
     }
-
 
     public Preferences getUserPreferences() {
         return userPreferences;
@@ -77,16 +64,6 @@ public class User {
         this.userPreferences = userPreferences;
     }
 
-
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public String getRefreshToken() {
-        return refreshToken;
-    }
-
-
     public String getPlanItCalendarID() {
         return planItCalendarID;
     }
@@ -94,22 +71,5 @@ public class User {
     public void setPlanItCalendarID(String planItCalendarID) {
         this.planItCalendarID = planItCalendarID;
     }
-
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-    }
-
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
-    public long getExpireTimeInMilliseconds() {
-        return expireTimeInMilliseconds;
-    }
-
-    public void setExpireTimeInMilliseconds(long expireTimeInMilliseconds) {
-        this.expireTimeInMilliseconds = expireTimeInMilliseconds;
-    }
-
 
 }

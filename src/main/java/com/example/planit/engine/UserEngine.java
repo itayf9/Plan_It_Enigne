@@ -54,9 +54,9 @@ public class UserEngine {
         long expireTimeInMilliseconds = tokens.getExpireTimeInMilliseconds();
 
         // update the access and refresh tokens of the user.
-        user.setAccessToken(accessToken);
-        user.setExpireTimeInMilliseconds(expireTimeInMilliseconds);
-        user.setRefreshToken(refreshToken);
+        user.getAuth().setAccessToken(accessToken);
+        user.getAuth().setExpireTimeInMilliseconds(expireTimeInMilliseconds);
+        user.getAuth().setRefreshToken(refreshToken);
         userRepo.save(user);
         return user.getSubjectId();
     }
