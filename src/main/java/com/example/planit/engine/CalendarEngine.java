@@ -1120,6 +1120,8 @@ public class CalendarEngine {
     public DTOgenerateResponseToController generateStudyEvents(String sub, String start, String end, Map<Long, Boolean> userDecisions) {
 
         StudyPlan studyPlan = new StudyPlan();
+        studyPlan.setStartDateTimeOfPlan(start);
+        studyPlan.setStartDateTimeOfPlan(end);
         try {
             // check if user exist in DB
             Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
@@ -1205,6 +1207,15 @@ public class CalendarEngine {
             }
         }
         return false; // scope was not found or response wasn't successful
+    }
+
+    public DTOstudyPlanResponseToController getUserLatestStudyPlan(String sub) {
+        Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+
+        if (maybeUser.isEmpty()) {
+            return new DTOstudyPlanResponseToController(false, ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+        }
+        return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK);
     }
 }
 

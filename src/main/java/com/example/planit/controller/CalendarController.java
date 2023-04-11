@@ -95,4 +95,13 @@ public class CalendarController {
                 .body(new DTOgenerateResponseToClient(generateResponseToController.isSucceed(),
                         generateResponseToController.getDetails(), generateResponseToController.getStudyPlan()));
     }
+
+    @GetMapping(value = "/scan")
+    public ResponseEntity<DTOstudyPlanResponseToClient> getLatestStudyPlan(@RequestParam String sub) {
+        DTOstudyPlanResponseToController dtOstudyPlanResponseToController = calendarEngine.getUserLatestStudyPlan(sub);
+
+        return ResponseEntity.status(dtOstudyPlanResponseToController.getHttpStatus())
+                .body(new DTOstudyPlanResponseToClient(dtOstudyPlanResponseToController.isSucceed(),
+                        dtOstudyPlanResponseToController.getDetails(), dtOstudyPlanResponseToController.getStudyPlan()));
+    }
 }
