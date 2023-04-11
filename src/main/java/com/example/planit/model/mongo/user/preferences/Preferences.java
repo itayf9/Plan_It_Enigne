@@ -4,12 +4,12 @@ import static com.example.planit.utill.defaults.Defaults.*;
 
 public class Preferences {
 
-    private final int userStudyStartTime; // 0800 will be converted to 8 to represent 08:00 in the morning
-    private final int userStudyEndTime; // 2200 will be converted to 22 to represent 22:00 at night
-    private final int userBreakTime; // in minutes e.g. 15 minutes
-    private final int studySessionTime; // in minutes e.g. 120 minutes ~ 2 hours
-    private final boolean isStudyOnHolidays;
-    private final boolean isStudyOnWeekends;
+    private int userStudyStartTime; // 0800 will be converted to 8 to represent 08:00 in the morning
+    private int userStudyEndTime; // 2200 will be converted to 22 to represent 22:00 at night
+    private int userBreakTime; // in minutes e.g. 15 minutes
+    private int studySessionTime; // in minutes e.g. 120 minutes ~ 2 hours
+    private boolean isStudyOnHolidays;
+    private boolean isStudyOnWeekends;
 
     public Preferences() {
         this.studySessionTime = DEFAULT_USER_STUDY_SESSION_TIME;
@@ -40,12 +40,31 @@ public class Preferences {
         return isStudyOnHolidays;
     }
 
-    public void setUserStudyStartTime(int userStudyStartTime) {
-        this.userStudyStartTime = userStudyStartTime;
-    }
-
     public boolean isStudyOnWeekends() {
         return isStudyOnWeekends;
     }
 
+    public void setUserStudyStartTime(int userStudyStartTime) {
+        this.userStudyStartTime = userStudyStartTime;
+    }
+
+    public void setUserStudyEndTime(int userStudyEndTime) {
+        this.userStudyEndTime = userStudyEndTime;
+    }
+
+    public void setUserBreakTime(int userBreakTime) {
+        this.userBreakTime = userBreakTime;
+    }
+
+    public void setStudySessionTime(int studySessionTime) {
+        this.studySessionTime = studySessionTime;
+    }
+
+    public void setStudyOnHolidays(boolean studyOnHolidays) {
+        isStudyOnHolidays = studyOnHolidays;
+    }
+
+    public void setStudyOnWeekends(boolean studyOnWeekends) {
+        isStudyOnWeekends = studyOnWeekends;
+    }
 }

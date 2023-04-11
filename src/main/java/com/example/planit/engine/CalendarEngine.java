@@ -1071,8 +1071,8 @@ public class CalendarEngine {
 
             if (fullDayEvents.size() != 0) {
 
-            /*fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, events
-                    , user.getUserPreferences().isStudyOnHolyDays(), holidaysDatesCurrentYear, holidaysDatesNextYear);*/
+                fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
+                        , user.getUserPreferences().isStudyOnHolidays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
 
                 // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
                 if (fullDayEvents.size() != 0) {
