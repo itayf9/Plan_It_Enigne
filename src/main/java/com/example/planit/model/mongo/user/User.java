@@ -72,4 +72,7 @@ public class User {
         this.planItCalendarID = planItCalendarID;
     }
 
+    public void setLatestStudyPlan(StudyPlan studyPlan) {
+        this.latestStudyPlan = studyPlan;
+    }
 }

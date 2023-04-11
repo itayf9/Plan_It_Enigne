@@ -1091,6 +1091,9 @@ public class CalendarEngine {
                     planItCalendarOldEvents,
                     studyPlan);
 
+            user.setLatestStudyPlan(studyPlan);
+            userRepo.save(user);
+
         } catch (TokenResponseException e) {
             // e.g. when the refresh token has expired
             if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
@@ -1167,6 +1170,9 @@ public class CalendarEngine {
 
             // 2# 3# 4# 5#
             generatePlanItCalendar(regularEvents, userCalendarsInformation.getExamsFound(), maybeUser.get(), userCalendarsInformation.getCalendarService(), start, planItCalendarOldEvents, studyPlan);
+
+            user.setLatestStudyPlan(studyPlan);
+            userRepo.save(user);
 
         } catch (TokenResponseException e) {
             // e.g. when the refresh token has expired
