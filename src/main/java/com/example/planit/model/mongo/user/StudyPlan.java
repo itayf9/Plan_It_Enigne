@@ -3,9 +3,11 @@ package com.example.planit.model.mongo.user;
 import com.example.planit.model.exam.Exam;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.util.List;
+
 public class StudyPlan {
     @Field(name = "scanned_exams")
-    private Exam[] scannedExams;
+    private List<Exam> scannedExams;
     @Field(name = "start_datetime_of_plan")
     private String startDateTimeOfPlan;
     @Field(name = "end_datetime_of_plan")
@@ -16,7 +18,7 @@ public class StudyPlan {
     public StudyPlan() {
     }
 
-    public void setScannedExams(Exam[] scannedExams) {
+    public void setScannedExams(List<Exam> scannedExams) {
         this.scannedExams = scannedExams;
     }
 
@@ -32,7 +34,7 @@ public class StudyPlan {
         this.totalNumberOfStudySessions = totalNumberOfStudySessions;
     }
 
-    public Exam[] getScannedExams() {
+    public List<Exam> getScannedExams() {
         return scannedExams;
     }
 

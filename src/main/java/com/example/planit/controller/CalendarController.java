@@ -5,25 +5,17 @@ import com.example.planit.engine.HolidaysEngine;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
-import com.example.planit.utill.dto.DTOgenerateResponseToController;
-import com.example.planit.utill.dto.DTOscanResponseToClient;
-import com.example.planit.utill.dto.DTOscanResponseToController;
-import com.example.planit.utill.dto.DTOstatus;
-import com.google.api.client.auth.oauth2.TokenResponseException;
+import com.example.planit.utill.dto.*;
 import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 
@@ -69,25 +61,16 @@ public class CalendarController {
      *
      * @param sub user's sub value to search the User on DB & get preferences.
      * @return ResponseEntity<List < Event>> we return list of events in a case of full day events found, otherwise we generate the calendar.
-     * @throws IOException              IOException
-     * @throws GeneralSecurityException GeneralSecurityException
      */
     @PostMapping(value = "/scan")
-    public ResponseEntity<DTOscanResponseToClient> scanUserEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end) throws IOException, GeneralSecurityException {
+    public ResponseEntity<DTOscanResponseToClient> scanUserEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end) {
 
         long s = System.currentTimeMillis();
         calendarLogger.info("User " + sub + " has requested scan");
         DTOscanResponseToController scanResponseToController = null;
 
-        try {
-            scanResponseToController = calendarEngine.scanUserEvents(sub, start, end);
-        } catch (TokenResponseException e) {
-            // e.g. when the refresh token has expired
-            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(new DTOscanResponseToClient(false, Constants.ERROR_INVALID_GRANT, new ArrayList<>()));
-            }
-        }
+        DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(sub, start, end);
+
         long t = System.currentTimeMillis();
         long res = t - s;
         calendarLogger.info("scan time is " + res + " ms");
@@ -95,7 +78,7 @@ public class CalendarController {
         return ResponseEntity.status(scanResponseToController.getHttpStatus())
                 .body(new DTOscanResponseToClient(scanResponseToController.isSucceed(),
                         scanResponseToController.getDetails(),
-                        scanResponseToController.getFullDayEvents()));
+                        scanResponseToController.getFullDayEvents(), scanResponseToController.getStudyPlan()));
     }
 
     /**
@@ -104,15 +87,13 @@ public class CalendarController {
      * @param sub       user's sub value to search the User on DB & get preferences
      * @param decisions array of boolean values representing
      * @return ResponseEntity<String> this method not suppose to fail unless it's been called externally
-     * @throws IOException              IOException
-     * @throws GeneralSecurityException GeneralSecurityException
      */
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<DTOstatus> generateStudyEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end, @RequestBody Map<Long, Boolean> decisions) throws IOException, GeneralSecurityException {
+    public ResponseEntity<DTOstatus> generateStudyEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end, @RequestBody Map<Long, Boolean> decisions) {
 
         DTOgenerateResponseToController generateResponseToController = calendarEngine.generateStudyEvents(sub, start, end, decisions);
         return ResponseEntity.status(generateResponseToController.getHttpStatus())
-                .body(new DTOstatus(generateResponseToController.isSucceed(),
-                        generateResponseToController.getDetails()));
+                .body(new DTOgenerateResponseToClient(generateResponseToController.isSucceed(),
+                        generateResponseToController.getDetails(), generateResponseToController.getStudyPlan()));
     }
 }
