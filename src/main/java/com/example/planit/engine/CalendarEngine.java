@@ -509,17 +509,15 @@ public class CalendarEngine {
                         // add to freeSlotListAfterAdjust
                         freeSlotListAfterAdjust.add(new TimeSlot(new DateTime(startOfCurrentSlot.toEpochMilli()), new DateTime(endOfCurrentSlot.toEpochMilli())));
                         // add to updateTotalTime the update free time
-                        updateTotalTime += (endOfCurrentSlot.toEpochMilli() - startOfCurrentSlot.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
                     }
+                    updateTotalTime += (endOfCurrentSlot.toEpochMilli() - startOfCurrentSlot.toEpochMilli()) / Constants.MILLIS_TO_HOUR;
                 }
                 // else throw start and end in the weekend
             }
             // the day is Saturday (20:00 - end)
             else if (startOfCurrentSlotDayInWeek == 6) {
-                if (startOfCurrentSlotHour < 20) // start after 20:00
-                {
-                    if (endOfCurrentSlotHour >= 20) // end after 20:00
-                    {
+                if (startOfCurrentSlotHour < 20) { // start after 20:00
+                    if (endOfCurrentSlotHour >= 20) {
                         // update the userFreeTimeSlot start time to 20:00
                         startOfCurrentSlot = startOfCurrentSlot
                                 .atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE))
@@ -1054,10 +1052,10 @@ public class CalendarEngine {
 
             // 1# get List of user's events
             // perform a scan on the user's Calendar to get all of his events at the time interval
-            DTOuserCalendarsInformation userEvents = getUserCalendarsInformation(user, start, end);
+            DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
 
             // fullDayEvents - a list of events that represents the user's full day events
-            List<Event> fullDayEvents = userEvents.getFullDayEvents();
+            List<Event> fullDayEvents = userCalendarsInformation.getFullDayEvents();
 
             // events - a list of events that represents all the user's events
             // planItCalendarOldEvents - a list of PlanIt calendar old events

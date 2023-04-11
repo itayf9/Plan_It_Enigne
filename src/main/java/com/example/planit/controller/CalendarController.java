@@ -67,7 +67,6 @@ public class CalendarController {
 
         long s = System.currentTimeMillis();
         calendarLogger.info("User " + sub + " has requested scan");
-        DTOscanResponseToController scanResponseToController = null;
 
         DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(sub, start, end);
 
