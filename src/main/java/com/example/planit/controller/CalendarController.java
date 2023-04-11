@@ -96,7 +96,7 @@ public class CalendarController {
                         generateResponseToController.getDetails(), generateResponseToController.getStudyPlan()));
     }
 
-    @GetMapping(value = "/scan")
+    @GetMapping(value = "/study-plan")
     public ResponseEntity<DTOstudyPlanResponseToClient> getLatestStudyPlan(@RequestParam String sub) {
         DTOstudyPlanResponseToController dtOstudyPlanResponseToController = calendarEngine.getUserLatestStudyPlan(sub);
 
