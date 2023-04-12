@@ -923,6 +923,7 @@ public class CalendarEngine {
      * @param planItCalendarID the calendar ID of the PlanIt calendar in the user's calendar list
      */
     private void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Event> planItCalendarOldEvents, User user, StudyPlan studyPlan) throws GeneralSecurityException {
+        studyPlan.setTotalNumberOfStudySessions(sessionsList.size());
 
         List<Event> overlapsOldEvents = getOverlapOldEventsPlanItCalendar(sessionsList, planItCalendarOldEvents);
 
@@ -936,7 +937,7 @@ public class CalendarEngine {
                 throw new RuntimeException(e);
             }
         }
-        studyPlan.setTotalNumberOfStudySessions(sessionsList.size());
+        //studyPlan.setTotalNumberOfStudySessions(sessionsList.size());
         // add updated events to the PlanIt calendar
         // this loop goes through the sessions and adds them to the PlanIt calendar
         for (StudySession session : sessionsList) {
