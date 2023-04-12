@@ -1,8 +1,10 @@
 package com.example.planit.model.mongo.user;
 
 import com.example.planit.model.exam.Exam;
+import com.example.planit.model.exam.ExamClientRepresentation;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class StudyPlan {
@@ -16,9 +18,10 @@ public class StudyPlan {
     private int totalNumberOfStudySessions;
 
     public StudyPlan() {
+        this.scannedExams = new ArrayList<>();
     }
 
-    public void setScannedExams(List<Exam> scannedExams) {
+    public void setScannedExams(List<ExamClientRepresentation> scannedExams) {
         this.scannedExams = scannedExams;
     }
 

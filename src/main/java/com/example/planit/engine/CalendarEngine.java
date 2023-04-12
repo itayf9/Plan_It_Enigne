@@ -1064,7 +1064,7 @@ public class CalendarEngine {
             List<Event> regularEvents = userCalendarsInformation.getEvents();
             List<Event> planItCalendarOldEvents = userCalendarsInformation.getPlanItCalendarOldEvents();
             List<Exam> examsFound = userCalendarsInformation.getExamsFound();
-            studyPlan.setScannedExams(examsFound);
+            studyPlan.convertAndSetScannedExamsAsClientRepresentation(examsFound);
             // checks if no exams are
             if (examsFound.size() == 0) {
                 return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
@@ -1146,7 +1146,8 @@ public class CalendarEngine {
             List<Event> planItCalendarOldEvents = userCalendarsInformation.getPlanItCalendarOldEvents();
             // events - a list of events that represents all the user's events
             List<Event> regularEvents = userCalendarsInformation.getEvents();
-            studyPlan.setScannedExams(userCalendarsInformation.getExamsFound());
+            List<Exam> examsFound = userCalendarsInformation.getExamsFound();
+            studyPlan.convertAndSetScannedExamsAsClientRepresentation(examsFound);
 
             // check if fullDayEvents List is empty (which doesn't suppose to be)
             if (fullDayEvents.size() != 0) {
