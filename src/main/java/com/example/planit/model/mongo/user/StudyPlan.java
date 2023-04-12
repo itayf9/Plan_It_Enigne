@@ -9,7 +9,7 @@ import java.util.List;
 
 public class StudyPlan {
     @Field(name = "scanned_exams")
-    private List<Exam> scannedExams;
+    private List<ExamClientRepresentation> scannedExams;
     @Field(name = "start_datetime_of_plan")
     private String startDateTimeOfPlan;
     @Field(name = "end_datetime_of_plan")
@@ -37,7 +37,7 @@ public class StudyPlan {
         this.totalNumberOfStudySessions = totalNumberOfStudySessions;
     }
 
-    public List<Exam> getScannedExams() {
+    public List<ExamClientRepresentation> getScannedExams() {
         return scannedExams;
     }
 
@@ -51,5 +51,16 @@ public class StudyPlan {
 
     public int getTotalNumberOfStudySessions() {
         return totalNumberOfStudySessions;
+    }
+
+    public void convertAndSetScannedExamsAsClientRepresentation(List<Exam> scannedExams) {
+        for (Exam currentScannedExam : scannedExams) {
+            this.scannedExams.add(convertScannedExamToClientRepresentation(currentScannedExam));
+        }
+    }
+
+    private static ExamClientRepresentation convertScannedExamToClientRepresentation(Exam scannedExamToBeConverted) {
+        return new ExamClientRepresentation(scannedExamToBeConverted.getCourse().getCourseName(),
+                scannedExamToBeConverted.getDateTime().toStringRfc3339());
     }
 }
