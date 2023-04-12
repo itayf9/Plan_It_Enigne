@@ -971,6 +971,7 @@ public class CalendarEngine {
     /**
      * finds all the overlapping events from the old PlanIt calendar (from previous generating processes).
      * the new generated sessions are compared to the old generated events.
+     * the overlapping events are removed from sessionsList.
      *
      * @param sessionsList            the new list of {@link StudySession} that about to be created as an events
      * @param planItCalendarOldEvents the old list of {@link Event} that been created and to be checked if causing an overlap anywhere
@@ -1031,7 +1032,7 @@ public class CalendarEngine {
 
         StudyPlan studyPlan = new StudyPlan();
         studyPlan.setStartDateTimeOfPlan(start);
-        studyPlan.setStartDateTimeOfPlan(end);
+        studyPlan.setEndDateTimeOfPlan(end);
         try {
 
             // check if user exist in DB

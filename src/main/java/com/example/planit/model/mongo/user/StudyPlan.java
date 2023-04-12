@@ -11,7 +11,7 @@ public class StudyPlan {
     @Field(name = "start_datetime_of_plan")
     private String startDateTimeOfPlan;
     @Field(name = "end_datetime_of_plan")
-    private String endDataTimeOfPlan;
+    private String endDateTimeOfPlan;
     @Field(name = "number_of_sessions")
     private int totalNumberOfStudySessions;
 
@@ -26,8 +26,8 @@ public class StudyPlan {
         this.startDateTimeOfPlan = startDateTimeOfPlan;
     }
 
-    public void setEndDataTimeOfPlan(String endDataTimeOfPlan) {
-        this.endDataTimeOfPlan = endDataTimeOfPlan;
+    public void setEndDateTimeOfPlan(String endDateTimeOfPlan) {
+        this.endDateTimeOfPlan = endDateTimeOfPlan;
     }
 
     public void setTotalNumberOfStudySessions(int totalNumberOfStudySessions) {
@@ -42,8 +42,8 @@ public class StudyPlan {
         return startDateTimeOfPlan;
     }
 
-    public String getEndDataTimeOfPlan() {
-        return endDataTimeOfPlan;
+    public String getEndDateTimeOfPlan() {
+        return endDateTimeOfPlan;
     }
 
     public int getTotalNumberOfStudySessions() {
