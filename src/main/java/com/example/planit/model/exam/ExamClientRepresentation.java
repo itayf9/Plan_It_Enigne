@@ -1,9 +1,9 @@
 package com.example.planit.model.exam;
 
 public class ExamClientRepresentation {
-    private String courseName;
+    private final String courseName;
 
-    private String dateTimeISO;
+    private final String dateTimeISO;
 
     public ExamClientRepresentation(String courseName, String dateTimeISO) {
         this.courseName = courseName;

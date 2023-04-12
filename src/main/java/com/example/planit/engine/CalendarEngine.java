@@ -1224,7 +1224,7 @@ public class CalendarEngine {
         if (maybeUser.isEmpty()) {
             return new DTOstudyPlanResponseToController(false, ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
         }
-        return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK);
+        return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan());
     }
 }
 
