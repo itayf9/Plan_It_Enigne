@@ -26,6 +26,8 @@ public class User {
     @Field(name = "latest_study_plan")
     private StudyPlan latestStudyPlan;
 
+    @Field(name = "is_admin")
+    private boolean isAdmin;
 
     // need empty ctor for mongo reflection stuff
     public User() {
@@ -38,6 +40,7 @@ public class User {
         this.planItCalendarID = null;
         this.auth = new Auth(accessToken, expireTimeInMilliseconds, refreshToken);
         this.latestStudyPlan = new StudyPlan();
+        this.isAdmin = false;
     }
 
     public String getSubjectId() {
@@ -74,5 +77,13 @@ public class User {
 
     public void setLatestStudyPlan(StudyPlan studyPlan) {
         this.latestStudyPlan = studyPlan;
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
+    }
+
+    public void setAdmin(boolean admin) {
+        isAdmin = admin;
     }
 }

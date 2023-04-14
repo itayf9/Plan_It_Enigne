@@ -35,7 +35,6 @@ public class UserController {
 
     @PostConstruct
     private void init() {
-        // initialize CalendarEngine
         this.userEngine = new UserEngine(userRepo, env);
     }
 

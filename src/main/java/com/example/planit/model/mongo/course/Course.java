@@ -1,11 +1,16 @@
 package com.example.planit.model.mongo.course;
 
+import org.bson.types.ObjectId;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 @Document("courses")
 public class Course {
 
+    @Id
+    @Field(name = "id")
+    private ObjectId id;
     @Field(name = "name")
     private String courseName;
     @Field(name = "level")
@@ -14,7 +19,7 @@ public class Course {
     private int credits;
     @Field(name = "study-time")
     private int recommendedStudyTime; // in days e.g - 2 for 2 days
-
+    
     @Field(name = "subjects")
     private String[] courseSubjects;
 
@@ -31,6 +36,11 @@ public class Course {
         this.recommendedStudyTime = recommendedStudyTime;
         this.courseSubjects = courseSubjects;
         this.subjectsPracticePercentage = subjectsPracticePercentage;
+    }
+
+
+    public ObjectId getId() {
+        return id;
     }
 
     public String getCourseName() {
