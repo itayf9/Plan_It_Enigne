@@ -8,6 +8,7 @@ import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOcoursesResponseToController;
 import org.springframework.http.HttpStatus;
 
+import java.util.List;
 import java.util.Optional;
 
 public class AdminEngine {
@@ -23,18 +24,23 @@ public class AdminEngine {
 
     public DTOcoursesResponseToController getAllCoursesFromDB(String sub) {
 
-        Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+        try {
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
-        if (maybeUser.isEmpty()) {
-            return new DTOcoursesResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            if (maybeUser.isEmpty()) {
+                return new DTOcoursesResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+            User maybeAdminUser = maybeUser.get();
+
+            if (!maybeAdminUser.isAdmin()) {
+                return new DTOcoursesResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+            }
+
+            return new DTOcoursesResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK, courseRepo.findAll());
+
+        } catch (Exception e) {
+            return new DTOcoursesResponseToController(false, "Error fetching courses from database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        User maybeAdminUser = maybeUser.get();
-
-        if (!maybeAdminUser.isAdmin()) {
-            return new DTOcoursesResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
-        }
-
-        return new DTOcoursesResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK, courseRepo.findAll());
     }
 
     public DTOcoursesResponseToController addCourseToDB(Course course, String sub) {
@@ -109,4 +115,29 @@ public class AdminEngine {
         }
     }
 
+    public DTOcoursesResponseToController getCourseFromDB(String courseId, String sub) {
+        try {
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+
+            if (maybeUser.isEmpty()) {
+                return new DTOcoursesResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+            User maybeAdminUser = maybeUser.get();
+
+            if (!maybeAdminUser.isAdmin()) {
+                return new DTOcoursesResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+            }
+
+            Optional<Course> maybeCourse = courseRepo.findCourseById(courseId);
+
+            if (maybeCourse.isEmpty()) {
+                return new DTOcoursesResponseToController(false, Constants.ERROR_COURSE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+            // return list of single Course because I am tired, and it's 04:44
+            return new DTOcoursesResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK, List.of(maybeCourse.get()));
+
+        } catch (Exception e) {
+            return new DTOcoursesResponseToController(false, "Error fetching course from database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

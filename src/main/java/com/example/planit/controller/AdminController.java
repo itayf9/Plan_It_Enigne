@@ -37,6 +37,17 @@ public class AdminController {
                         dtOcoursesResponseToController.getDetails(), dtOcoursesResponseToController.getCourses()));
     }
 
+    @CrossOrigin(origins = "http://localhost:3000")
+    @GetMapping(value = "/admin/course")
+    public ResponseEntity<DTOcoursesResponseToClient> getCourse(@RequestParam String courseId, @RequestParam String sub) {
+        DTOcoursesResponseToController dtOcoursesResponseToController = adminEngine.getCourseFromDB(courseId, sub);
+
+        return ResponseEntity.status(dtOcoursesResponseToController.getHttpStatus())
+                .body(new DTOcoursesResponseToClient(dtOcoursesResponseToController.isSucceed(),
+                        dtOcoursesResponseToController.getDetails(), dtOcoursesResponseToController.getCourses()));
+    }
+
+    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/admin/courses")
     public ResponseEntity<DTOstatus> addCourse(@RequestBody Course course, @RequestParam String sub) {
         DTOcoursesResponseToController dtOcoursesResponseToController = adminEngine.addCourseToDB(course, sub);
@@ -46,6 +57,7 @@ public class AdminController {
                         dtOcoursesResponseToController.getDetails()));
     }
 
+    @CrossOrigin(origins = "http://localhost:3000")
     @PutMapping(value = "/admin/courses")
     public ResponseEntity<DTOstatus> updateCourse(@RequestBody Course course, @RequestParam String sub) {
         DTOcoursesResponseToController dtOcoursesResponseToController = adminEngine.updateCourseInDB(course, sub);
