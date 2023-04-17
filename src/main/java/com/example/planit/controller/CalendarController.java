@@ -4,7 +4,6 @@ import com.example.planit.engine.CalendarEngine;
 import com.example.planit.engine.HolidaysEngine;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.user.UserRepository;
-import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.*;
 import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
@@ -15,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.MessageFormat;
 import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +34,7 @@ public class CalendarController {
     @Autowired
     private UserRepository userRepo;
 
-    public static Logger calendarLogger = LogManager.getLogger(Constants.CALENDAR_LOGGER_NAME);
+    public static Logger logger = LogManager.getLogger(CalendarController.class);
 
     private Set<String> holidaysDatesCurrentYear;
     private Set<String> holidaysDatesNextYear;
@@ -66,13 +66,13 @@ public class CalendarController {
     public ResponseEntity<DTOscanResponseToClient> scanUserEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end) {
 
         long s = System.currentTimeMillis();
-        calendarLogger.info("User " + sub + " has requested scan");
+        logger.info(MessageFormat.format("User {0}: has requested POST /scan with params: sub={0}, start={1}, end={2}", sub, start, end));
 
         DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(sub, start, end);
 
         long t = System.currentTimeMillis();
         long res = t - s;
-        calendarLogger.info("scan time is " + res + " ms");
+        logger.info(MessageFormat.format("User {0}: scan time is {1} ms", sub, res));
 
         return ResponseEntity.status(scanResponseToController.getHttpStatus())
                 .body(new DTOscanResponseToClient(scanResponseToController.isSucceed(),
@@ -83,14 +83,22 @@ public class CalendarController {
     /**
      * this endpoint re-scan the user Calendar events, deals with the full days events that has been found and generates the plan it calendar.
      *
-     * @param sub       user's sub value to search the User on DB & get preferences
-     * @param decisions array of boolean values representing
+     * @param sub       user's sub value (as string), to search the User on DB & get preferences
+     * @param decisions array of boolean values representing the user's decisions for each of the full day events that were found
      * @return ResponseEntity<String> this method not suppose to fail unless it's been called externally
      */
     @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<DTOstatus> generateStudyEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end, @RequestBody Map<Long, Boolean> decisions) {
 
+        long s = System.currentTimeMillis();
+        logger.info(MessageFormat.format("User {0}: has requested POST /generate with params: sub={0}, start={1}, end={2}, decisions={3}", sub, start, end, decisions.toString()));
+
         DTOgenerateResponseToController generateResponseToController = calendarEngine.generateStudyEvents(sub, start, end, decisions);
+
+        long t = System.currentTimeMillis();
+        long res = t - s;
+        logger.info(MessageFormat.format("User {0}: generate time is {1} ms", sub, res));
+
         return ResponseEntity.status(generateResponseToController.getHttpStatus())
                 .body(new DTOgenerateResponseToClient(generateResponseToController.isSucceed(),
                         generateResponseToController.getDetails(), generateResponseToController.getStudyPlan()));
@@ -98,7 +106,15 @@ public class CalendarController {
 
     @GetMapping(value = "/study-plan")
     public ResponseEntity<DTOstudyPlanResponseToClient> getLatestStudyPlan(@RequestParam String sub) {
+
+        long s = System.currentTimeMillis();
+        logger.info(MessageFormat.format("User {0}: has requested POST /study-plan with params: sub={0}", sub));
+
         DTOstudyPlanResponseToController dtOstudyPlanResponseToController = calendarEngine.getUserLatestStudyPlan(sub);
+
+        long t = System.currentTimeMillis();
+        long res = t - s;
+        logger.info(MessageFormat.format("User {0}: study-plan time is {1} ms", sub, res));
 
         return ResponseEntity.status(dtOstudyPlanResponseToController.getHttpStatus())
                 .body(new DTOstudyPlanResponseToClient(dtOstudyPlanResponseToController.isSucceed(),

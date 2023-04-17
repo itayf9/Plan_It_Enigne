@@ -9,6 +9,8 @@ import com.example.planit.utill.dto.DTOloginResponseToClient;
 import com.example.planit.utill.dto.DTOstatus;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import jakarta.annotation.PostConstruct;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -19,11 +21,14 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
 import java.util.Optional;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
 public class UserController {
+
+    private static final Logger logger = LogManager.getLogger(UserController.class);
 
     @Autowired
     private Environment env;
@@ -45,6 +50,9 @@ public class UserController {
     @PostMapping(value = "/login")
     public ResponseEntity<DTOloginResponseToClient> signUpOrLogin(@RequestParam(value = "code") String authCode) {
 
+        long s = System.currentTimeMillis();
+        logger.info(MessageFormat.format("New login: user has requested POST /login with params: code={0}", authCode));
+
         // decode auth  (e.g. %2F to /)
         authCode = URLDecoder.decode(authCode, StandardCharsets.UTF_8);
 
@@ -61,12 +69,20 @@ public class UserController {
                 // the user does not exist in DB, refers to sign up
                 String subjectID = userEngine.createNewUserAndSaveToDB(googleTokenResponse);
 
+                long t = System.currentTimeMillis();
+                long res = t - s;
+                logger.info(MessageFormat.format("User {0}: was successfully signed up. time {1} ms", subjectID, res));
+
                 return ResponseEntity.status(HttpStatus.CREATED)
                         .body(new DTOloginResponseToClient(true, Constants.REGISTER, subjectID));
 
             } else {
                 // the user already exists in the DB, refers to sign in
                 String subjectID = userEngine.updateAuthorizationTokens(googleTokenResponse);
+
+                long t = System.currentTimeMillis();
+                long res = t - s;
+                logger.info(MessageFormat.format("User {0}: was successfully signed in. time {1} ms", subjectID, res));
 
                 return ResponseEntity.status(HttpStatus.OK)
                         .body(new DTOloginResponseToClient(true, Constants.LOGIN, subjectID));
@@ -88,8 +104,15 @@ public class UserController {
     @GetMapping(value = "/profile", produces = {MediaType.APPLICATION_JSON_VALUE})
     public User getUserPreferencesFromDB(@RequestParam String sub) throws Exception {
 
+        long s = System.currentTimeMillis();
+        logger.info(MessageFormat.format("User {0}: has requested GET /profile with params: sub={0}", sub));
+
         // assuming user exist and subjectID will be found when this endpoint will be called.
         Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+
+        long t = System.currentTimeMillis();
+        long res = t - s;
+        logger.info(MessageFormat.format("User {0}: profile time is {1} ms", sub, res));
 
         if (maybeUser.isPresent()) {
             return maybeUser.get();
@@ -105,6 +128,9 @@ public class UserController {
     @PostMapping(value = "/profile", consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<DTOstatus> updateUserPreferencesInDB(@RequestBody Preferences preferences, @RequestParam String sub) {
 
+        long s = System.currentTimeMillis();
+        logger.info(MessageFormat.format("User {0}: has requested POST /profile with params: sub={0}, preferences={1}", sub, preferences.toString()));
+
         // assuming user exist and subjectID will be found when this endpoint will be called.
         Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
@@ -115,10 +141,18 @@ public class UserController {
 
             userRepo.save(user);
 
+            long t = System.currentTimeMillis();
+            long res = t - s;
+            logger.info(MessageFormat.format("User {0}: successfully saved preferences in DB. profile time is {1} ms", sub, res));
+
             return ResponseEntity.status(HttpStatus.OK)
                     .body(new DTOstatus(true, Constants.NO_PROBLEM));
 
         } else {
+            long t = System.currentTimeMillis();
+            long res = t - s;
+            logger.info(MessageFormat.format("User {0}: could not save preferences in DB. profile time is {1} ms", sub, res));
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new DTOstatus(false, Constants.ERROR_UNAUTHORIZED_USER));
         }

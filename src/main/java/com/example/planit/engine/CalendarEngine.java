@@ -48,7 +48,7 @@ import static com.example.planit.utill.Utility.roundInstantMinutesTime;
 
 public class CalendarEngine {
 
-    public static Logger calendarLogger = LogManager.getLogger(Constants.CALENDAR_LOGGER_NAME);
+    public static Logger logger = LogManager.getLogger(CalendarEngine.class);
 
     private final CoursesRepository courseRepo;
 
@@ -1031,6 +1031,8 @@ public class CalendarEngine {
      */
     public DTOscanResponseToController scanUserEvents(String subjectID, String start, String end) {
 
+        Instant measureTimeInstant;
+
         StudyPlan studyPlan = new StudyPlan();
         studyPlan.setStartDateTimeOfPlan(start);
         studyPlan.setEndDateTimeOfPlan(end);
@@ -1054,7 +1056,10 @@ public class CalendarEngine {
 
             // 1# get List of user's events
             // perform a scan on the user's Calendar to get all of his events at the time interval
+            logger.debug("user " + subjectID + ": before getting calendar information.");
+            measureTimeInstant = Instant.now();
             DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
+            logger.debug("user " + subjectID + ": after getting calendar information. " + measureTimeInstant.until(Instant.now(), ChronoUnit.MILLIS));
 
             // fullDayEvents - a list of events that represents the user's full day events
             List<Event> fullDayEvents = userCalendarsInformation.getFullDayEvents();
@@ -1073,9 +1078,9 @@ public class CalendarEngine {
 
             if (fullDayEvents.size() != 0) {
 
-                fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
+               /* fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
                         , user.getUserPreferences().isStudyOnHolidays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
-
+*/
                 // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
                 if (fullDayEvents.size() != 0) {
 
@@ -1152,9 +1157,9 @@ public class CalendarEngine {
             // check if fullDayEvents List is empty (which doesn't suppose to be)
             if (fullDayEvents.size() != 0) {
 
-                fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
+          /*      fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
                         , user.getUserPreferences().isStudyOnHolidays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
-
+*/
                 // go through the list of full day events
                 for (Event fullDayEvent : fullDayEvents) {
 
