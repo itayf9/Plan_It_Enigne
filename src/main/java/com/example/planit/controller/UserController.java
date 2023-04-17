@@ -7,6 +7,7 @@ import com.example.planit.model.mongo.user.preferences.Preferences;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOloginResponseToClient;
 import com.example.planit.utill.dto.DTOstatus;
+import com.example.planit.utill.dto.DTOuserClientRepresentation;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
@@ -23,6 +24,8 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Optional;
+
+import static com.example.planit.model.mongo.user.UserClientRepresentation.buildUserClientRepresentationFromUser;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
@@ -102,7 +105,7 @@ public class UserController {
      */
     @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(value = "/profile", produces = {MediaType.APPLICATION_JSON_VALUE})
-    public User getUserPreferencesFromDB(@RequestParam String sub) throws Exception {
+    public ResponseEntity<DTOuserClientRepresentation> getUserPreferencesFromDB(@RequestParam String sub) throws Exception {
 
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested GET /profile with params: sub={0}", sub));
@@ -115,9 +118,12 @@ public class UserController {
         logger.info(MessageFormat.format("User {0}: profile time is {1} ms", sub, res));
 
         if (maybeUser.isPresent()) {
-            return maybeUser.get();
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new DTOuserClientRepresentation(true, Constants.NO_PROBLEM,
+                            buildUserClientRepresentationFromUser(maybeUser.get())));
         } else {
-            throw new Exception("No User Found with this email");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new DTOuserClientRepresentation(false, Constants.ERROR_UNAUTHORIZED_USER));
         }
     }
 
