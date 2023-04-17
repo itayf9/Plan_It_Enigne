@@ -34,4 +34,28 @@ public class UserClientRepresentation {
                 userToBeConverted.getLatestStudyPlan(),
                 userToBeConverted.isAdmin());
     }
+
+    public String getSubjectID() {
+        return subjectID;
+    }
+
+    public Profile getProfile() {
+        return profile;
+    }
+
+    public Preferences getUserPreferences() {
+        return userPreferences;
+    }
+
+    public String getPlanItCalendarID() {
+        return planItCalendarID;
+    }
+
+    public StudyPlan getLatestStudyPlan() {
+        return latestStudyPlan;
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
+    }
 }

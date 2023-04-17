@@ -1,8 +1,10 @@
 package com.example.planit.utill.dto;
 
 import com.example.planit.model.mongo.user.UserClientRepresentation;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class DTOuserClientRepresentation extends DTOstatus {
+    @JsonProperty("user")
     UserClientRepresentation userClientRepresentation;
 
     public DTOuserClientRepresentation(boolean isSucceed, String details, UserClientRepresentation userClientRepresentation) {
