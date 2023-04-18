@@ -303,11 +303,11 @@ public class CalendarEngine {
                 throw new RuntimeException(e);
             }
             // check if calendar is the exams calendar
-            if (calendar.getSummary().equals("יומן אישי מתחנת המידע")) {
+            if (calendar.getSummary().equals(Constants.EXAMS_CALENDAR_SUMMERY_NAME)) {
                 // scan events to find exams
                 for (Event event : events.getItems()) {
                     // check if event is an exam
-                    if (event.getSummary().contains("מבחן")) {
+                    if (event.getSummary().contains(Constants.EXAM_KEYWORD_TO_IDENTIFY_EXAMS)) {
                         // get exam/course name
                         Optional<Course> maybeFoundCourse = extractCourseFromExam(event.getSummary(), courses);
 

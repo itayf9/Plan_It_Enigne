@@ -43,6 +43,8 @@ public class Constants {
     public static final String ERROR_NO_CALENDAR_SCOPE_GRANTED = "Calendar scope could not be found.";
     public static final String ERROR_INVALID_GRANT = "Invalid Grant";
     public static final String ERROR_FROM_GOOGLE_API_EXECUTE = "General exception google api execute";
+    public static final String EXAMS_CALENDAR_SUMMERY_NAME = "יומן אישי מתחנת המידע";
+    public static final CharSequence EXAM_KEYWORD_TO_IDENTIFY_EXAMS = "מבחן";
     public static String ERROR_NO_VALID_ACCESS_TOKEN = "Access Token not valid anymore.";
     public static String COURSE_ALREADY_EXIST = "Course already exists in database";
     public static String ERROR_COURSE_NOT_FOUND = "Course does not exist in database";
