@@ -76,6 +76,26 @@ public class CalendarEngine {
         this.holidaysDatesNextYear = holidaysDatesNextYear;
     }
 
+/*LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+    FileAppender fileAppender = new FileAppender();
+    fileAppender.setContext(loggerContext);
+    fileAppender.setName("timestamp");
+    // set the file name
+    fileAppender.setFile("log/" + System.currentTimeMillis()+".log");
+
+    PatternLayoutEncoder encoder = new PatternLayoutEncoder();
+    encoder.setContext(loggerContext);
+    encoder.setPattern("%r %thread %level - %msg%n");
+    encoder.start();
+
+    fileAppender.setEncoder(encoder);
+    fileAppender.start();
+
+    // attach the rolling file appender to the logger of your choice
+    Logger logbackLogger = loggerContext.getLogger("Main");
+    logbackLogger.addAppender(fileAppender);*/
+
     /**
      * Extract all the events that are in the user calendars.
      *
