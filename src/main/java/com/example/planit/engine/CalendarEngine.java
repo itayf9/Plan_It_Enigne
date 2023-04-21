@@ -38,6 +38,7 @@ import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -982,6 +983,7 @@ public class CalendarEngine {
                 System.out.println(e.getDetails());
                 System.out.println(e.getStatusCode());
                 System.out.println(e.getMessage());
+                logger.error(MessageFormat.format("planitcalender id:{0}, google message:{1}", planItCalendarID,e.getMessage()));
                 throw new RuntimeException();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1151,7 +1153,7 @@ public class CalendarEngine {
 
         StudyPlan studyPlan = new StudyPlan();
         studyPlan.setStartDateTimeOfPlan(start);
-        studyPlan.setStartDateTimeOfPlan(end);
+        studyPlan.setEndDateTimeOfPlan(end);
         try {
             // check if user exist in DB
             Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
