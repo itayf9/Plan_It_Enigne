@@ -327,7 +327,7 @@ public class CalendarEngine {
             }
 
             // adds the events, excluding the full day events, from the calendar to the list
-            regularEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() == null).toList());
+            regularEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() == null && !isEventAHolidayOfMTACalendar(event, isEventBelongToMtaCalender)).toList());
             // adds the full day events to the fullDayEvents list
             fullDayEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
         }
@@ -338,9 +338,36 @@ public class CalendarEngine {
         return regularEventsFromAllCalendars;
     }
 
+    /***
+     * check if the current is from Mta Calendar, the time of the event is start at 8 a.m and end at 18 p.m.
+     * @param event the current event to check
+     * @param isEventBelongToMtaCalender have the answer if the current event is from the Mta calendar
+     * @return result if the event is from the Mta calendar and start at 8 a.m and end at 18 p.m
+     */
+    private boolean isEventAHolidayOfMTACalendar(Event event, boolean[] isEventBelongToMtaCalender) {
+        boolean result = false;
+        if (isEventBelongToMtaCalender[0]) {
+            // create instant for the start time and end time of the current event
+            Instant startOfCurrentEvent = Instant.ofEpochMilli(event.getStart().getDateTime().getValue());
+            Instant endOfCurrentEvent = Instant.ofEpochMilli(event.getEnd().getDateTime().getValue());
+
+            // get start time from the event
+            int startOfCurrentSlotHour = startOfCurrentEvent.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE)).getHour();
+            // get end time from the event
+            int endOfCurrentSlotHour = endOfCurrentEvent.atZone(ZoneId.of(Constants.ISRAEL_TIME_ZONE)).getHour();
+
+            if (startOfCurrentSlotHour == 8 && endOfCurrentSlotHour == 18) {
+                // check if the start (hours) = 8 && end (hours) = 18
+                result = true;
+            }
+        }
+
+        return result;
+    }
+
     /**
      * find the name of the course, from the String that contains the event summery of an exam event.
-     * e.g מבחן מועד 1 ציון בחינה - פרונטלי גב' אריאן שלומית חישוביות
+     * e.g מבחן מועד 1  ציון בחינה - פרונטלי גב' אריאן שלומית חישוביות
      * return "חישוביות"
      */
     private static Optional<Course> extractCourseFromExam(String summary, List<Course> courses) { // TO DO
@@ -983,7 +1010,7 @@ public class CalendarEngine {
                 System.out.println(e.getDetails());
                 System.out.println(e.getStatusCode());
                 System.out.println(e.getMessage());
-                logger.error(MessageFormat.format("planitcalender id:{0}, google message:{1}", planItCalendarID,e.getMessage()));
+                logger.error(MessageFormat.format("planitcalender id:{0}, google message:{1}", planItCalendarID, e.getMessage()));
                 throw new RuntimeException();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1100,9 +1127,9 @@ public class CalendarEngine {
 
             if (fullDayEvents.size() != 0) {
 
-               /* fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
+                fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
                         , user.getUserPreferences().isStudyOnHolidays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
-*/
+
                 // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
                 if (fullDayEvents.size() != 0) {
 
@@ -1179,9 +1206,9 @@ public class CalendarEngine {
             // check if fullDayEvents List is empty (which doesn't suppose to be)
             if (fullDayEvents.size() != 0) {
 
-          /*      fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
+                fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
                         , user.getUserPreferences().isStudyOnHolidays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
-*/
+
                 // go through the list of full day events
                 for (Event fullDayEvent : fullDayEvents) {
 

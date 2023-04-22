@@ -48,12 +48,13 @@ public class CalendarController {
         String CLIENT_ID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
         String CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
-        // initialize CalendarEngine
-        this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidaysDatesCurrentYear, holidaysDatesNextYear);
-
         // extract the holidays dates as iso format and return it in a set of string(iso format) (for current year and the next year).
         holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear());
         holidaysDatesNextYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear() + 1);
+
+        // initialize CalendarEngine
+        this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidaysDatesCurrentYear, holidaysDatesNextYear);
+
     }
 
     /**
