@@ -288,12 +288,14 @@ public class CalendarEngine {
     private List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
                                                   List<Event> fullDayEventsFromAllCalendars, List<Event> planItCalendarOldEvents, List<Exam> examsFound) {
         List<Event> regularEventsFromAllCalendars = new ArrayList<>();
+        boolean[] isEventBelongToMtaCalender = new boolean[1];
 
         List<Course> courses = courseRepo.findAll(); // get all courses from DB
 
         for (CalendarListEntry calendar : calendarList) {
             Events events;
             try {
+                isEventBelongToMtaCalender[0] = false;
                 events = calendarService.events().list(calendar.getId())
                         .setTimeMin(start)
                         .setOrderBy("startTime")
@@ -305,6 +307,7 @@ public class CalendarEngine {
             }
             // check if calendar is the exams calendar
             if (calendar.getSummary().equals(Constants.EXAMS_CALENDAR_SUMMERY_NAME)) {
+                isEventBelongToMtaCalender[0] = true;
                 // scan events to find exams
                 for (Event event : events.getItems()) {
                     // check if event is an exam
