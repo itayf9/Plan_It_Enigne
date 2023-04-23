@@ -8,6 +8,7 @@ import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOloginResponseToClient;
 import com.example.planit.utill.dto.DTOstatus;
 import com.example.planit.utill.dto.DTOuserClientRepresentation;
+import com.example.planit.utill.exception.UnauthorizedUserException;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
@@ -71,26 +72,32 @@ public class UserController {
             if (userRepo.findUserBySubjectID(subjectId).isEmpty()) {
                 // the user does not exist in DB, refers to sign up
                 String subjectID = userEngine.createNewUserAndSaveToDB(googleTokenResponse);
+                boolean isAdmin = userEngine.isTheUserWithThisSubjectIdAnAdmin(subjectID);
 
                 long t = System.currentTimeMillis();
                 long res = t - s;
                 logger.info(MessageFormat.format("User {0}: was successfully signed up. time {1} ms", subjectID, res));
 
                 return ResponseEntity.status(HttpStatus.CREATED)
-                        .body(new DTOloginResponseToClient(true, Constants.REGISTER, subjectID));
+                        .body(new DTOloginResponseToClient(true, Constants.REGISTER, subjectID, isAdmin));
 
             } else {
                 // the user already exists in the DB, refers to sign in
                 String subjectID = userEngine.updateAuthorizationTokens(googleTokenResponse);
+                boolean isAdmin = userEngine.isTheUserWithThisSubjectIdAnAdmin(subjectID);
 
                 long t = System.currentTimeMillis();
                 long res = t - s;
                 logger.info(MessageFormat.format("User {0}: was successfully signed in. time {1} ms", subjectID, res));
 
                 return ResponseEntity.status(HttpStatus.OK)
-                        .body(new DTOloginResponseToClient(true, Constants.LOGIN, subjectID));
+                        .body(new DTOloginResponseToClient(true, Constants.LOGIN, subjectID, isAdmin));
             }
 
+        } catch (UnauthorizedUserException e) {
+            // the user has become unauthorized (not found in the DB)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new DTOloginResponseToClient(false, Constants.ERROR_UNAUTHORIZED_USER, e.getSubjectID(), false));
         } catch (IOException e) {
             throw new RuntimeException(e);
             // return http response "the auth code is not valid",

@@ -3,6 +3,7 @@ package com.example.planit.engine;
 import com.example.planit.model.mongo.user.User;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.dto.DTOtokens;
+import com.example.planit.utill.exception.UnauthorizedUserException;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
@@ -148,5 +149,24 @@ public class UserEngine {
         String subjectId = tokenResponse.parseIdToken().getPayload().getSubject();
 
         return new DTOtokens(accessToken, expireTimeInMilliseconds, refreshToken, email, subjectId);*/
+    }
+
+    /**
+     * checks in the DB if the given subjectID represents a registered user.
+     * then checks if the user is an admin.
+     *
+     * @param subjectID a string represents the subjectID of a user.
+     * @return rue if the user is registered and an admin. false if the user is registers and not an admin. null if the user is not registered
+     * @throws UnauthorizedUserException if the user's subjectID does not appear in the DB
+     */
+    public boolean isTheUserWithThisSubjectIdAnAdmin(String subjectID) throws UnauthorizedUserException {
+
+        Optional<User> maybeUser = userRepo.findUserBySubjectID(subjectID);
+
+        if (maybeUser.isPresent()) {
+            return maybeUser.get().isAdmin();
+        } else {
+            throw new UnauthorizedUserException(subjectID);
+        }
     }
 }
