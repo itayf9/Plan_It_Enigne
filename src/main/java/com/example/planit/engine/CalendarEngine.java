@@ -123,7 +123,7 @@ public class CalendarEngine {
         validateAccessTokenExpireTime(user);
 
         // get List of user's events
-        List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, new DateTime(start), new DateTime(end), fullDayEvents, planItCalendarOldEvents, examsFound);
+        List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, new DateTime(start), new DateTime(end), fullDayEvents, planItCalendarOldEvents, examsFound, user.getPlanItCalendarID());
         return new DTOuserCalendarsInformation(fullDayEvents, planItCalendarOldEvents, examsFound, events, calendarService);
     }
 
@@ -286,7 +286,7 @@ public class CalendarEngine {
      * @return List of all the event's user has
      */
     private List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
-                                                  List<Event> fullDayEventsFromAllCalendars, List<Event> planItCalendarOldEvents, List<Exam> examsFound) {
+                                                  List<Event> fullDayEventsFromAllCalendars, List<Event> planItCalendarOldEvents, List<Exam> examsFound, String maybeExistingPlanItCalendarID) {
         List<Event> regularEventsFromAllCalendars = new ArrayList<>();
         boolean[] isEventBelongToMtaCalender = new boolean[1];
 
@@ -305,6 +305,7 @@ public class CalendarEngine {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+
             // check if calendar is the exams calendar
             if (calendar.getSummary().equals(Constants.EXAMS_CALENDAR_SUMMERY_NAME)) {
                 isEventBelongToMtaCalender[0] = true;
@@ -324,7 +325,9 @@ public class CalendarEngine {
 
             // checks if calendar is the PlanIt calendar
             // ignores the PlanIt calendar in order to generate new study time slots
-            if (calendar.getSummary().equals(PLANIT_CALENDAR_SUMMERY_NAME)) {
+            if (calendar.getSummary().equals(PLANIT_CALENDAR_SUMMERY_NAME)
+                    && maybeExistingPlanItCalendarID != null
+                    && maybeExistingPlanItCalendarID.equals(calendar.getId())) {
                 planItCalendarOldEvents.addAll(events.getItems());
                 continue;
             }
