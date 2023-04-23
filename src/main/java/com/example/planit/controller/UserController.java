@@ -151,7 +151,7 @@ public class UserController {
             User user = maybeUser.get();
 
             user.setUserPreferences(preferences);
-
+            user.setCompletedFirstSetup(true); // assume that when ever the user gets here that means he completed the first setup
             userRepo.save(user);
 
             long t = System.currentTimeMillis();

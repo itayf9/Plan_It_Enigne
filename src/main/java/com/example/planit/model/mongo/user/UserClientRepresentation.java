@@ -5,25 +5,29 @@ import com.example.planit.model.mongo.user.preferences.Preferences;
 
 public class UserClientRepresentation {
 
-    private String subjectID;
+    private final String subjectID;
 
-    private Profile profile;
+    private final Profile profile;
 
-    private Preferences userPreferences;
+    private final Preferences userPreferences;
 
-    private String planItCalendarID;
+    private final String planItCalendarID;
 
-    private StudyPlan latestStudyPlan;
+    private final StudyPlan latestStudyPlan;
 
-    private boolean isAdmin;
+    private final boolean isAdmin;
 
-    private UserClientRepresentation(String subjectID, Profile profile, Preferences userPreferences, String planItCalendarID, StudyPlan latestStudyPlan, boolean isAdmin) {
+    private final boolean isCompletedFirstSetup;
+
+
+    private UserClientRepresentation(String subjectID, Profile profile, Preferences userPreferences, String planItCalendarID, StudyPlan latestStudyPlan, boolean isAdmin, boolean isCompletedFirstSetup) {
         this.subjectID = subjectID;
         this.profile = profile;
         this.userPreferences = userPreferences;
         this.planItCalendarID = planItCalendarID;
         this.latestStudyPlan = latestStudyPlan;
         this.isAdmin = isAdmin;
+        this.isCompletedFirstSetup = isCompletedFirstSetup;
     }
 
     public static UserClientRepresentation buildUserClientRepresentationFromUser(User userToBeConverted) {
@@ -32,11 +36,16 @@ public class UserClientRepresentation {
                 userToBeConverted.getUserPreferences(),
                 userToBeConverted.getPlanItCalendarID(),
                 userToBeConverted.getLatestStudyPlan(),
-                userToBeConverted.isAdmin());
+                userToBeConverted.isAdmin(),
+                userToBeConverted.isCompletedFirstSetup());
     }
 
     public String getSubjectID() {
         return subjectID;
+    }
+
+    public boolean isCompletedFirstSetup() {
+        return isCompletedFirstSetup;
     }
 
     public Profile getProfile() {

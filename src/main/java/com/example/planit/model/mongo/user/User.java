@@ -29,6 +29,17 @@ public class User {
     @Field(name = "is_admin")
     private boolean isAdmin;
 
+    @Field(name = "is_completed_first_setup")
+    private boolean isCompletedFirstSetup;
+
+    public boolean isCompletedFirstSetup() {
+        return isCompletedFirstSetup;
+    }
+
+    public void setCompletedFirstSetup(boolean completedFirstSetup) {
+        isCompletedFirstSetup = completedFirstSetup;
+    }
+
     // need empty ctor for mongo reflection stuff
     public User() {
     }
@@ -41,6 +52,7 @@ public class User {
         this.auth = new Auth(accessToken, expireTimeInMilliseconds, refreshToken);
         this.latestStudyPlan = new StudyPlan();
         this.isAdmin = false;
+        this.isCompletedFirstSetup = false;
     }
 
     public String getSubjectId() {
