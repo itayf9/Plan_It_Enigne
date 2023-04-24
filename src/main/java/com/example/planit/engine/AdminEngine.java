@@ -59,9 +59,15 @@ public class AdminEngine {
                 return new DTOcoursesResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
             }
 
-            // Check if course already exists in database
-            Optional<Course> existingCourse = courseRepo.findCourseById(course.getId());
-            if (existingCourse.isPresent()) {
+            // Check if course already exists in database by id
+            Optional<Course> existingCourseById = courseRepo.findCourseById(course.getCourseId());
+            if (existingCourseById.isPresent()) {
+                return new DTOcoursesResponseToController(false, Constants.COURSE_ALREADY_EXIST, HttpStatus.BAD_REQUEST);
+            }
+
+            // Check if course already exists in database by name
+            Optional<Course> existingCourseByName = courseRepo.findCourseByCourseName(course.getCourseName());
+            if (existingCourseByName.isPresent()) {
                 return new DTOcoursesResponseToController(false, Constants.COURSE_ALREADY_EXIST, HttpStatus.BAD_REQUEST);
             }
 
@@ -92,7 +98,7 @@ public class AdminEngine {
 
 
             // Check if course exists in database
-            Optional<Course> maybeExistingCourse = courseRepo.findCourseById(course.getId());
+            Optional<Course> maybeExistingCourse = courseRepo.findCourseById(course.getCourseId());
             if (maybeExistingCourse.isEmpty()) {
                 return new DTOcoursesResponseToController(false, Constants.ERROR_COURSE_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }

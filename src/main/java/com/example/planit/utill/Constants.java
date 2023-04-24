@@ -13,6 +13,8 @@ public class Constants {
     /**
      * Application name.
      */
+    public static final String CALENDAR_HOLIDAYS_ID_IN_GOOGLE="iw.jewish#holiday@group.v.calendar.google.com";
+
     public static final String APPLICATION_NAME = "PlanIt";
 
     public static final String PLANIT_CALENDAR_SUMMERY_NAME = "PlanIt Calendar";

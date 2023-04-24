@@ -8,5 +8,5 @@ public interface CoursesRepository extends MongoRepository<Course, String> {
 
     Optional<Course> findCourseByCourseName(String courseName);
 
-    Optional<Course> findCourseById(String id);
+    Optional<Course> findCourseById(String courseId);
 }
