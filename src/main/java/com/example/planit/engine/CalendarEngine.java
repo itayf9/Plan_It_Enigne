@@ -117,7 +117,8 @@ public class CalendarEngine {
         List<Event> fullDayEvents = new ArrayList<>();
         List<Event> planItCalendarOldEvents = new ArrayList<>();
         List<Exam> examsFound = new LinkedList<>();
-
+        // here we got the holidays date form user calendar "חגים בישראל"
+        setHolidaysFromCalendar(calendarService, new DateTime(start), new DateTime(end));
 
         // validate token
         validateAccessTokenExpireTime(user);
@@ -319,6 +320,7 @@ public class CalendarEngine {
                         // add to list of found exams
                         maybeFoundCourse.ifPresent(course -> examsFound.add(new Exam(course, event.getStart().getDateTime())));
                     }
+
                 }
 
             }
@@ -331,7 +333,10 @@ public class CalendarEngine {
                 planItCalendarOldEvents.addAll(events.getItems());
                 continue;
             }
-
+/*
+                    // if event in calendar college from 8:00 - 18:00
+                    // we not need to add him.
+*/
             // adds the events, excluding the full day events, from the calendar to the list
             regularEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() == null && !isEventAHolidayOfMTACalendar(event, isEventBelongToMtaCalender)).toList());
             // adds the full day events to the fullDayEvents list
@@ -1286,6 +1291,30 @@ public class CalendarEngine {
         }
         return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan());
     }
+
+    private void setHolidaysFromCalendar(Calendar calendarService,DateTime start, DateTime end) {
+        Events events;
+
+        if (holidaysDatesCurrentYear != null)
+        {
+            return;
+        }
+        try {
+            events = calendarService.events().list(Constants.CALENDAR_HOLIDAYS_ID_IN_GOOGLE)
+                    .setTimeMin(start)
+                    .setOrderBy("startTime")
+                    .setTimeMax(end)
+                    .setSingleEvents(true)
+                    .execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        for (Event event : events.getItems()) {
+
+            holidaysDatesCurrentYear.add(event.getStart().getDate().toStringRfc3339());
+        }
+    }
+
 }
 
 /*

@@ -13,6 +13,7 @@ public class Course {
     private String courseName;
     @Field(name = "level")
     private int difficultyLevel;
+
     @Field(name = "credits")
     private int credits;
     @Field(name = "study-time")
@@ -27,7 +28,8 @@ public class Course {
     public Course() {
     }
 
-    public Course(String courseName, int difficultyLevel, int credits, int recommendedStudyTime, String[] courseSubjects, int subjectsPracticePercentage) {
+    public Course(String courseId,String courseName, int difficultyLevel, int credits, int recommendedStudyTime, String[] courseSubjects, int subjectsPracticePercentage) {
+       this.id = courseId;
         this.courseName = courseName;
         this.difficultyLevel = difficultyLevel;
         this.credits = credits;
@@ -37,7 +39,7 @@ public class Course {
     }
 
 
-    public String getId() {
+    public String getCourseId() {
         return id;
     }
 
@@ -88,4 +90,9 @@ public class Course {
     public void setSubjectsPracticePercentage(int subjectsPracticePercentage) {
         this.subjectsPracticePercentage = subjectsPracticePercentage;
     }
+
+    public void setCourseId(String courseId) {
+        this.id = courseId;
+    }
+
 }
