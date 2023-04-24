@@ -31,7 +31,7 @@ class PlanITApplicationTests {
 
     private CalendarEngine calendarEngine;
 
-    private String subjectIDForTestInput = "112510677559500692451";
+    private final String subjectIDForTestInput = "112510677559500692451";
 
     @Before
     public void init() {
