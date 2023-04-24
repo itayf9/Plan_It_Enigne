@@ -32,7 +32,7 @@ class PlanITApplicationTests {
     private CalendarEngine calendarEngine;
 
     @Before
-    void init() {
+    public void init() {
         String clientId = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
         String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
         String holidaysApiKey = env.getProperty("holidays_api_key");
