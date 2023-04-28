@@ -50,7 +50,7 @@ public class User {
         this.userPreferences = new Preferences();
         this.planItCalendarID = null;
         this.auth = new Auth(accessToken, expireTimeInMilliseconds, refreshToken);
-        this.latestStudyPlan = new StudyPlan();
+        this.latestStudyPlan = null;
         this.isAdmin = false;
         this.isCompletedFirstSetup = false;
     }
