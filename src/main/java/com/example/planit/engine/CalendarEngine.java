@@ -12,6 +12,7 @@ import com.example.planit.utill.Constants;
 import com.example.planit.utill.EventComparator;
 import com.example.planit.utill.Utility;
 import com.example.planit.utill.dto.*;
+import com.example.planit.utill.exception.UserCalendarNotFound;
 import com.google.api.client.auth.oauth2.RefreshTokenRequest;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.auth.oauth2.TokenResponseException;
@@ -290,6 +291,7 @@ public class CalendarEngine {
                                                   List<Event> fullDayEventsFromAllCalendars, List<Event> planItCalendarOldEvents, List<Exam> examsFound, String maybeExistingPlanItCalendarID) {
         List<Event> regularEventsFromAllCalendars = new ArrayList<>();
         boolean[] isEventBelongToMtaCalender = new boolean[1];
+        boolean isMtaCalenderFound = false;
 
         List<Course> courses = courseRepo.findAll(); // get all courses from DB
 
@@ -310,6 +312,7 @@ public class CalendarEngine {
             // check if calendar is the exams calendar
             if (calendar.getSummary().equals(Constants.EXAMS_CALENDAR_SUMMERY_NAME)) {
                 isEventBelongToMtaCalender[0] = true;
+                isMtaCalenderFound = true;
                 // scan events to find exams
                 for (Event event : events.getItems()) {
                     // check if event is an exam
@@ -341,6 +344,10 @@ public class CalendarEngine {
             regularEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() == null && !isEventAHolidayOfMTACalendar(event, isEventBelongToMtaCalender)).toList());
             // adds the full day events to the fullDayEvents list
             fullDayEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
+        }
+
+        if (!isMtaCalenderFound){
+            throw new UserCalendarNotFound(Constants.COLLEGE_CALENDAR_NOT_FOUND);
         }
 
         // sorts the events, so they will be ordered by start time
