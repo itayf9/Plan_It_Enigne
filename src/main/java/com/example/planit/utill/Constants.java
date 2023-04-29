@@ -50,4 +50,6 @@ public class Constants {
     public static String ERROR_NO_VALID_ACCESS_TOKEN = "Access Token not valid anymore.";
     public static String COURSE_ALREADY_EXIST = "Course already exists in database";
     public static String ERROR_COURSE_NOT_FOUND = "Course does not exist in database";
+
+    public static String COLLEGE_CALENDAR_NOT_FOUND = "College calendar does not found";
 }
