@@ -1,7 +1,6 @@
 package com.example.planit.controller;
 
 import com.example.planit.engine.CalendarEngine;
-import com.example.planit.engine.HolidaysEngine;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
@@ -17,12 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.MessageFormat;
-import java.time.ZonedDateTime;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
@@ -52,8 +47,8 @@ public class CalendarController {
         String CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
         // extract the holidays dates as iso format and return it in a set of string(iso format) (for current year and the next year).
-        holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear());
-        holidaysDatesNextYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear() + 1);
+        // holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear());
+        // holidaysDatesNextYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear() + 1);
 
         // initialize CalendarEngine
         this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidaysDatesCurrentYear, holidaysDatesNextYear);
@@ -81,8 +76,7 @@ public class CalendarController {
                     .body(new DTOscanResponseToClient(scanResponseToController.isSucceed(),
                             scanResponseToController.getDetails(),
                             scanResponseToController.getFullDayEvents(), scanResponseToController.getStudyPlan()));
-        }
-        catch (UserCalendarNotFound e){
+        } catch (UserCalendarNotFound e) {
             return ResponseEntity.status(406)
                     .body(new DTOscanResponseToClient(false,
                             e.getCalendarError(),
@@ -103,7 +97,7 @@ public class CalendarController {
 
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /generate with params: sub={0}, start={1}, end={2}, decisions={3}", sub, start, end, decisions.toString()));
-        try{
+        try {
             DTOgenerateResponseToController generateResponseToController = calendarEngine.generateStudyEvents(sub, start, end, decisions);
             long t = System.currentTimeMillis();
             long res = t - s;
@@ -112,8 +106,7 @@ public class CalendarController {
             return ResponseEntity.status(generateResponseToController.getHttpStatus())
                     .body(new DTOgenerateResponseToClient(generateResponseToController.isSucceed(),
                             generateResponseToController.getDetails(), generateResponseToController.getStudyPlan()));
-        }
-        catch (UserCalendarNotFound e){
+        } catch (UserCalendarNotFound e) {
             return ResponseEntity.status(406)
                     .body(new DTOscanResponseToClient(false,
                             Constants.COLLEGE_CALENDAR_NOT_FOUND,
