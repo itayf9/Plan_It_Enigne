@@ -123,10 +123,40 @@ public class CalendarEngine {
 
         // validate token
         validateAccessTokenExpireTime(user);
-
+        // Set<String> holidaysFromUserCalendar = getHolidaysFromUserCalendars(calendarService, calendarList, new DateTime(start), new DateTime(end));
         // get List of user's events
         List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, new DateTime(start), new DateTime(end), fullDayEvents, planItCalendarOldEvents, examsFound, user.getPlanItCalendarID());
         return new DTOuserCalendarsInformation(fullDayEvents, planItCalendarOldEvents, examsFound, events, calendarService);
+    }
+
+    private Set<String> getHolidaysFromUserCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end) {
+        Set<String> holidays = new HashSet<>();
+
+        for (CalendarListEntry calendar : calendarList) {
+            Events events;
+            String calendarId = calendar.getId();
+            try {
+                events = calendarService.events().list(calendarId)
+                        .setTimeMin(start)
+                        .setOrderBy("startTime")
+                        .setTimeMax(end)
+                        .setSingleEvents(true)
+                        .execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            if (calendarId.equals("iw.jewish#holiday@group.v.calendar.google.com")) {
+
+                for (Event event : events.getItems()) {
+                    DateTime startOfEvent = event.getStart().getDate();
+                    if (startOfEvent != null) {
+                        holidays.add(start.toString());
+                    }
+                }
+            }
+        }
+        return holidays;
     }
 
     /**
