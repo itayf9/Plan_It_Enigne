@@ -3,13 +3,18 @@ package com.example.planit.engine;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.user.User;
+import com.example.planit.model.mongo.user.UserClientRepresentation;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOcoursesResponseToController;
+import com.example.planit.utill.dto.DTOusersResponseToController;
 import org.springframework.http.HttpStatus;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import static com.example.planit.model.mongo.user.UserClientRepresentation.buildUserClientRepresentationFromUser;
 
 public class AdminEngine {
 
@@ -145,5 +150,68 @@ public class AdminEngine {
         } catch (Exception e) {
             return new DTOcoursesResponseToController(false, "Error fetching course from database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public DTOusersResponseToController getAllUsersFromDB(String sub) {
+        try {
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+
+            if (maybeUser.isEmpty()) {
+                return new DTOusersResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+            User maybeAdminUser = maybeUser.get();
+
+            if (!maybeAdminUser.isAdmin()) {
+                return new DTOusersResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+            }
+
+            List<User> users = userRepo.findAll();
+
+            List<UserClientRepresentation> userClientRepresentations = new ArrayList<>();
+
+            for (User user : users) {
+                userClientRepresentations.add(buildUserClientRepresentationFromUser(user));
+            }
+
+            return new DTOusersResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK, userClientRepresentations);
+
+        } catch (Exception e) {
+            return new DTOusersResponseToController(false, "Error fetching users from database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public DTOusersResponseToController makeUserAdminInDB(String sub, String userSubId) {
+
+        try {
+
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+
+            if (maybeUser.isEmpty()) {
+                return new DTOusersResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            User maybeAdminUser = maybeUser.get();
+
+            if (!maybeAdminUser.isAdmin()) {
+                return new DTOusersResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+            }
+
+            // Check if user exists in database
+            Optional<User> maybeExistingUser = userRepo.findUserBySubjectID(userSubId);
+            if (maybeExistingUser.isEmpty()) {
+                return new DTOusersResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            // Update the existing user in the database
+            User existingUser = maybeExistingUser.get();
+            existingUser.setAdmin(true);
+
+            userRepo.save(existingUser);
+            return new DTOusersResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new DTOusersResponseToController(false, "Error updating user in database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
     }
 }
