@@ -376,7 +376,7 @@ public class CalendarEngine {
             fullDayEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
         }
 
-        if (!isMtaCalenderFound){
+        if (!isMtaCalenderFound) {
             throw new UserCalendarNotFound(Constants.COLLEGE_CALENDAR_NOT_FOUND);
         }
 
@@ -1199,16 +1199,22 @@ public class CalendarEngine {
             userRepo.save(user);
 
         } catch (TokenResponseException e) {
-            // e.g. when the refresh token has expired
             if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
-                return new DTOscanResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST, new ArrayList<>(), new StudyPlan());
+                // e.g. when the refresh token has expired
+                return new DTOscanResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
+            } else {
+                // e.g. an unknown error had happened
+                return new DTOscanResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         } catch (IOException e) {
             // e.g. when we call Google API with execute() method
-            return new DTOscanResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR, new ArrayList<>(), new StudyPlan());
+            return new DTOscanResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (GeneralSecurityException e) {
             // e.g. could not create HTTP secure connection
-            return new DTOscanResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, new ArrayList<>(), new StudyPlan());
+            return new DTOscanResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            // e.g. an unknown error had happened
+            return new DTOscanResponseToController(false, Constants.ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
@@ -1280,9 +1286,12 @@ public class CalendarEngine {
             userRepo.save(user);
 
         } catch (TokenResponseException e) {
-            // e.g. when the refresh token has expired
             if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
+                // e.g. when the refresh token has expired
                 return new DTOgenerateResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
+            } else {
+                // e.g. an unknown error had happened
+                return new DTOgenerateResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         } catch (IOException e) {
             // e.g. when we call Google API with execute() method
@@ -1290,6 +1299,9 @@ public class CalendarEngine {
         } catch (GeneralSecurityException e) {
             // e.g. could not create HTTP secure connection
             return new DTOgenerateResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            // e.g. an unknown error had happened
+            return new DTOgenerateResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return new DTOgenerateResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
@@ -1329,11 +1341,10 @@ public class CalendarEngine {
         return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan());
     }
 
-    private void setHolidaysFromCalendar(Calendar calendarService,DateTime start, DateTime end) {
+    private void setHolidaysFromCalendar(Calendar calendarService, DateTime start, DateTime end) {
         Events events;
 
-        if (holidaysDatesCurrentYear != null)
-        {
+        if (holidaysDatesCurrentYear != null) {
             return;
         }
         try {

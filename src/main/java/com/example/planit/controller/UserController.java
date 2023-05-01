@@ -57,13 +57,15 @@ public class UserController {
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("New login: user has requested POST /login with params: code={0}", authCode));
 
-        // decode auth  (e.g. %2F to /)
-        authCode = URLDecoder.decode(authCode, StandardCharsets.UTF_8);
-
-        GoogleTokenResponse googleTokenResponse;
-
         //
         try {
+
+            // decode auth  (e.g. %2F to /)
+            authCode = URLDecoder.decode(authCode, StandardCharsets.UTF_8);
+
+            GoogleTokenResponse googleTokenResponse;
+
+
             googleTokenResponse = userEngine.getGoogleTokensFromAuthCode(authCode);
 
             // check if user subjectId exist in the DB
