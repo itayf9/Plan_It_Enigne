@@ -48,6 +48,7 @@ public class Constants {
     public static final String EXAMS_CALENDAR_SUMMERY_NAME = "יומן אישי מתחנת המידע";
     public static final CharSequence EXAM_KEYWORD_TO_IDENTIFY_EXAMS = "מבחן";
     public static final String ERROR_DEFAULT = "Unknown Error";
+    public static final String ERROR_ILLEGAL_CHARACTERS_IN_AUTH_CODE = "There are illegal characters in the auth code";
     public static String ERROR_NO_VALID_ACCESS_TOKEN = "Access Token not valid anymore.";
     public static String COURSE_ALREADY_EXIST = "Course already exists in database";
     public static String ERROR_COURSE_NOT_FOUND = "Course does not exist in database";
