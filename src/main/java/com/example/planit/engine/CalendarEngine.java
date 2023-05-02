@@ -12,7 +12,7 @@ import com.example.planit.utill.Constants;
 import com.example.planit.utill.EventComparator;
 import com.example.planit.utill.Utility;
 import com.example.planit.utill.dto.*;
-import com.example.planit.utill.exception.UserCalendarNotFound;
+import com.example.planit.utill.exception.UserCalendarNotFoundException;
 import com.google.api.client.auth.oauth2.RefreshTokenRequest;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.auth.oauth2.TokenResponseException;
@@ -377,7 +377,7 @@ public class CalendarEngine {
         }
 
         if (!isMtaCalenderFound) {
-            throw new UserCalendarNotFound(Constants.COLLEGE_CALENDAR_NOT_FOUND);
+            throw new UserCalendarNotFoundException(Constants.COLLEGE_CALENDAR_NOT_FOUND);
         }
 
         // sorts the events, so they will be ordered by start time
@@ -1198,6 +1198,9 @@ public class CalendarEngine {
             user.setLatestStudyPlan(studyPlan);
             userRepo.save(user);
 
+        } catch (UserCalendarNotFoundException e) {
+            // e.g. when the user doesn't have Exams Calendar
+            return new DTOscanResponseToController(false, e.getCalendarError(), HttpStatus.NOT_ACCEPTABLE);
         } catch (TokenResponseException e) {
             if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
                 // e.g. when the refresh token has expired
@@ -1285,6 +1288,9 @@ public class CalendarEngine {
             user.setLatestStudyPlan(studyPlan);
             userRepo.save(user);
 
+        } catch (UserCalendarNotFoundException e) {
+            // e.g. when the user doesn't have Exams Calendar
+            return new DTOgenerateResponseToController(false, COLLEGE_CALENDAR_NOT_FOUND, HttpStatus.NOT_ACCEPTABLE);
         } catch (TokenResponseException e) {
             if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
                 // e.g. when the refresh token has expired

@@ -3,9 +3,7 @@ package com.example.planit.controller;
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.user.UserRepository;
-import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.*;
-import com.example.planit.utill.exception.UserCalendarNotFound;
 import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -66,22 +64,17 @@ public class CalendarController {
 
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /scan with params: sub={0}, start={1}, end={2}", sub, start, end));
-        try {
-            DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(sub, start, end);
-            long t = System.currentTimeMillis();
-            long res = t - s;
-            logger.info(MessageFormat.format("User {0}: scan time is {1} ms", sub, res));
 
-            return ResponseEntity.status(scanResponseToController.getHttpStatus())
-                    .body(new DTOscanResponseToClient(scanResponseToController.isSucceed(),
-                            scanResponseToController.getDetails(),
-                            scanResponseToController.getFullDayEvents(), scanResponseToController.getStudyPlan()));
-        } catch (UserCalendarNotFound e) {
-            return ResponseEntity.status(406)
-                    .body(new DTOscanResponseToClient(false,
-                            e.getCalendarError(),
-                            null, null));
-        }
+        DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(sub, start, end);
+        long t = System.currentTimeMillis();
+        long res = t - s;
+        logger.info(MessageFormat.format("User {0}: scan time is {1} ms", sub, res));
+
+        return ResponseEntity.status(scanResponseToController.getHttpStatus())
+                .body(new DTOscanResponseToClient(scanResponseToController.isSucceed(),
+                        scanResponseToController.getDetails(),
+                        scanResponseToController.getFullDayEvents(), scanResponseToController.getStudyPlan()));
+
 
     }
 
@@ -97,21 +90,16 @@ public class CalendarController {
 
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /generate with params: sub={0}, start={1}, end={2}, decisions={3}", sub, start, end, decisions.toString()));
-        try {
-            DTOgenerateResponseToController generateResponseToController = calendarEngine.generateStudyEvents(sub, start, end, decisions);
-            long t = System.currentTimeMillis();
-            long res = t - s;
-            logger.info(MessageFormat.format("User {0}: generate time is {1} ms", sub, res));
 
-            return ResponseEntity.status(generateResponseToController.getHttpStatus())
-                    .body(new DTOgenerateResponseToClient(generateResponseToController.isSucceed(),
-                            generateResponseToController.getDetails(), generateResponseToController.getStudyPlan()));
-        } catch (UserCalendarNotFound e) {
-            return ResponseEntity.status(406)
-                    .body(new DTOscanResponseToClient(false,
-                            Constants.COLLEGE_CALENDAR_NOT_FOUND,
-                            null, null));
-        }
+        DTOgenerateResponseToController generateResponseToController = calendarEngine.generateStudyEvents(sub, start, end, decisions);
+        long t = System.currentTimeMillis();
+        long res = t - s;
+        logger.info(MessageFormat.format("User {0}: generate time is {1} ms", sub, res));
+
+        return ResponseEntity.status(generateResponseToController.getHttpStatus())
+                .body(new DTOgenerateResponseToClient(generateResponseToController.isSucceed(),
+                        generateResponseToController.getDetails(), generateResponseToController.getStudyPlan()));
+
 
     }
 
