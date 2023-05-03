@@ -112,7 +112,7 @@ public class UserController {
      */
     @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(value = "/profile", produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<DTOuserClientRepresentation> getUserPreferencesFromDB(@RequestParam String sub) throws Exception {
+    public ResponseEntity<DTOuserClientRepresentation> getUserPreferencesFromDB(@RequestParam String sub) {
 
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested GET /profile with params: sub={0}", sub));
