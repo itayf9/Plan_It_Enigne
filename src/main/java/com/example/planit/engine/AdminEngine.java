@@ -8,6 +8,8 @@ import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOcoursesResponseToController;
 import com.example.planit.utill.dto.DTOusersResponseToController;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
@@ -21,6 +23,8 @@ public class AdminEngine {
     private final CoursesRepository courseRepo;
 
     private final UserRepository userRepo;
+
+    public static Logger logger = LogManager.getLogger(AdminEngine.class);
 
     public AdminEngine(CoursesRepository courseRepo, UserRepository userRepo) {
         this.courseRepo = courseRepo;

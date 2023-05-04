@@ -2,7 +2,6 @@ package com.example.planit.engine;
 
 import com.example.planit.holidays.Holiday;
 import com.example.planit.holidays.HolidaysResponse;
-import com.example.planit.utill.Constants;
 import com.google.api.services.calendar.model.Event;
 import com.google.gson.Gson;
 import com.mashape.unirest.http.HttpResponse;
@@ -18,7 +17,7 @@ import java.util.Set;
 
 public class HolidaysEngine {
 
-    public static Logger calendarLogger = LogManager.getLogger(Constants.CALENDAR_LOGGER_NAME);
+    public static Logger logger = LogManager.getLogger(HolidaysEngine.class);
 
     public static Gson gson = new Gson();
 

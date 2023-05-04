@@ -164,7 +164,7 @@ public class CalendarEngine {
      * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
      */
     public void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, String start, List<Event> planItCalendarOldEvents, StudyPlan studyPlan)
-            throws GeneralSecurityException {
+            throws GeneralSecurityException, IOException {
 
         // gets the list of free slots
         DTOfreetime dtofreetime = getFreeSlots(allEvents, user, exams, start);
@@ -289,16 +289,12 @@ public class CalendarEngine {
      * @param calendarService Google Calendar service provider.
      * @return List of all the User Google Calendars
      */
-    private static List<CalendarListEntry> getCalendarList(Calendar calendarService) {
+    private static List<CalendarListEntry> getCalendarList(Calendar calendarService) throws IOException {
         String pageToken = null;
         List<CalendarListEntry> calendars = new ArrayList<>();
         do {
             CalendarList calendarList;
-            try {
-                calendarList = calendarService.calendarList().list().setPageToken(pageToken).execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            calendarList = calendarService.calendarList().list().setPageToken(pageToken).execute();
             calendars.addAll(calendarList.getItems());
 
             pageToken = calendarList.getNextPageToken();
@@ -318,7 +314,7 @@ public class CalendarEngine {
      * @return List of all the event's user has
      */
     private List<Event> getEventsFromALLCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end,
-                                                  List<Event> fullDayEventsFromAllCalendars, List<Event> planItCalendarOldEvents, List<Exam> examsFound, String maybeExistingPlanItCalendarID) {
+                                                  List<Event> fullDayEventsFromAllCalendars, List<Event> planItCalendarOldEvents, List<Exam> examsFound, String maybeExistingPlanItCalendarID) throws IOException {
         List<Event> regularEventsFromAllCalendars = new ArrayList<>();
         boolean[] isEventBelongToMtaCalender = new boolean[1];
         boolean isMtaCalenderFound = false;
@@ -327,17 +323,14 @@ public class CalendarEngine {
 
         for (CalendarListEntry calendar : calendarList) {
             Events events;
-            try {
-                isEventBelongToMtaCalender[0] = false;
-                events = calendarService.events().list(calendar.getId())
-                        .setTimeMin(start)
-                        .setOrderBy("startTime")
-                        .setTimeMax(end)
-                        .setSingleEvents(true)
-                        .execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+
+            isEventBelongToMtaCalender[0] = false;
+            events = calendarService.events().list(calendar.getId())
+                    .setTimeMin(start)
+                    .setOrderBy("startTime")
+                    .setTimeMax(end)
+                    .setSingleEvents(true)
+                    .execute();
 
             // check if calendar is the exams calendar
             if (calendar.getSummary().equals(Constants.EXAMS_CALENDAR_SUMMERY_NAME)) {
@@ -646,7 +639,7 @@ public class CalendarEngine {
      *
      * @param calendarService a calendar service of the user
      */
-    private String createPlanItCalendar(Calendar calendarService, User user) {
+    private String createPlanItCalendar(Calendar calendarService, User user) throws GeneralSecurityException, IOException {
 
         String planItCalendarID;
         String planItCalendarIdFromDB = user.getPlanItCalendarID();
@@ -669,12 +662,9 @@ public class CalendarEngine {
 
         // Insert the new calendar
         com.google.api.services.calendar.model.Calendar createdCalendar;
-        try {
-            validateAccessTokenExpireTime(user);
-            createdCalendar = calendarService.calendars().insert(calendar).execute();
-        } catch (IOException | GeneralSecurityException e) {
-            throw new RuntimeException(e);
-        }
+
+        validateAccessTokenExpireTime(user);
+        createdCalendar = calendarService.calendars().insert(calendar).execute();
 
         planItCalendarID = createdCalendar.getId();
         user.setPlanItCalendarID(planItCalendarID);
@@ -1018,20 +1008,16 @@ public class CalendarEngine {
      * @param service          the Google's {@link Calendar} service
      * @param planItCalendarID the calendar ID of the PlanIt calendar in the user's calendar list
      */
-    private void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Event> planItCalendarOldEvents, User user, StudyPlan studyPlan) throws GeneralSecurityException {
+    private void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Event> planItCalendarOldEvents, User user, StudyPlan studyPlan) throws GeneralSecurityException, IOException {
         studyPlan.setTotalNumberOfStudySessions(sessionsList.size());
 
         List<Event> overlapsOldEvents = getOverlapOldEventsPlanItCalendar(sessionsList, planItCalendarOldEvents);
 
         for (Event eventToBeDeleted : overlapsOldEvents) {
-            try {
-                validateAccessTokenExpireTime(user);
-                // removes overlap events in the PlanIt calendar
-                service.events().delete(planItCalendarID, eventToBeDeleted.getId()).execute();
 
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            validateAccessTokenExpireTime(user);
+            // removes overlap events in the PlanIt calendar
+            service.events().delete(planItCalendarID, eventToBeDeleted.getId()).execute();
         }
         //studyPlan.setTotalNumberOfStudySessions(sessionsList.size());
         // add updated events to the PlanIt calendar
@@ -1055,13 +1041,8 @@ public class CalendarEngine {
                 service.events().insert(planItCalendarID, event).execute();
 
             } catch (GoogleJsonResponseException e) {
-                System.out.println(e.getDetails());
-                System.out.println(e.getStatusCode());
-                System.out.println(e.getMessage());
                 logger.error(MessageFormat.format("planitcalender id:{0}, google message:{1}", planItCalendarID, e.getMessage()));
-                throw new RuntimeException();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw e;
             }
         }
     }
@@ -1200,8 +1181,10 @@ public class CalendarEngine {
 
         } catch (UserCalendarNotFoundException e) {
             // e.g. when the user doesn't have Exams Calendar
+            logger.error(MessageFormat.format("Exception {0}: {1}", e.getClass(), e.getMessage()));
             return new DTOscanResponseToController(false, e.getCalendarError(), HttpStatus.NOT_ACCEPTABLE);
         } catch (TokenResponseException e) {
+            logger.error(MessageFormat.format("Exception {0}: {1}", e.getClass(), e.getMessage()));
             if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
                 // e.g. when the refresh token has expired
                 return new DTOscanResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
@@ -1211,14 +1194,16 @@ public class CalendarEngine {
             }
         } catch (IOException e) {
             // e.g. when we call Google API with execute() method
+            logger.error(MessageFormat.format("Exception {0}: {1}", e.getClass(), e.getMessage()));
             return new DTOscanResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (GeneralSecurityException e) {
             // e.g. could not create HTTP secure connection
+            logger.error(MessageFormat.format("Exception {0}: {1}", e.getClass(), e.getMessage()));
             return new DTOscanResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
+        } /*catch (Exception e) {
             // e.g. an unknown error had happened
             return new DTOscanResponseToController(false, Constants.ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        }*/
 
         return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
     }

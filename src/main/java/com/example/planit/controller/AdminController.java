@@ -7,6 +7,8 @@ import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.*;
 import jakarta.annotation.PostConstruct;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,8 @@ public class AdminController {
     CoursesRepository courseRepo;
     @Autowired
     UserRepository userRepo;
+
+    public static Logger logger = LogManager.getLogger(AdminController.class);
 
     private AdminEngine adminEngine;
 
