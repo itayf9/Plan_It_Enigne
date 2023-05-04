@@ -4,11 +4,11 @@ import com.example.planit.engine.AdminEngine;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.user.UserRepository;
-import com.example.planit.utill.dto.DTOcoursesResponseToClient;
-import com.example.planit.utill.dto.DTOcoursesResponseToController;
-import com.example.planit.utill.dto.DTOstatus;
+import com.example.planit.utill.Constants;
+import com.example.planit.utill.dto.*;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -65,6 +65,34 @@ public class AdminController {
         return ResponseEntity.status(dtOcoursesResponseToController.getHttpStatus())
                 .body(new DTOstatus(dtOcoursesResponseToController.isSucceed(),
                         dtOcoursesResponseToController.getDetails()));
+    }
+
+    @CrossOrigin(origins = "http://localhost:3000")
+    @GetMapping(value = "/admin/users")
+    public ResponseEntity<DTOstatus> getAllUsers(@RequestParam String sub) {
+        DTOusersResponseToController dtOcoursesResponseToController = adminEngine.getAllUsersFromDB(sub);
+
+        return ResponseEntity.status(dtOcoursesResponseToController.getHttpStatus())
+                .body(new DTOusersResponseToClient(dtOcoursesResponseToController.isSucceed(),
+                        dtOcoursesResponseToController.getDetails(), dtOcoursesResponseToController.getUsers()));
+    }
+
+    @CrossOrigin(origins = "http://localhost:3000")
+    @PutMapping(value = "/admin/make-user-admin")
+    public ResponseEntity<DTOstatus> makeUserAdmin(@RequestParam String sub, @RequestParam String userSubId) {
+        DTOusersResponseToController dtOcoursesResponseToController = adminEngine.makeUserAdminInDB(sub, userSubId);
+
+        return ResponseEntity.status(dtOcoursesResponseToController.getHttpStatus())
+                .body(new DTOstatus(dtOcoursesResponseToController.isSucceed(),
+                        dtOcoursesResponseToController.getDetails()));
+    }
+
+    @CrossOrigin(origins = "http://localhost:3000")
+    @PutMapping(value = "/admin/update-holidays")
+    public ResponseEntity<DTOstatus> updateHolidays(@RequestParam String sub) {
+
+        // for oshri to continue implementation
+        return ResponseEntity.status(HttpStatus.OK).body(new DTOstatus(true, Constants.NO_PROBLEM));
     }
 
 }
