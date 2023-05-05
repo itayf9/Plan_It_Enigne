@@ -3,12 +3,12 @@ package com.example.planit.controller;
 import com.example.planit.engine.AdminEngine;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
+import com.example.planit.model.mongo.holiday.HolidayRepository;
 import com.example.planit.model.mongo.user.UserRepository;
-import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.*;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,12 +19,16 @@ public class AdminController {
     CoursesRepository courseRepo;
     @Autowired
     UserRepository userRepo;
+    @Autowired
+    private HolidayRepository holidayRepo;
+    @Autowired
+    private Environment env;
 
     private AdminEngine adminEngine;
 
     @PostConstruct
     private void init() {
-        this.adminEngine = new AdminEngine(courseRepo, userRepo);
+        this.adminEngine = new AdminEngine(courseRepo, userRepo, holidayRepo, env);
     }
 
     @CrossOrigin(origins = "http://localhost:3000")
@@ -70,29 +74,31 @@ public class AdminController {
     @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(value = "/admin/users")
     public ResponseEntity<DTOstatus> getAllUsers(@RequestParam String sub) {
-        DTOusersResponseToController dtOcoursesResponseToController = adminEngine.getAllUsersFromDB(sub);
+        DTOusersResponseToController dtOusersResponseToController = adminEngine.getAllUsersFromDB(sub);
 
-        return ResponseEntity.status(dtOcoursesResponseToController.getHttpStatus())
-                .body(new DTOusersResponseToClient(dtOcoursesResponseToController.isSucceed(),
-                        dtOcoursesResponseToController.getDetails(), dtOcoursesResponseToController.getUsers()));
+        return ResponseEntity.status(dtOusersResponseToController.getHttpStatus())
+                .body(new DTOusersResponseToClient(dtOusersResponseToController.isSucceed(),
+                        dtOusersResponseToController.getDetails(), dtOusersResponseToController.getUsers()));
     }
 
     @CrossOrigin(origins = "http://localhost:3000")
     @PutMapping(value = "/admin/make-user-admin")
     public ResponseEntity<DTOstatus> makeUserAdmin(@RequestParam String sub, @RequestParam String userSubId) {
-        DTOusersResponseToController dtOcoursesResponseToController = adminEngine.makeUserAdminInDB(sub, userSubId);
+        DTOusersResponseToController dtOusersResponseToController = adminEngine.makeUserAdminInDB(sub, userSubId);
 
-        return ResponseEntity.status(dtOcoursesResponseToController.getHttpStatus())
-                .body(new DTOstatus(dtOcoursesResponseToController.isSucceed(),
-                        dtOcoursesResponseToController.getDetails()));
+        return ResponseEntity.status(dtOusersResponseToController.getHttpStatus())
+                .body(new DTOstatus(dtOusersResponseToController.isSucceed(),
+                        dtOusersResponseToController.getDetails()));
     }
 
     @CrossOrigin(origins = "http://localhost:3000")
     @PutMapping(value = "/admin/update-holidays")
     public ResponseEntity<DTOstatus> updateHolidays(@RequestParam String sub) {
 
-        // for oshri to continue implementation
-        return ResponseEntity.status(HttpStatus.OK).body(new DTOstatus(true, Constants.NO_PROBLEM));
+        DTOholidaysResponseToController dtOholidaysResponseToController = adminEngine.updateHolidays(sub);
+
+        return ResponseEntity.status(dtOholidaysResponseToController.getHttpStatus())
+                .body(new DTOstatus(dtOholidaysResponseToController.isSucceed(), dtOholidaysResponseToController.getDetails()));
     }
 
 }
