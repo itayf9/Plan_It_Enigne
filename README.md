@@ -15,16 +15,16 @@ Utillizes Google's Authorization and Authentication APIs.
 
 ## Screenshots of the site
 Home screen before connecting
-![App Screenshot](https://github.com/oshriFadlon1/Plan_It_Enigne_1.0/blob/master/%D7%93%D7%A3%20%D7%A0%D7%97%D7%99%D7%AA%D7%94.png)
+![App Screenshot](readme_objects/home.png)
 
 Home screen after connection
-![App Screenshot](https://github.com/oshriFadlon1/Plan_It_Enigne_1.0/blob/master/%D7%93%D7%A3%20%D7%9C%D7%90%D7%97%D7%A8%20%D7%97%D7%99%D7%91%D7%95%D7%A8.png)
+![App Screenshot](readme_objects/after.png)
 
 User profile
-![App Screenshot](https://github.com/oshriFadlon1/Plan_It_Enigne_1.0/blob/master/%D7%93%D7%A3%20%D7%A4%D7%A8%D7%98%D7%99%20%D7%9E%D7%A9%D7%AA%D7%9E%D7%A9.png)
+![App Screenshot](readme_objects/user.png)
 
 The calendar creation screen and generate it 
-![App Screenshot](https://github.com/oshriFadlon1/Plan_It_Enigne_1.0/blob/master/%D7%93%D7%A3%20%D7%92%D7%99%D7%A0%D7%A8%D7%95%D7%98%20%D7%99%D7%95%D7%9E%D7%9F%20%D7%9C%D7%90%D7%97%D7%A8%20%D7%92%D7%A0%D7%A8%D7%95%D7%98.png)
+![App Screenshot](readme_objects/generate.png)
 
 ## The project programmers
 
