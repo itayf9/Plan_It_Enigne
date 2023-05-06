@@ -13,7 +13,7 @@ for a personalized and optimized study schedule, PlanIT considers the student's 
 Utillizes Google's Authorization and Authentication APIs.
 
 
-## Screenshots
+## Screenshots of the site
 Home screen before connecting
 ![App Screenshot](https://github.com/oshriFadlon1/Plan_It_Enigne_1.0/blob/master/%D7%93%D7%A3%20%D7%A0%D7%97%D7%99%D7%AA%D7%94.png)
 
