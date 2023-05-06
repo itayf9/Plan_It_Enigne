@@ -2,6 +2,8 @@ package com.example.planit.controller;
 
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.model.mongo.course.CoursesRepository;
+import com.example.planit.model.mongo.holiday.Holiday;
+import com.example.planit.model.mongo.holiday.HolidayRepository;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.dto.*;
 import jakarta.annotation.PostConstruct;
@@ -14,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.MessageFormat;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,10 +34,10 @@ public class CalendarController {
     @Autowired
     private UserRepository userRepo;
 
-    public static Logger logger = LogManager.getLogger(CalendarController.class);
+    @Autowired
+    private HolidayRepository holidayRepo;
 
-    private Set<String> holidaysDatesCurrentYear;
-    private Set<String> holidaysDatesNextYear;
+    public static Logger logger = LogManager.getLogger(CalendarController.class);
 
     private CalendarEngine calendarEngine;
 
@@ -44,12 +48,14 @@ public class CalendarController {
         String CLIENT_ID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
         String CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
-        // extract the holidays dates as iso format and return it in a set of string(iso format) (for current year and the next year).
-        // holidaysDatesCurrentYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear());
-        // holidaysDatesNextYear = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, ZonedDateTime.now().getYear() + 1);
+        // get Holidays from db and create set contains iso string of all holidays
+        List<Holiday> holidays = holidayRepo.findAll();
+        Set<String> holidaysDates = new HashSet<>();
+
+        holidays.forEach(holiday -> holidaysDates.add(holiday.getHolidayStartDate()));
 
         // initialize CalendarEngine
-        this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidaysDatesCurrentYear, holidaysDatesNextYear);
+        this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidaysDates);
 
     }
 

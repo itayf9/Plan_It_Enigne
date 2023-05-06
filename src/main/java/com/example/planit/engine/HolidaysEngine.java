@@ -7,9 +7,11 @@ import com.google.gson.Gson;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -32,65 +34,43 @@ public class HolidaysEngine {
      * @param year           the requested year
      * @return set of string that present the dates of the holidays.
      */
-    public static Set<String> getDatesOfHolidays(String holidaysApiKey, String country, int year) {
+    public static Set<com.example.planit.model.mongo.holiday.Holiday> getDatesOfHolidays(String holidaysApiKey, String country, int year) {
 
         Unirest.setTimeouts(0, 0);
 
-        String url = "";
+        Set<com.example.planit.model.mongo.holiday.Holiday> allHolidays = new HashSet<>();
 
-        Set<String> allHolidays = new HashSet<>();
         // create the url with query parameters
-        url = createUrlForCurrentCountryAndYear(holidaysApiKey, country, year);
-
         try {
+            URIBuilder uriBuilder = new URIBuilder("https://calendarific.com/api/v2/holidays");
+            uriBuilder.addParameter("api_key", holidaysApiKey);
+            uriBuilder.addParameter("country", country);
+            uriBuilder.addParameter("year", Integer.toString(year));
+            uriBuilder.build();
+
             // send get request to "calendarific" server with the url that require to get all jews holidays
-            HttpResponse<String> response = Unirest.get(url).asString();
+            HttpResponse<String> response = Unirest.get(uriBuilder.toString()).asString();
 
-            // parse the response to holidaysResponse object
-            HolidaysResponse holidaysResponse = gson.fromJson(response.getBody(), HolidaysResponse.class);
+            if (response.getStatus() != 200) {
+                throw new RuntimeException("code: " + response.getStatus());
+            } else {
+                // parse the response to holidaysResponse object
+                HolidaysResponse holidaysResponse = gson.fromJson(response.getBody(), HolidaysResponse.class);
 
-            // check if we got 200 in code response
-            if (holidaysResponse.getMeta().getCode() != 200) {
-                // if not we throw exceptions with the code we got
-                throw new RuntimeException("code: " + holidaysResponse.getMeta().getCode());
+                // extract the holidays in array to convert them to map
+                Holiday[] holidaysArray = holidaysResponse.getResponse().getHolidays();
+
+                for (Holiday holiday : holidaysArray) {
+
+                    // add the date of the holidays to set
+                    allHolidays.add(new com.example.planit.model.mongo.holiday.Holiday(holiday.getName(), holiday.getDate().getIso()));
+                }
             }
 
-            // extract the holidays in array to convert them to map
-            Holiday[] holidaysArray = holidaysResponse.getResponse().getHolidays();
-
-            for (Holiday holiday : holidaysArray) {
-
-                // add the date of the holidays to set
-                allHolidays.add(holiday.getDate().getIso());
-            }
-
-        } catch (UnirestException e) {
-            throw new RuntimeException(e);
+        } catch (UnirestException | URISyntaxException e) {
+            throw new RuntimeException();
         }
         return allHolidays;
-    }
-
-    public static List<Event> handleHolidaysInFullDaysEvents(List<Event> fullDayEvents, List<Event> events
-            , boolean isStudyOnHolyDays, Set<String> holidaysDatesCurrentYear, Set<String> holidaysDatesNextYear) {
-        List<Event> copyOfFullDayEvents = new ArrayList<>(fullDayEvents);
-        // scan through the list and check if an event is a holiday.
-        for (Event fullDayEvent : fullDayEvents) {
-            if (holidaysDatesCurrentYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())
-                    || holidaysDatesNextYear.contains(fullDayEvent.getStart().getDate().toStringRfc3339())) {
-
-                // check if user want to study on holidays
-                if (isStudyOnHolyDays) {
-
-                    // remove the holiday from the list of events
-                    events.remove(fullDayEvent);
-                }
-
-                // remove the event from the copy of list of fullDayEvents and the events list
-                copyOfFullDayEvents.remove(fullDayEvent);
-            }
-        }
-
-        return copyOfFullDayEvents;
     }
 
     /**
@@ -100,7 +80,7 @@ public class HolidaysEngine {
      * @param year    the year we want the date of the holidays
      * @return string that return contain the full url to get request
      */
-    private static String createUrlForCurrentCountryAndYear(String holidaysApiKey, String country, int year) {
+    public static String createUrlForCurrentCountryAndYear(String holidaysApiKey, String country, int year) {
         return UrlRequest + "?" + "api_key=" + holidaysApiKey + "&country=" + country + "&year=" + year;
     }
 

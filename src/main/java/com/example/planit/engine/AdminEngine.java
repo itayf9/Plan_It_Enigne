@@ -2,23 +2,32 @@ package com.example.planit.engine;
 
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
+import com.example.planit.model.mongo.holiday.Holiday;
+import com.example.planit.model.mongo.holiday.HolidayRepository;
 import com.example.planit.model.mongo.user.User;
 import com.example.planit.model.mongo.user.UserClientRepresentation;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOcoursesResponseToController;
+import com.example.planit.utill.dto.DTOholidaysResponseToController;
 import com.example.planit.utill.dto.DTOusersResponseToController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.example.planit.model.mongo.user.UserClientRepresentation.buildUserClientRepresentationFromUser;
+import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
 
 public class AdminEngine {
+
+    private final Environment env;
 
     private final CoursesRepository courseRepo;
 
@@ -26,9 +35,13 @@ public class AdminEngine {
 
     public static Logger logger = LogManager.getLogger(AdminEngine.class);
 
-    public AdminEngine(CoursesRepository courseRepo, UserRepository userRepo) {
+    private final HolidayRepository holidayRepo;
+
+    public AdminEngine(CoursesRepository courseRepo, UserRepository userRepo, HolidayRepository holidayRepo, Environment env) {
         this.courseRepo = courseRepo;
         this.userRepo = userRepo;
+        this.holidayRepo = holidayRepo;
+        this.env = env;
     }
 
     public DTOcoursesResponseToController getAllCoursesFromDB(String sub) {
@@ -218,4 +231,38 @@ public class AdminEngine {
         }
 
     }
+
+    public DTOholidaysResponseToController updateHolidays(String sub) {
+        List<Holiday> oldHolidays = holidayRepo.findAll();
+        Set<Holiday> holidays;
+        try {
+
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+
+            if (maybeUser.isEmpty()) {
+                return new DTOholidaysResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+            User maybeAdminUser = maybeUser.get();
+
+            if (!maybeAdminUser.isAdmin()) {
+                return new DTOholidaysResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+            }
+
+            // save Holidays current year
+            holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue());
+            holidayRepo.saveAll(holidays);
+            // save Holidays next year
+            holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue() + 1);
+            holidayRepo.saveAll(holidays);
+
+            // remove old values to avoid duplication
+            holidayRepo.deleteAll(oldHolidays);
+
+            return new DTOholidaysResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new DTOholidaysResponseToController(false, Constants.ERROR_CALENDRIFIC_EXCEPTION, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }
