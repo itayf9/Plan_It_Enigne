@@ -1,5 +1,5 @@
 
-![Logo](https://github.com/oshriFadlon1/Plan_It_Enigne_1.0/blob/master/Plan.png)
+![Logo](readme_objects/Plan.png)
 
 
 # PlanIT
