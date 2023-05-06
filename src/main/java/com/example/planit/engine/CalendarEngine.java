@@ -59,9 +59,7 @@ public class CalendarEngine {
     private final String CLIENT_ID;
     private final String CLIENT_SECRET;
 
-    private final Set<String> holidaysDatesCurrentYear;
-    private final Set<String> holidaysDatesNextYear;
-
+    private final Set<String> holidays;
 
     /**
      * Global instance of the JSON factory.
@@ -69,34 +67,13 @@ public class CalendarEngine {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
     public CalendarEngine(String CLIENT_ID, String CLIENT_SECRET, UserRepository userRepo, CoursesRepository courseRepo,
-                          Set<String> holidaysDatesCurrentYear, Set<String> holidaysDatesNextYear) {
+                          Set<String> holidays) {
         this.CLIENT_ID = CLIENT_ID;
         this.CLIENT_SECRET = CLIENT_SECRET;
         this.userRepo = userRepo;
         this.courseRepo = courseRepo;
-        this.holidaysDatesCurrentYear = holidaysDatesCurrentYear;
-        this.holidaysDatesNextYear = holidaysDatesNextYear;
+        this.holidays = holidays;
     }
-
-/*LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-
-    FileAppender fileAppender = new FileAppender();
-    fileAppender.setContext(loggerContext);
-    fileAppender.setName("timestamp");
-    // set the file name
-    fileAppender.setFile("log/" + System.currentTimeMillis()+".log");
-
-    PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-    encoder.setContext(loggerContext);
-    encoder.setPattern("%r %thread %level - %msg%n");
-    encoder.start();
-
-    fileAppender.setEncoder(encoder);
-    fileAppender.start();
-
-    // attach the rolling file appender to the logger of your choice
-    Logger logbackLogger = loggerContext.getLogger("Main");
-    logbackLogger.addAppender(fileAppender);*/
 
     /**
      * Extract all the events that are in the user calendars.
@@ -123,41 +100,11 @@ public class CalendarEngine {
 
         // validate token
         validateAccessTokenExpireTime(user);
-        // Set<String> holidaysFromUserCalendar = getHolidaysFromUserCalendars(calendarService, calendarList, new DateTime(start), new DateTime(end));
         // get List of user's events
         List<Event> events = getEventsFromALLCalendars(calendarService, calendarList, new DateTime(start), new DateTime(end), fullDayEvents, planItCalendarOldEvents, examsFound, user.getPlanItCalendarID());
         return new DTOuserCalendarsInformation(fullDayEvents, planItCalendarOldEvents, examsFound, events, calendarService);
     }
 
-    private Set<String> getHolidaysFromUserCalendars(Calendar calendarService, List<CalendarListEntry> calendarList, DateTime start, DateTime end) {
-        Set<String> holidays = new HashSet<>();
-
-        for (CalendarListEntry calendar : calendarList) {
-            Events events;
-            String calendarId = calendar.getId();
-            try {
-                events = calendarService.events().list(calendarId)
-                        .setTimeMin(start)
-                        .setOrderBy("startTime")
-                        .setTimeMax(end)
-                        .setSingleEvents(true)
-                        .execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-            if (calendarId.equals("iw.jewish#holiday@group.v.calendar.google.com")) {
-
-                for (Event event : events.getItems()) {
-                    DateTime startOfEvent = event.getStart().getDate();
-                    if (startOfEvent != null) {
-                        holidays.add(start.toString());
-                    }
-                }
-            }
-        }
-        return holidays;
-    }
 
     /**
      * @param allEvents list of the user events we found during the initial scan
@@ -376,7 +323,7 @@ public class CalendarEngine {
             fullDayEventsFromAllCalendars.addAll(events.getItems().stream().filter(event -> event.getStart().getDate() != null).toList());
         }
 
-        if (!isMtaCalenderFound){
+        if (!isMtaCalenderFound) {
             throw new UserCalendarNotFound(Constants.COLLEGE_CALENDAR_NOT_FOUND);
         }
 
@@ -1176,7 +1123,7 @@ public class CalendarEngine {
             if (fullDayEvents.size() != 0) {
 
                 fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
-                        , user.getUserPreferences().isStudyOnHolidays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
+                        , user.getUserPreferences().isStudyOnHolidays(), holidays);
 
                 // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
                 if (fullDayEvents.size() != 0) {
@@ -1255,7 +1202,7 @@ public class CalendarEngine {
             if (fullDayEvents.size() != 0) {
 
                 fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
-                        , user.getUserPreferences().isStudyOnHolidays(), holidaysDatesCurrentYear, holidaysDatesNextYear);
+                        , user.getUserPreferences().isStudyOnHolidays(), holidays);
 
                 // go through the list of full day events
                 for (Event fullDayEvent : fullDayEvents) {
@@ -1329,11 +1276,10 @@ public class CalendarEngine {
         return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan());
     }
 
-    private void setHolidaysFromCalendar(Calendar calendarService,DateTime start, DateTime end) {
+    private void setHolidaysFromCalendar(Calendar calendarService, DateTime start, DateTime end) {
         Events events;
 
-        if (holidaysDatesCurrentYear != null)
-        {
+        if (holidays != null) {
             return;
         }
         try {
@@ -1348,7 +1294,7 @@ public class CalendarEngine {
         }
         for (Event event : events.getItems()) {
 
-            holidaysDatesCurrentYear.add(event.getStart().getDate().toStringRfc3339());
+            holidays.add(event.getStart().getDate().toStringRfc3339());
         }
     }
 
