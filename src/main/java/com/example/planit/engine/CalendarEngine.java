@@ -46,6 +46,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static com.example.planit.utill.Constants.*;
+import static com.example.planit.utill.Utility.buildExceptionMessage;
 import static com.example.planit.utill.Utility.roundInstantMinutesTime;
 
 public class CalendarEngine {
@@ -1104,14 +1105,12 @@ public class CalendarEngine {
                 return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
             }
 
+            // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
+            if (fullDayEvents.size() != 0) {
 
-
-                // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
-                if (fullDayEvents.size() != 0) {
-
-                    // return the user with the updated list of fullDayEvents.
-                    return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents, new StudyPlan());
-                }
+                // return the user with the updated list of fullDayEvents.
+                return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents, new StudyPlan());
+            }
 
 
             generatePlanItCalendar(regularEvents,
@@ -1127,10 +1126,10 @@ public class CalendarEngine {
 
         } catch (UserCalendarNotFoundException e) {
             // e.g. when the user doesn't have Exams Calendar
-            logger.error(MessageFormat.format("Exception {0}: {1}", e.getClass(), e.getMessage()));
+            logger.error(buildExceptionMessage(e));
             return new DTOscanResponseToController(false, e.getCalendarError(), HttpStatus.NOT_ACCEPTABLE);
         } catch (TokenResponseException e) {
-            logger.error(MessageFormat.format("Exception {0}: {1}", e.getClass(), e.getMessage()));
+            logger.error(buildExceptionMessage(e));
             if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
                 // e.g. when the refresh token has expired
                 return new DTOscanResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
@@ -1140,16 +1139,17 @@ public class CalendarEngine {
             }
         } catch (IOException e) {
             // e.g. when we call Google API with execute() method
-            logger.error(MessageFormat.format("Exception {0}: {1}", e.getClass(), e.getMessage()));
+            logger.error(buildExceptionMessage(e));
             return new DTOscanResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (GeneralSecurityException e) {
             // e.g. could not create HTTP secure connection
-            logger.error(MessageFormat.format("Exception {0}: {1}", e.getClass(), e.getMessage()));
+            logger.error(buildExceptionMessage(e));
             return new DTOscanResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        } /*catch (Exception e) {
+        } catch (Exception e) {
             // e.g. an unknown error had happened
+            logger.error(buildExceptionMessage(e));
             return new DTOscanResponseToController(false, Constants.ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
-        }*/
+        }
 
         return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
     }
@@ -1218,8 +1218,10 @@ public class CalendarEngine {
 
         } catch (UserCalendarNotFoundException e) {
             // e.g. when the user doesn't have Exams Calendar
+            logger.error(buildExceptionMessage(e));
             return new DTOgenerateResponseToController(false, COLLEGE_CALENDAR_NOT_FOUND, HttpStatus.NOT_ACCEPTABLE);
         } catch (TokenResponseException e) {
+            logger.error(buildExceptionMessage(e));
             if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
                 // e.g. when the refresh token has expired
                 return new DTOgenerateResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
@@ -1229,12 +1231,15 @@ public class CalendarEngine {
             }
         } catch (IOException e) {
             // e.g. when we call Google API with execute() method
+            logger.error(buildExceptionMessage(e));
             return new DTOgenerateResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (GeneralSecurityException e) {
             // e.g. could not create HTTP secure connection
+            logger.error(buildExceptionMessage(e));
             return new DTOgenerateResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             // e.g. an unknown error had happened
+            logger.error(buildExceptionMessage(e));
             return new DTOgenerateResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
