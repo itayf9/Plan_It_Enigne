@@ -27,8 +27,10 @@ The calendar creation screen and generate it
 ![App Screenshot](https://github.com/oshriFadlon1/Plan_It_Enigne_1.0/blob/master/%D7%93%D7%A3%20%D7%92%D7%99%D7%A0%D7%A8%D7%95%D7%98%20%D7%99%D7%95%D7%9E%D7%9F%20%D7%9C%D7%90%D7%97%D7%A8%20%D7%92%D7%A0%D7%A8%D7%95%D7%98.png)
 
 
-## Authors
+## The project programmers
 
 - [@Danielsio](https://github.com/Danielsio)
 
 - [@itayf9](https://github.com/itayf9)
+
+- [@oshriFadlon1](https://github.com/oshriFadlon1)
