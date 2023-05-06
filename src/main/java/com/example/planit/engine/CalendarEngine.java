@@ -1120,10 +1120,6 @@ public class CalendarEngine {
             }
 
 
-            if (fullDayEvents.size() != 0) {
-
-                fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
-                        , user.getUserPreferences().isStudyOnHolidays(), holidays);
 
                 // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
                 if (fullDayEvents.size() != 0) {
@@ -1132,7 +1128,6 @@ public class CalendarEngine {
                     return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents, new StudyPlan());
                 }
 
-            }
 
             generatePlanItCalendar(regularEvents,
                     userCalendarsInformation.getExamsFound(),
@@ -1200,9 +1195,6 @@ public class CalendarEngine {
 
             // check if fullDayEvents List is empty (which doesn't suppose to be)
             if (fullDayEvents.size() != 0) {
-
-                fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
-                        , user.getUserPreferences().isStudyOnHolidays(), holidays);
 
                 // go through the list of full day events
                 for (Event fullDayEvent : fullDayEvents) {
