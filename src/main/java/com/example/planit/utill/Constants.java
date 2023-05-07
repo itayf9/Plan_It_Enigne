@@ -47,7 +47,7 @@ public class Constants {
     public static final String ERROR_FROM_GOOGLE_API_EXECUTE = "General exception google api execute";
     public static final String EXAMS_CALENDAR_SUMMERY_NAME = "יומן אישי מתחנת המידע";
     public static final CharSequence EXAM_KEYWORD_TO_IDENTIFY_EXAMS = "מבחן";
-    public static final String ERROR_DEFAULT = "Unknown Error";
+    public static final String ERROR_DEFAULT = "Some Internal Server Error";
     public static final String ERROR_ILLEGAL_CHARACTERS_IN_AUTH_CODE = "There are illegal characters in the auth code";
     public static final String ERROR_CALENDRIFIC_EXCEPTION = "Error From Callendrific";
     public static String ERROR_NO_VALID_ACCESS_TOKEN = "Access Token not valid anymore.";

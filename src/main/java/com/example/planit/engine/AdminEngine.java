@@ -11,11 +11,13 @@ import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOcoursesResponseToController;
 import com.example.planit.utill.dto.DTOholidaysResponseToController;
 import com.example.planit.utill.dto.DTOusersResponseToController;
+import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 
+import java.net.URISyntaxException;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +25,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.example.planit.model.mongo.user.UserClientRepresentation.buildUserClientRepresentationFromUser;
+import static com.example.planit.utill.Constants.ERROR_DEFAULT;
 import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
+import static com.example.planit.utill.Utility.buildExceptionMessage;
 
 public class AdminEngine {
 
@@ -61,7 +65,8 @@ public class AdminEngine {
             return new DTOcoursesResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK, courseRepo.findAll());
 
         } catch (Exception e) {
-            return new DTOcoursesResponseToController(false, "Error fetching courses from database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            logger.error(buildExceptionMessage(e));
+            return new DTOcoursesResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -98,7 +103,8 @@ public class AdminEngine {
             return new DTOcoursesResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED);
 
         } catch (Exception e) {
-            return new DTOcoursesResponseToController(false, "Error adding course to database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            logger.error(buildExceptionMessage(e));
+            return new DTOcoursesResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -139,7 +145,8 @@ public class AdminEngine {
             return new DTOcoursesResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
 
         } catch (Exception e) {
-            return new DTOcoursesResponseToController(false, "Error updating course in database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            logger.error(buildExceptionMessage(e));
+            return new DTOcoursesResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -165,7 +172,8 @@ public class AdminEngine {
             return new DTOcoursesResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK, List.of(maybeCourse.get()));
 
         } catch (Exception e) {
-            return new DTOcoursesResponseToController(false, "Error fetching course from database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            logger.error(buildExceptionMessage(e));
+            return new DTOcoursesResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -193,7 +201,8 @@ public class AdminEngine {
             return new DTOusersResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK, userClientRepresentations);
 
         } catch (Exception e) {
-            return new DTOusersResponseToController(false, "Error fetching users from database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            logger.error(buildExceptionMessage(e));
+            return new DTOusersResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -227,7 +236,8 @@ public class AdminEngine {
             return new DTOusersResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
 
         } catch (Exception e) {
-            return new DTOusersResponseToController(false, "Error updating user in database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            logger.error(buildExceptionMessage(e));
+            return new DTOusersResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
     }
@@ -260,8 +270,14 @@ public class AdminEngine {
 
             return new DTOholidaysResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
 
-        } catch (Exception e) {
+        } catch (URISyntaxException | UnirestException e) {
+            // e.g. when there was problem with the url parsing or the response parsing in getDatesOfHolidays
+            logger.error(buildExceptionMessage(e));
             return new DTOholidaysResponseToController(false, Constants.ERROR_CALENDRIFIC_EXCEPTION, HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            // e.g. an unknown error had happened
+            logger.error(buildExceptionMessage(e));
+            return new DTOholidaysResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
