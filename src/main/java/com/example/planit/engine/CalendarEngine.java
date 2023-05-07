@@ -1272,12 +1272,19 @@ public class CalendarEngine {
     }
 
     public DTOstudyPlanResponseToController getUserLatestStudyPlan(String sub) {
-        Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
-        if (maybeUser.isEmpty()) {
-            return new DTOstudyPlanResponseToController(false, ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+        try {
+
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+
+            if (maybeUser.isEmpty()) {
+                return new DTOstudyPlanResponseToController(false, ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+            }
+            return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan());
+        } catch (Exception e) {
+            logger.error(buildExceptionMessage(e));
+            return new DTOstudyPlanResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan());
     }
 
     private void setHolidaysFromCalendar(Calendar calendarService, DateTime start, DateTime end) {
