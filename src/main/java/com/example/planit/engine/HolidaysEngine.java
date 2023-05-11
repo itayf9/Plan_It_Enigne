@@ -13,7 +13,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -84,6 +83,5 @@ public class HolidaysEngine {
     public static String createUrlForCurrentCountryAndYear(String holidaysApiKey, String country, int year) {
         return UrlRequest + "?" + "api_key=" + holidaysApiKey + "&country=" + country + "&year=" + year;
     }
-
 
 }
