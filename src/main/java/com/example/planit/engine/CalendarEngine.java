@@ -318,7 +318,7 @@ public class CalendarEngine {
         }
 
         if (!isMtaCalenderFound) {
-            throw new UserCalendarNotFoundException(Constants.COLLEGE_CALENDAR_NOT_FOUND);
+            throw new UserCalendarNotFoundException(Constants.ERROR_COLLEGE_CALENDAR_NOT_FOUND);
         }
 
         // sorts the events, so they will be ordered by start time
@@ -1071,7 +1071,7 @@ public class CalendarEngine {
             // check if user exist in DB
             Optional<User> maybeUser = userRepo.findUserBySubjectID(subjectID);
             if (maybeUser.isEmpty()) {
-                return new DTOscanResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.UNAUTHORIZED);
+                return new DTOscanResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
 
             // get instance of the user
@@ -1173,7 +1173,7 @@ public class CalendarEngine {
             // check if user exist in DB
             Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
             if (maybeUser.isEmpty()) {
-                return new DTOgenerateResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.UNAUTHORIZED);
+                return new DTOgenerateResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
 
             // get instance of the user
@@ -1219,7 +1219,7 @@ public class CalendarEngine {
         } catch (UserCalendarNotFoundException e) {
             // e.g. when the user doesn't have Exams Calendar
             logger.error(buildExceptionMessage(e));
-            return new DTOgenerateResponseToController(false, COLLEGE_CALENDAR_NOT_FOUND, HttpStatus.NOT_ACCEPTABLE);
+            return new DTOgenerateResponseToController(false, ERROR_COLLEGE_CALENDAR_NOT_FOUND, HttpStatus.NOT_ACCEPTABLE);
         } catch (TokenResponseException e) {
             logger.error(buildExceptionMessage(e));
             if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
@@ -1278,7 +1278,7 @@ public class CalendarEngine {
             Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
             if (maybeUser.isEmpty()) {
-                return new DTOstudyPlanResponseToController(false, ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+                return new DTOstudyPlanResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
             return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan());
         } catch (Exception e) {

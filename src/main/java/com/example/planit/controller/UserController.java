@@ -99,18 +99,22 @@ public class UserController {
 
         } catch (UnauthorizedUserException e) {
             // the user has become unauthorized (not found in the DB)
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new DTOloginResponseToClient(false, Constants.ERROR_UNAUTHORIZED_USER, e.getSubjectID(), false));
+            logger.error(buildExceptionMessage(e));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new DTOloginResponseToClient(false, Constants.ERROR_USER_NOT_FOUND, e.getSubjectID(), false));
         } catch (IOException e) {
             // return http response "the auth code is not valid",
+            logger.error(buildExceptionMessage(e));
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new DTOloginResponseToClient(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, null, false));
         } catch (IllegalArgumentException e) {
             // when the authCode is not in the right format
+            logger.error(buildExceptionMessage(e));
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new DTOloginResponseToClient(false, Constants.ERROR_ILLEGAL_CHARACTERS_IN_AUTH_CODE, null, false));
         } catch (Exception e) {
             // an unknown error had happened
+            logger.error(buildExceptionMessage(e));
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new DTOloginResponseToClient(false, Constants.ERROR_DEFAULT, null, false));
         }
@@ -143,8 +147,8 @@ public class UserController {
                         .body(new DTOuserClientRepresentation(true, Constants.NO_PROBLEM,
                                 buildUserClientRepresentationFromUser(maybeUser.get())));
             } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new DTOuserClientRepresentation(false, Constants.ERROR_UNAUTHORIZED_USER));
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new DTOuserClientRepresentation(false, Constants.ERROR_USER_NOT_FOUND));
             }
         } catch (Exception e) {
             logger.error(buildExceptionMessage(e));
@@ -187,8 +191,8 @@ public class UserController {
                 long res = t - s;
                 logger.info(MessageFormat.format("User {0}: could not save preferences in DB. profile time is {1} ms", sub, res));
 
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new DTOstatus(false, Constants.ERROR_UNAUTHORIZED_USER));
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new DTOstatus(false, Constants.ERROR_USER_NOT_FOUND));
             }
 
         } catch (Exception e) {
