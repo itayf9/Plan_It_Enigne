@@ -12,6 +12,22 @@ import java.time.temporal.ChronoUnit;
 
 public class Utility {
 
+    public static String buildExceptionMessage(Exception e) {
+        StringBuilder buildExceptionMessageBuilder = new StringBuilder();
+
+        buildExceptionMessageBuilder.append("Exception ")
+                .append(e.getClass()).append(": ").append(e.getMessage())
+                .append("\n");
+
+        StackTraceElement[] stackTraceElements = e.getStackTrace();
+        for (StackTraceElement stackTraceElement : stackTraceElements) {
+            buildExceptionMessageBuilder.append("          at ")
+                    .append(stackTraceElement.toString()).append("\n");
+        }
+
+        return buildExceptionMessageBuilder.toString();
+    }
+
     /**
      * checks if the instants are on the same date (Year, Month, Day)
      *

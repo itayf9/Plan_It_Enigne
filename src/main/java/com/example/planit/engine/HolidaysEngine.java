@@ -2,8 +2,6 @@ package com.example.planit.engine;
 
 import com.example.planit.holidays.Holiday;
 import com.example.planit.holidays.HolidaysResponse;
-import com.example.planit.utill.Constants;
-import com.google.api.services.calendar.model.Event;
 import com.google.gson.Gson;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
@@ -14,12 +12,11 @@ import org.apache.logging.log4j.Logger;
 
 import java.net.URISyntaxException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class HolidaysEngine {
 
-    public static Logger calendarLogger = LogManager.getLogger(Constants.CALENDAR_LOGGER_NAME);
+    public static Logger logger = LogManager.getLogger(HolidaysEngine.class);
 
     public static Gson gson = new Gson();
 
@@ -34,42 +31,39 @@ public class HolidaysEngine {
      * @param year           the requested year
      * @return set of string that present the dates of the holidays.
      */
-    public static Set<com.example.planit.model.mongo.holiday.Holiday> getDatesOfHolidays(String holidaysApiKey, String country, int year) {
+    public static Set<com.example.planit.model.mongo.holiday.Holiday> getDatesOfHolidays(String holidaysApiKey, String country, int year) throws URISyntaxException, UnirestException {
 
         Unirest.setTimeouts(0, 0);
 
         Set<com.example.planit.model.mongo.holiday.Holiday> allHolidays = new HashSet<>();
 
         // create the url with query parameters
-        try {
-            URIBuilder uriBuilder = new URIBuilder("https://calendarific.com/api/v2/holidays");
-            uriBuilder.addParameter("api_key", holidaysApiKey);
-            uriBuilder.addParameter("country", country);
-            uriBuilder.addParameter("year", Integer.toString(year));
-            uriBuilder.build();
+        URIBuilder uriBuilder = new URIBuilder("https://calendarific.com/api/v2/holidays");
+        uriBuilder.addParameter("api_key", holidaysApiKey);
+        uriBuilder.addParameter("country", country);
+        uriBuilder.addParameter("year", Integer.toString(year));
+        uriBuilder.build();
 
-            // send get request to "calendarific" server with the url that require to get all jews holidays
-            HttpResponse<String> response = Unirest.get(uriBuilder.toString()).asString();
+        // send get request to "calendarific" server with the url that require to get all jews holidays
+        HttpResponse<String> response = Unirest.get(uriBuilder.toString()).asString();
 
-            if (response.getStatus() != 200) {
-                throw new RuntimeException("code: " + response.getStatus());
-            } else {
-                // parse the response to holidaysResponse object
-                HolidaysResponse holidaysResponse = gson.fromJson(response.getBody(), HolidaysResponse.class);
+        if (response.getStatus() != 200) {
+            throw new RuntimeException("code: " + response.getStatus());
+        } else {
+            // parse the response to holidaysResponse object
+            HolidaysResponse holidaysResponse = gson.fromJson(response.getBody(), HolidaysResponse.class);
 
-                // extract the holidays in array to convert them to map
-                Holiday[] holidaysArray = holidaysResponse.getResponse().getHolidays();
+            // extract the holidays in array to convert them to map
+            Holiday[] holidaysArray = holidaysResponse.getResponse().getHolidays();
 
-                for (Holiday holiday : holidaysArray) {
+            for (Holiday holiday : holidaysArray) {
 
-                    // add the date of the holidays to set
-                    allHolidays.add(new com.example.planit.model.mongo.holiday.Holiday(holiday.getName(), holiday.getDate().getIso()));
-                }
+                // add the date of the holidays to set
+                allHolidays.add(new com.example.planit.model.mongo.holiday.Holiday(holiday.getName(), holiday.getDate().getIso()));
             }
-
-        } catch (UnirestException | URISyntaxException e) {
-            throw new RuntimeException();
         }
+
+
         return allHolidays;
     }
 

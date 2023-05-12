@@ -66,6 +66,8 @@
     <!-- LOG "CalendarEngine" at DEBUG level -->
     <logger name="com.example.planit.engine.CalendarEngine" level="debug" additivity="false">
         <appender-ref ref="RollingFileCalendarEngine"/>
+        <appender-ref ref="RollingFile"/>
+        <appender-ref ref="Console"/>
     </logger>
 
 </configuration>
