@@ -3,6 +3,7 @@ package com.example.planit.engine;
 import com.example.planit.model.exam.Exam;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
+import com.example.planit.model.mongo.holiday.Holiday;
 import com.example.planit.model.mongo.user.StudyPlan;
 import com.example.planit.model.mongo.user.User;
 import com.example.planit.model.mongo.user.UserRepository;
@@ -60,7 +61,7 @@ public class CalendarEngine {
     private final String CLIENT_ID;
     private final String CLIENT_SECRET;
 
-    private final Set<String> holidays;
+    private final List<Holiday> holidays;
 
     /**
      * Global instance of the JSON factory.
@@ -68,7 +69,7 @@ public class CalendarEngine {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
     public CalendarEngine(String CLIENT_ID, String CLIENT_SECRET, UserRepository userRepo, CoursesRepository courseRepo,
-                          Set<String> holidays) {
+                          List<Holiday> holidays) {
         this.CLIENT_ID = CLIENT_ID;
         this.CLIENT_SECRET = CLIENT_SECRET;
         this.userRepo = userRepo;
@@ -96,8 +97,6 @@ public class CalendarEngine {
         List<Event> fullDayEvents = new ArrayList<>();
         List<Event> planItCalendarOldEvents = new ArrayList<>();
         List<Exam> examsFound = new LinkedList<>();
-        // here we got the holidays date form user calendar "חגים בישראל"
-        setHolidaysFromCalendar(calendarService, new DateTime(start), new DateTime(end));
 
         // validate token
         validateAccessTokenExpireTime(user);
@@ -1105,6 +1104,12 @@ public class CalendarEngine {
                 return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
             }
 
+            // remove duplications
+            fullDayEvents = removeDuplicationsByDate(fullDayEvents);
+
+            // add the holidays
+            fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
+
             // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
             if (fullDayEvents.size() != 0) {
 
@@ -1154,6 +1159,126 @@ public class CalendarEngine {
         return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
     }
 
+    /***
+     * add the holidays from the "holidays" list to the full day events list.
+     * if the holiday's date already exists in any full day event, concatenates the name of the holiday to that full day event's summery.
+     * @param fullDayEvents a list of {@link Event } which are full day events, sorted by start date.
+     * @param start a string represents the ISO time, which is the start time of generating.
+     * @param end a string represents the ISO time, which is the end time of generating.
+     * @return a list of full day {@link Event} union with the holidays
+     */
+    private List<Event> addHolidaysToFullDayEvents(List<Event> fullDayEvents, String start, String end) {
+
+        List<Event> fullDayEventsWithHolidays = new ArrayList<>();
+
+        // filters the holidays to be in range of 'start' and 'end'
+        List<Holiday> holidaysInRange = holidays.stream().filter(holiday -> DateTime.parseRfc3339(holiday.getHolidayStartDate()).getValue() >= DateTime.parseRfc3339(start).getValue()
+                && DateTime.parseRfc3339(holiday.getHolidayStartDate()).getValue() <= DateTime.parseRfc3339(end).getValue()).toList();
+
+
+        if (holidaysInRange.size() == 0) {
+            return fullDayEvents;
+        }
+
+        if (fullDayEvents.size() == 0) {
+            holidaysInRange.forEach(holiday -> fullDayEventsWithHolidays.add(new Event()
+                    .setSummary(holiday.getHolidayName())
+                    .setStart(new EventDateTime()
+                            .setDate(DateTime.parseRfc3339(holiday.getHolidayStartDate()))
+                            .setTimeZone(ISRAEL_TIME_ZONE))
+                    .setEnd(new EventDateTime()
+                            .setDate(DateTime.parseRfc3339(holiday.getHolidayStartDate()))
+                            .setTimeZone(ISRAEL_TIME_ZONE))));
+            return fullDayEventsWithHolidays;
+        }
+
+
+        int currentHolidayIndex = 0;
+        int currentFullDayEventIndex = 0;
+
+        while (currentHolidayIndex < holidaysInRange.size() && currentFullDayEventIndex < fullDayEvents.size()) {
+            Holiday currentHoliday = holidaysInRange.get(currentHolidayIndex);
+            Event currentFullDayEvent = fullDayEvents.get(currentFullDayEventIndex);
+
+            long currentHolidayLongValue = DateTime.parseRfc3339(currentHoliday.getHolidayStartDate()).getValue();
+            long currentFullDayEventLongValue = DateTime.parseRfc3339(currentFullDayEvent.getStart().getDate().toStringRfc3339()).getValue();
+
+            if (currentHolidayLongValue == currentFullDayEventLongValue) {
+                // same day
+                if (!currentFullDayEvent.getSummary().contains(currentHoliday.getHolidayName())) {
+                    fullDayEventsWithHolidays.add(currentFullDayEvent.setSummary(currentFullDayEvent.getSummary() + " | " + currentHoliday.getHolidayName()));
+                } else {
+                    fullDayEventsWithHolidays.add(currentFullDayEvent);
+                }
+                currentHolidayIndex++;
+                currentFullDayEventIndex++;
+
+            } else if (currentHolidayLongValue > currentFullDayEventLongValue) {
+                // holiday is before the full day
+                fullDayEventsWithHolidays.add(currentFullDayEvent);
+                currentFullDayEventIndex++;
+            } else {
+                // holiday is after the full day
+                fullDayEventsWithHolidays.add(new Event()
+                        .setSummary(currentHoliday.getHolidayName())
+                        .setStart(new EventDateTime()
+                                .setDate(DateTime.parseRfc3339(currentHoliday.getHolidayStartDate()))
+                                .setTimeZone(ISRAEL_TIME_ZONE))
+                        .setEnd(new EventDateTime()
+                                .setDate(DateTime.parseRfc3339(currentHoliday.getHolidayStartDate()))
+                                .setTimeZone(ISRAEL_TIME_ZONE)));
+                currentHolidayIndex++;
+            }
+        }
+
+        while (currentHolidayIndex < holidaysInRange.size()) {
+            Holiday currentHoliday = holidaysInRange.get(currentHolidayIndex);
+            fullDayEventsWithHolidays.add(new Event()
+                    .setSummary(currentHoliday.getHolidayName())
+                    .setStart(new EventDateTime()
+                            .setDate(DateTime.parseRfc3339(currentHoliday.getHolidayStartDate()))
+                            .setTimeZone(ISRAEL_TIME_ZONE))
+                    .setEnd(new EventDateTime()
+                            .setDate(DateTime.parseRfc3339(currentHoliday.getHolidayStartDate()))
+                            .setTimeZone(ISRAEL_TIME_ZONE)));
+            currentHolidayIndex++;
+        }
+
+        while (currentFullDayEventIndex < fullDayEvents.size()) {
+            Event currentFullDayEvent = fullDayEvents.get(currentFullDayEventIndex);
+            fullDayEventsWithHolidays.add(currentFullDayEvent);
+            currentFullDayEventIndex++;
+        }
+
+        return fullDayEventsWithHolidays;
+    }
+
+
+    /**
+     * removes events that have that same date.
+     *
+     * @param fullDayEvents a list of {@link Event} to remove the duplications from.
+     * @return a list of {@link Event} that is the modified list.
+     */
+    private List<Event> removeDuplicationsByDate(List<Event> fullDayEvents) {
+
+        List<Event> modifiedFullDayEventsList = new ArrayList<>();
+        Event lastEventInModifiedList = null;
+
+        for (Event fullDayEvent : fullDayEvents) {
+
+            if (lastEventInModifiedList == null || lastEventInModifiedList.getStart().getDate().getValue() != fullDayEvent.getStart().getDate().getValue()) {
+                lastEventInModifiedList = fullDayEvent;
+                modifiedFullDayEventsList.add(lastEventInModifiedList);
+            } else {
+                lastEventInModifiedList.setSummary(lastEventInModifiedList.getSummary() + " | " + fullDayEvent.getSummary());
+            }
+
+        }
+
+        return modifiedFullDayEventsList;
+    }
+
     /**
      * performs a scan on the user events and gather some information.
      * then, performs generate PlanIt calendar after handling full days events' user's decisions
@@ -1190,6 +1315,12 @@ public class CalendarEngine {
             List<Event> regularEvents = userCalendarsInformation.getEvents();
             List<Exam> examsFound = userCalendarsInformation.getExamsFound();
             studyPlan.convertAndSetScannedExamsAsClientRepresentation(examsFound);
+
+            // remove duplications
+            fullDayEvents = removeDuplicationsByDate(fullDayEvents);
+
+            // add the holidays
+            fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
 
             // check if fullDayEvents List is empty (which doesn't suppose to be)
             if (fullDayEvents.size() != 0) {
@@ -1284,28 +1415,6 @@ public class CalendarEngine {
         } catch (Exception e) {
             logger.error(buildExceptionMessage(e));
             return new DTOstudyPlanResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    private void setHolidaysFromCalendar(Calendar calendarService, DateTime start, DateTime end) {
-        Events events;
-
-        if (holidays != null) {
-            return;
-        }
-        try {
-            events = calendarService.events().list(Constants.CALENDAR_HOLIDAYS_ID_IN_GOOGLE)
-                    .setTimeMin(start)
-                    .setOrderBy("startTime")
-                    .setTimeMax(end)
-                    .setSingleEvents(true)
-                    .execute();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        for (Event event : events.getItems()) {
-
-            holidays.add(event.getStart().getDate().toStringRfc3339());
         }
     }
 

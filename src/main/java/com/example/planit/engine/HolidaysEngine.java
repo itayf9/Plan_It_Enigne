@@ -78,5 +78,4 @@ public class HolidaysEngine {
         return UrlRequest + "?" + "api_key=" + holidaysApiKey + "&country=" + country + "&year=" + year;
     }
 
-
 }

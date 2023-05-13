@@ -1,7 +1,6 @@
 package com.example.planit;
 
 import com.example.planit.engine.CalendarEngine;
-import com.example.planit.engine.HolidaysEngine;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.holiday.Holiday;
 import com.example.planit.model.mongo.holiday.HolidayRepository;
@@ -14,14 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
-import org.springframework.data.mongodb.core.MongoOperations;
 
-import java.time.ZonedDateTime;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-
-import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
 
 @SpringBootTest
 class PlanITApplicationTests {
@@ -46,12 +39,9 @@ class PlanITApplicationTests {
         String clientId = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
         String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
         List<Holiday> holidays = holidayRepo.findAll();
-        Set<String> holidaysDates = new HashSet<>();
-
-        holidays.forEach(holiday -> holidaysDates.add(holiday.getHolidayStartDate()));
 
         // initialize CalendarEngine
-        this.calendarEngine = new CalendarEngine(clientId, clientSecret, userRepo, courseRepo, holidaysDates);
+        this.calendarEngine = new CalendarEngine(clientId, clientSecret, userRepo, courseRepo, holidays);
     }
 
     @Test
@@ -167,7 +157,7 @@ class PlanITApplicationTests {
     @Test
     void holidaysFoundInCalendar() {
         init();
-        String expectedOutput =  Constants.UNHANDLED_FULL_DAY_EVENTS;
+        String expectedOutput = Constants.UNHANDLED_FULL_DAY_EVENTS;
         int numerOfFullDaysEnevtExpexted = 3;
         DTOscanResponseToController scanResponse = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,

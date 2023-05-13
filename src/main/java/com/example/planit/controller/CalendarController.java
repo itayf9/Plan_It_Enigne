@@ -16,10 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.MessageFormat;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
@@ -50,12 +48,9 @@ public class CalendarController {
 
         // get Holidays from db and create set contains iso string of all holidays
         List<Holiday> holidays = holidayRepo.findAll();
-        Set<String> holidaysDates = new HashSet<>();
-
-        holidays.forEach(holiday -> holidaysDates.add(holiday.getHolidayStartDate()));
 
         // initialize CalendarEngine
-        this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidaysDates);
+        this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidays);
 
     }
 
