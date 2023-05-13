@@ -27,6 +27,7 @@ import java.text.MessageFormat;
 import java.util.Optional;
 
 import static com.example.planit.model.mongo.user.UserClientRepresentation.buildUserClientRepresentationFromUser;
+import static com.example.planit.utill.Utility.buildExceptionMessage;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
@@ -57,13 +58,15 @@ public class UserController {
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("New login: user has requested POST /login with params: code={0}", authCode));
 
-        // decode auth  (e.g. %2F to /)
-        authCode = URLDecoder.decode(authCode, StandardCharsets.UTF_8);
-
-        GoogleTokenResponse googleTokenResponse;
-
         //
         try {
+
+            // decode auth  (e.g. %2F to /)
+            authCode = URLDecoder.decode(authCode, StandardCharsets.UTF_8);
+
+            GoogleTokenResponse googleTokenResponse;
+
+
             googleTokenResponse = userEngine.getGoogleTokensFromAuthCode(authCode);
 
             // check if user subjectId exist in the DB
@@ -99,8 +102,17 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new DTOloginResponseToClient(false, Constants.ERROR_UNAUTHORIZED_USER, e.getSubjectID(), false));
         } catch (IOException e) {
-            throw new RuntimeException(e);
             // return http response "the auth code is not valid",
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new DTOloginResponseToClient(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, null, false));
+        } catch (IllegalArgumentException e) {
+            // when the authCode is not in the right format
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new DTOloginResponseToClient(false, Constants.ERROR_ILLEGAL_CHARACTERS_IN_AUTH_CODE, null, false));
+        } catch (Exception e) {
+            // an unknown error had happened
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new DTOloginResponseToClient(false, Constants.ERROR_DEFAULT, null, false));
         }
     }
 
@@ -117,20 +129,27 @@ public class UserController {
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested GET /profile with params: sub={0}", sub));
 
-        // assuming user exist and subjectID will be found when this endpoint will be called.
-        Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+        try {
 
-        long t = System.currentTimeMillis();
-        long res = t - s;
-        logger.info(MessageFormat.format("User {0}: profile time is {1} ms", sub, res));
+            // assuming user exist and subjectID will be found when this endpoint will be called.
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
-        if (maybeUser.isPresent()) {
-            return ResponseEntity.status(HttpStatus.OK)
-                    .body(new DTOuserClientRepresentation(true, Constants.NO_PROBLEM,
-                            buildUserClientRepresentationFromUser(maybeUser.get())));
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new DTOuserClientRepresentation(false, Constants.ERROR_UNAUTHORIZED_USER));
+            long t = System.currentTimeMillis();
+            long res = t - s;
+            logger.info(MessageFormat.format("User {0}: profile time is {1} ms", sub, res));
+
+            if (maybeUser.isPresent()) {
+                return ResponseEntity.status(HttpStatus.OK)
+                        .body(new DTOuserClientRepresentation(true, Constants.NO_PROBLEM,
+                                buildUserClientRepresentationFromUser(maybeUser.get())));
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new DTOuserClientRepresentation(false, Constants.ERROR_UNAUTHORIZED_USER));
+            }
+        } catch (Exception e) {
+            logger.error(buildExceptionMessage(e));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new DTOuserClientRepresentation(false, Constants.ERROR_DEFAULT));
         }
     }
 
@@ -144,30 +163,38 @@ public class UserController {
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /profile with params: sub={0}, preferences={1}", sub, preferences.toString()));
 
-        // assuming user exist and subjectID will be found when this endpoint will be called.
-        Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
+        try {
 
-        if (maybeUser.isPresent()) {
-            User user = maybeUser.get();
+            // assuming user exist and subjectID will be found when this endpoint will be called.
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
-            user.setUserPreferences(preferences);
-            user.setCompletedFirstSetup(true); // assume that when ever the user gets here that means he completed the first setup
-            userRepo.save(user);
+            if (maybeUser.isPresent()) {
+                User user = maybeUser.get();
 
-            long t = System.currentTimeMillis();
-            long res = t - s;
-            logger.info(MessageFormat.format("User {0}: successfully saved preferences in DB. profile time is {1} ms", sub, res));
+                user.setUserPreferences(preferences);
+                user.setCompletedFirstSetup(true); // assume that when ever the user gets here that means he completed the first setup
+                userRepo.save(user);
 
-            return ResponseEntity.status(HttpStatus.OK)
-                    .body(new DTOstatus(true, Constants.NO_PROBLEM));
+                long t = System.currentTimeMillis();
+                long res = t - s;
+                logger.info(MessageFormat.format("User {0}: successfully saved preferences in DB. profile time is {1} ms", sub, res));
 
-        } else {
-            long t = System.currentTimeMillis();
-            long res = t - s;
-            logger.info(MessageFormat.format("User {0}: could not save preferences in DB. profile time is {1} ms", sub, res));
+                return ResponseEntity.status(HttpStatus.OK)
+                        .body(new DTOstatus(true, Constants.NO_PROBLEM));
 
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new DTOstatus(false, Constants.ERROR_UNAUTHORIZED_USER));
+            } else {
+                long t = System.currentTimeMillis();
+                long res = t - s;
+                logger.info(MessageFormat.format("User {0}: could not save preferences in DB. profile time is {1} ms", sub, res));
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new DTOstatus(false, Constants.ERROR_UNAUTHORIZED_USER));
+            }
+
+        } catch (Exception e) {
+            logger.error(buildExceptionMessage(e));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new DTOstatus(false, Constants.ERROR_DEFAULT));
         }
     }
 }
