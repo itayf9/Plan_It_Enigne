@@ -89,13 +89,13 @@ public class AdminEngine {
             // Check if course already exists in database by id
             Optional<Course> existingCourseById = courseRepo.findCourseById(course.getCourseId());
             if (existingCourseById.isPresent()) {
-                return new DTOcoursesResponseToController(false, Constants.COURSE_ALREADY_EXIST, HttpStatus.BAD_REQUEST);
+                return new DTOcoursesResponseToController(false, Constants.ERROR_COURSE_ALREADY_EXIST, HttpStatus.BAD_REQUEST);
             }
 
             // Check if course already exists in database by name
             Optional<Course> existingCourseByName = courseRepo.findCourseByCourseName(course.getCourseName());
             if (existingCourseByName.isPresent()) {
-                return new DTOcoursesResponseToController(false, Constants.COURSE_ALREADY_EXIST, HttpStatus.BAD_REQUEST);
+                return new DTOcoursesResponseToController(false, Constants.ERROR_COURSE_ALREADY_EXIST, HttpStatus.BAD_REQUEST);
             }
 
             // Save the new course to the database
