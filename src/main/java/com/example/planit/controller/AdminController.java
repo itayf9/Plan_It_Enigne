@@ -46,8 +46,8 @@ public class AdminController {
     }
 
     @CrossOrigin(origins = "http://localhost:3000")
-    @GetMapping(value = "/admin/course")
-    public ResponseEntity<DTOcoursesResponseToClient> getCourse(@RequestParam String courseId, @RequestParam String sub) {
+    @GetMapping(value = "/admin/courses/{courseId}")
+    public ResponseEntity<DTOcoursesResponseToClient> getCourse(@PathVariable String courseId, @RequestParam String sub) {
         DTOcoursesResponseToController dtOcoursesResponseToController = adminEngine.getCourseFromDB(courseId, sub);
 
         return ResponseEntity.status(dtOcoursesResponseToController.getHttpStatus())
