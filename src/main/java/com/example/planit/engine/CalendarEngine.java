@@ -1,5 +1,6 @@
 package com.example.planit.engine;
 
+import com.example.planit.holidays.PlanITHolidays;
 import com.example.planit.model.exam.Exam;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
@@ -59,7 +60,7 @@ public class CalendarEngine {
     private final String CLIENT_ID;
     private final String CLIENT_SECRET;
 
-    private final Set<String> holidays;
+    private final PlanITHolidays holidays;
 
     /**
      * Global instance of the JSON factory.
@@ -67,7 +68,7 @@ public class CalendarEngine {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
     public CalendarEngine(String CLIENT_ID, String CLIENT_SECRET, UserRepository userRepo, CoursesRepository courseRepo,
-                          Set<String> holidays) {
+                          PlanITHolidays holidays) {
         this.CLIENT_ID = CLIENT_ID;
         this.CLIENT_SECRET = CLIENT_SECRET;
         this.userRepo = userRepo;
@@ -1123,7 +1124,7 @@ public class CalendarEngine {
             if (fullDayEvents.size() != 0) {
 
                 fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
-                        , user.getUserPreferences().isStudyOnHolidays(), holidays);
+                        , user.getUserPreferences().isStudyOnHolidays(), holidays.getHolidays());
 
                 // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
                 if (fullDayEvents.size() != 0) {
@@ -1202,7 +1203,7 @@ public class CalendarEngine {
             if (fullDayEvents.size() != 0) {
 
                 fullDayEvents = HolidaysEngine.handleHolidaysInFullDaysEvents(fullDayEvents, regularEvents
-                        , user.getUserPreferences().isStudyOnHolidays(), holidays);
+                        , user.getUserPreferences().isStudyOnHolidays(), holidays.getHolidays());
 
                 // go through the list of full day events
                 for (Event fullDayEvent : fullDayEvents) {
@@ -1294,7 +1295,7 @@ public class CalendarEngine {
         }
         for (Event event : events.getItems()) {
 
-            holidays.add(event.getStart().getDate().toStringRfc3339());
+            holidays.getHolidays().add(event.getStart().getDate().toStringRfc3339());
         }
     }
 

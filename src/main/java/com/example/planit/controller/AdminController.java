@@ -2,34 +2,17 @@ package com.example.planit.controller;
 
 import com.example.planit.engine.AdminEngine;
 import com.example.planit.model.mongo.course.Course;
-import com.example.planit.model.mongo.course.CoursesRepository;
-import com.example.planit.model.mongo.holiday.HolidayRepository;
-import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.dto.*;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
 public class AdminController {
-    @Autowired
-    CoursesRepository courseRepo;
-    @Autowired
-    UserRepository userRepo;
-    @Autowired
-    private HolidayRepository holidayRepo;
-    @Autowired
-    private Environment env;
 
+    @Autowired
     private AdminEngine adminEngine;
-
-    @PostConstruct
-    private void init() {
-        this.adminEngine = new AdminEngine(courseRepo, userRepo, holidayRepo, env);
-    }
 
     @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(value = "/admin/courses")

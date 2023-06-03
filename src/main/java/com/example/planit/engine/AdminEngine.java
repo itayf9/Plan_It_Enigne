@@ -1,5 +1,6 @@
 package com.example.planit.engine;
 
+import com.example.planit.holidays.PlanITHolidays;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.holiday.Holiday;
@@ -11,34 +12,29 @@ import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOcoursesResponseToController;
 import com.example.planit.utill.dto.DTOholidaysResponseToController;
 import com.example.planit.utill.dto.DTOusersResponseToController;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 
 import java.time.Year;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static com.example.planit.model.mongo.user.UserClientRepresentation.buildUserClientRepresentationFromUser;
 import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
 
+@Service
 public class AdminEngine {
-
-    private final Environment env;
-
-    private final CoursesRepository courseRepo;
-
-    private final UserRepository userRepo;
-
-    private final HolidayRepository holidayRepo;
-
-    public AdminEngine(CoursesRepository courseRepo, UserRepository userRepo, HolidayRepository holidayRepo, Environment env) {
-        this.courseRepo = courseRepo;
-        this.userRepo = userRepo;
-        this.holidayRepo = holidayRepo;
-        this.env = env;
-    }
+    @Autowired
+    private Environment env;
+    @Autowired
+    private CoursesRepository courseRepo;
+    @Autowired
+    private UserRepository userRepo;
+    @Autowired
+    private HolidayRepository holidayRepo;
+    @Autowired
+    PlanITHolidays holidays;
 
     public DTOcoursesResponseToController getAllCoursesFromDB(String sub) {
 
@@ -244,6 +240,9 @@ public class AdminEngine {
                 return new DTOholidaysResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
             }
 
+            // remove old values to avoid duplication
+            holidayRepo.deleteAll();
+
             // save Holidays current year
             holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue());
             holidayRepo.saveAll(holidays);
@@ -251,12 +250,15 @@ public class AdminEngine {
             holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue() + 1);
             holidayRepo.saveAll(holidays);
 
-            // remove old values to avoid duplication
-            holidayRepo.deleteAll(oldHolidays);
+            List<Holiday> holidaysFromDB = holidayRepo.findAll();
+            Set<String> holidaysDates = new HashSet<>();
+            holidaysFromDB.forEach(holiday -> holidaysDates.add(holiday.getHolidayStartDate()));
+            this.holidays.setHolidays(holidaysDates);
 
             return new DTOholidaysResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
 
         } catch (Exception e) {
+            holidayRepo.saveAll(oldHolidays);
             return new DTOholidaysResponseToController(false, Constants.ERROR_CALENDRIFIC_EXCEPTION, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
