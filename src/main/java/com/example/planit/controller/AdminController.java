@@ -27,13 +27,9 @@ public class AdminController {
     private Environment env;
 
     public static Logger logger = LogManager.getLogger(AdminController.class);
-
+    @Autowired
     private AdminEngine adminEngine;
 
-    @PostConstruct
-    private void init() {
-        this.adminEngine = new AdminEngine(courseRepo, userRepo, holidayRepo, env);
-    }
 
     @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(value = "/admin/courses")

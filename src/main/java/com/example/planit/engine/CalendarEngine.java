@@ -1,5 +1,6 @@
 package com.example.planit.engine;
 
+import com.example.planit.holidays.PlanITHolidays;
 import com.example.planit.model.exam.Exam;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
@@ -61,7 +62,7 @@ public class CalendarEngine {
     private final String CLIENT_ID;
     private final String CLIENT_SECRET;
 
-    private final List<Holiday> holidays;
+    private final PlanITHolidays holidays;
 
     /**
      * Global instance of the JSON factory.
@@ -69,7 +70,7 @@ public class CalendarEngine {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
     public CalendarEngine(String CLIENT_ID, String CLIENT_SECRET, UserRepository userRepo, CoursesRepository courseRepo,
-                          List<Holiday> holidays) {
+                          PlanITHolidays holidays) {
         this.CLIENT_ID = CLIENT_ID;
         this.CLIENT_SECRET = CLIENT_SECRET;
         this.userRepo = userRepo;
@@ -1172,7 +1173,7 @@ public class CalendarEngine {
         List<Event> fullDayEventsWithHolidays = new ArrayList<>();
 
         // filters the holidays to be in range of 'start' and 'end'
-        List<Holiday> holidaysInRange = holidays.stream().filter(holiday -> DateTime.parseRfc3339(holiday.getHolidayStartDate()).getValue() >= DateTime.parseRfc3339(start).getValue()
+        List<Holiday> holidaysInRange = holidays.getHolidays().stream().filter(holiday -> DateTime.parseRfc3339(holiday.getHolidayStartDate()).getValue() >= DateTime.parseRfc3339(start).getValue()
                 && DateTime.parseRfc3339(holiday.getHolidayStartDate()).getValue() <= DateTime.parseRfc3339(end).getValue()).toList();
 
 

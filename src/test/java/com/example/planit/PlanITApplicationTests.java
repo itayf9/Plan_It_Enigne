@@ -1,6 +1,7 @@
 package com.example.planit;
 
 import com.example.planit.engine.CalendarEngine;
+import com.example.planit.holidays.PlanITHolidays;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.holiday.Holiday;
 import com.example.planit.model.mongo.holiday.HolidayRepository;
@@ -31,14 +32,15 @@ class PlanITApplicationTests {
     private HolidayRepository holidayRepo;
 
     private CalendarEngine calendarEngine;
-
+    @Autowired
+    private PlanITHolidays holidays;
     private final String subjectIDForTestInput = "112510677559500692451";
 
     @Before
     public void init() {
         String clientId = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
         String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
-        List<Holiday> holidays = holidayRepo.findAll();
+        holidays.setHolidays(holidayRepo.findAll());
 
         // initialize CalendarEngine
         this.calendarEngine = new CalendarEngine(clientId, clientSecret, userRepo, courseRepo, holidays);

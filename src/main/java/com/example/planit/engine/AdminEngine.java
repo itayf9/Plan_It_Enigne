@@ -1,5 +1,6 @@
 package com.example.planit.engine;
 
+import com.example.planit.holidays.PlanITHolidays;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.holiday.Holiday;
@@ -14,8 +15,10 @@ import com.example.planit.utill.dto.DTOusersResponseToController;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 
 import java.net.URISyntaxException;
 import java.time.Year;
@@ -28,25 +31,20 @@ import static com.example.planit.model.mongo.user.UserClientRepresentation.build
 import static com.example.planit.utill.Constants.ERROR_DEFAULT;
 import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
 import static com.example.planit.utill.Utility.buildExceptionMessage;
-
+@Service
 public class AdminEngine {
-
-    private final Environment env;
-
-    private final CoursesRepository courseRepo;
-
-    private final UserRepository userRepo;
-
+    @Autowired
+    private Environment env;
+    @Autowired
+    private CoursesRepository courseRepo;
+    @Autowired
+    private UserRepository userRepo;
+    @Autowired
+    PlanITHolidays holidays;
     public static Logger logger = LogManager.getLogger(AdminEngine.class);
+    @Autowired
+    private HolidayRepository holidayRepo;
 
-    private final HolidayRepository holidayRepo;
-
-    public AdminEngine(CoursesRepository courseRepo, UserRepository userRepo, HolidayRepository holidayRepo, Environment env) {
-        this.courseRepo = courseRepo;
-        this.userRepo = userRepo;
-        this.holidayRepo = holidayRepo;
-        this.env = env;
-    }
 
     public DTOcoursesResponseToController getAllCoursesFromDB(String sub) {
 
@@ -257,6 +255,8 @@ public class AdminEngine {
             if (!maybeAdminUser.isAdmin()) {
                 return new DTOholidaysResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
             }
+            // remove old values to avoid duplication
+            holidayRepo.deleteAll();
 
             // save Holidays current year
             holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue());
@@ -265,8 +265,7 @@ public class AdminEngine {
             holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue() + 1);
             holidayRepo.saveAll(holidays);
 
-            // remove old values to avoid duplication
-            holidayRepo.deleteAll(oldHolidays);
+            this.holidays.setHolidays(holidayRepo.findAll());
 
             return new DTOholidaysResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
 
@@ -276,6 +275,7 @@ public class AdminEngine {
             return new DTOholidaysResponseToController(false, Constants.ERROR_CALENDRIFIC_EXCEPTION, HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             // e.g. an unknown error had happened
+            holidayRepo.saveAll(oldHolidays);
             logger.error(buildExceptionMessage(e));
             return new DTOholidaysResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }

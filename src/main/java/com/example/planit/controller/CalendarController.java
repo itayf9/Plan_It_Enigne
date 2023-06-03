@@ -1,6 +1,7 @@
 package com.example.planit.controller;
 
 import com.example.planit.engine.CalendarEngine;
+import com.example.planit.holidays.PlanITHolidays;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.holiday.Holiday;
 import com.example.planit.model.mongo.holiday.HolidayRepository;
@@ -37,6 +38,8 @@ public class CalendarController {
 
     public static Logger logger = LogManager.getLogger(CalendarController.class);
 
+    @Autowired
+    PlanITHolidays holidays;
     private CalendarEngine calendarEngine;
 
     @PostConstruct
@@ -47,11 +50,11 @@ public class CalendarController {
         String CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
 
         // get Holidays from db and create set contains iso string of all holidays
-        List<Holiday> holidays = holidayRepo.findAll();
+        holidays.setHolidays(holidayRepo.findAll());
+
 
         // initialize CalendarEngine
         this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidays);
-
     }
 
     /**
