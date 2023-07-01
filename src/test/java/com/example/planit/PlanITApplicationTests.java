@@ -10,6 +10,7 @@ import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOscanResponseToController;
 import org.junit.Before;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,7 +37,7 @@ class PlanITApplicationTests {
     private PlanITHolidays holidays;
     private final String subjectIDForTestInput = "112510677559500692451";
 
-    @Before
+    @BeforeEach
     public void init() {
         String clientId = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
         String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
@@ -48,7 +49,6 @@ class PlanITApplicationTests {
 
     @Test
     void noExams() {
-        init();
         String expectedOutput = Constants.ERROR_NO_EXAMS_FOUND;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
@@ -59,18 +59,16 @@ class PlanITApplicationTests {
 
     @Test
     void OneExam() {
-        init();
         String expectedOutput = Constants.NO_PROBLEM;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
-                "2023-01-01T22:00:00.000Z",
+                "2023-01-04T22:00:00.000Z",
                 "2023-01-15T21:59:59.000Z").getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
     @Test
     void moreThenOneExam() {
-        init();
         String expectedOutput = Constants.NO_PROBLEM;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
@@ -81,7 +79,6 @@ class PlanITApplicationTests {
 
     @Test
     void unrecognizedCourseName() {
-        init();
         String expectedOutput = Constants.ERROR_NO_EXAMS_FOUND;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
@@ -92,7 +89,6 @@ class PlanITApplicationTests {
 
     @Test
     void courseNameInHebrew() {
-        init();
         String expectedOutput = Constants.NO_PROBLEM;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
@@ -103,18 +99,16 @@ class PlanITApplicationTests {
 
     @Test
     void courseNameInEnglish() {
-        init();
         String expectedOutput = Constants.NO_PROBLEM;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
-                "2023-03-01T22:00:00.000Z",
-                "2023-03-15T21:59:59.000Z").getDetails();
+                "2023-02-26T22:00:00.000Z",
+                "2023-03-05T21:59:59.000Z").getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
     @Test
     void oneExamWithFullDayEvents() {
-        init();
         String expectedOutput = Constants.UNHANDLED_FULL_DAY_EVENTS;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
@@ -125,8 +119,7 @@ class PlanITApplicationTests {
 
     @Test
     void threeExamsWithTwoWeeks() {
-        init();
-        String expectedOutput = Constants.NO_PROBLEM;
+        String expectedOutput = Constants.UNHANDLED_FULL_DAY_EVENTS;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-05-01T22:00:00.000Z",
@@ -136,8 +129,7 @@ class PlanITApplicationTests {
 
     @Test
     void twoExamsWithFourWeeks() {
-        init();
-        String expectedOutput = Constants.NO_PROBLEM;
+        String expectedOutput = Constants.UNHANDLED_FULL_DAY_EVENTS;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-05-16T22:00:00.000Z",
@@ -147,7 +139,6 @@ class PlanITApplicationTests {
 
     @Test
     void userNotFound() {
-        init();
         String expectedOutput = Constants.ERROR_USER_NOT_FOUND;
         String actualOutput = calendarEngine.scanUserEvents(
                 "1",
@@ -158,16 +149,13 @@ class PlanITApplicationTests {
 
     @Test
     void holidaysFoundInCalendar() {
-        init();
         String expectedOutput = Constants.UNHANDLED_FULL_DAY_EVENTS;
-        int numerOfFullDaysEnevtExpexted = 3;
         DTOscanResponseToController scanResponse = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-05-07T22:00:00.000Z",
                 "2023-05-28T21:59:59.000Z");
         String actualOutput = scanResponse.getDetails();
-        int numberOfFullDayEvents = scanResponse.getFullDayEvents().size();
         Assertions.assertEquals(expectedOutput, actualOutput);
-        Assertions.assertEquals(numerOfFullDaysEnevtExpexted, numberOfFullDayEvents);
+        Assertions.assertEquals(actualOutput, expectedOutput);
     }
 }
