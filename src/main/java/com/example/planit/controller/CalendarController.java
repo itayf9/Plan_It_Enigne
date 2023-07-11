@@ -3,7 +3,6 @@ package com.example.planit.controller;
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.holidays.PlanITHolidays;
 import com.example.planit.model.mongo.course.CoursesRepository;
-import com.example.planit.model.mongo.holiday.Holiday;
 import com.example.planit.model.mongo.holiday.HolidayRepository;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.dto.*;
@@ -11,21 +10,17 @@ import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.MessageFormat;
-import java.util.List;
 import java.util.Map;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
 public class CalendarController {
-
-    @Autowired
-    private Environment env;
 
     @Autowired
     private CoursesRepository courseRepo;
@@ -40,18 +35,17 @@ public class CalendarController {
 
     @Autowired
     PlanITHolidays holidays;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    String CLIENT_ID;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    String CLIENT_SECRET;
     private CalendarEngine calendarEngine;
 
     @PostConstruct
     private void init() {
-
-        // get CLIENT_ID & CLIENT_SECRET values from environment
-        String CLIENT_ID = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
-        String CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
-
-        // get Holidays from db and create set contains iso string of all holidays
         holidays.setHolidays(holidayRepo.findAll());
-
 
         // initialize CalendarEngine
         this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidays);

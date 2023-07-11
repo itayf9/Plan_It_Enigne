@@ -3,26 +3,19 @@ package com.example.planit;
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.holidays.PlanITHolidays;
 import com.example.planit.model.mongo.course.CoursesRepository;
-import com.example.planit.model.mongo.holiday.Holiday;
 import com.example.planit.model.mongo.holiday.HolidayRepository;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOscanResponseToController;
-import org.junit.Before;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.env.Environment;
-
-import java.util.List;
 
 @SpringBootTest
 class PlanITApplicationTests {
-
-    @Autowired
-    private Environment env;
 
     @Autowired
     private CoursesRepository courseRepo;
@@ -37,13 +30,15 @@ class PlanITApplicationTests {
     private PlanITHolidays holidays;
     private final String subjectIDForTestInput = "112510677559500692451";
 
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String clientId;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    private String clientSecret;
+
     @BeforeEach
     public void init() {
-        String clientId = env.getProperty("spring.security.oauth2.client.registration.google.client-id");
-        String clientSecret = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
         holidays.setHolidays(holidayRepo.findAll());
-
-        // initialize CalendarEngine
         this.calendarEngine = new CalendarEngine(clientId, clientSecret, userRepo, courseRepo, holidays);
     }
 

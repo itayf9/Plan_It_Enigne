@@ -16,7 +16,7 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -34,13 +34,13 @@ import static com.example.planit.utill.Utility.buildExceptionMessage;
 @Service
 public class AdminEngine {
     @Autowired
-    private Environment env;
-    @Autowired
     private CoursesRepository courseRepo;
     @Autowired
     private UserRepository userRepo;
     @Autowired
     PlanITHolidays holidays;
+    @Value("${holidays_api_key}")
+    private String holidaysApiKey;
     public static Logger logger = LogManager.getLogger(AdminEngine.class);
     @Autowired
     private HolidayRepository holidayRepo;
@@ -241,10 +241,10 @@ public class AdminEngine {
     }
 
     public DTOholidaysResponseToController updateHolidays(String sub) {
-        List<Holiday> oldHolidays = holidayRepo.findAll();
-        Set<Holiday> holidays;
-        try {
 
+        List<Holiday> oldHolidays = holidayRepo.findAll();
+
+        try {
             Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
             if (maybeUser.isEmpty()) {
@@ -255,14 +255,17 @@ public class AdminEngine {
             if (!maybeAdminUser.isAdmin()) {
                 return new DTOholidaysResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
             }
+
+            Set<Holiday> holidays;
+
             // remove old values to avoid duplication
             holidayRepo.deleteAll();
 
             // save Holidays current year
-            holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue());
+            holidays = HolidaysEngine.getDatesOfHolidays(holidaysApiKey, ISRAEL_HOLIDAYS_CODE, Year.now().getValue());
             holidayRepo.saveAll(holidays);
             // save Holidays next year
-            holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue() + 1);
+            holidays = HolidaysEngine.getDatesOfHolidays(holidaysApiKey, ISRAEL_HOLIDAYS_CODE, Year.now().getValue() + 1);
             holidayRepo.saveAll(holidays);
 
             this.holidays.setHolidays(holidayRepo.findAll());
@@ -272,6 +275,7 @@ public class AdminEngine {
         } catch (URISyntaxException | UnirestException e) {
             // e.g. when there was problem with the url parsing or the response parsing in getDatesOfHolidays
             logger.error(buildExceptionMessage(e));
+            holidayRepo.saveAll(oldHolidays);
             return new DTOholidaysResponseToController(false, Constants.ERROR_CALENDRIFIC_EXCEPTION, HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             // e.g. an unknown error had happened
