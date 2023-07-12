@@ -1,6 +1,6 @@
 package com.example.planit.engine;
 
-import com.example.planit.holidays.PlanITHolidays;
+import com.example.planit.holidays.PlanITHolidaysWrapper;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.holiday.Holiday;
@@ -12,7 +12,6 @@ import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOcoursesResponseToController;
 import com.example.planit.utill.dto.DTOholidaysResponseToController;
 import com.example.planit.utill.dto.DTOusersResponseToController;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.net.URISyntaxException;
+import java.io.IOException;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,18 +32,26 @@ import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
 import static com.example.planit.utill.Utility.buildExceptionMessage;
 @Service
 public class AdminEngine {
+
+    @Autowired
+    private HolidaysEngine holidaysEngine;
+
     @Autowired
     private CoursesRepository courseRepo;
+
     @Autowired
     private UserRepository userRepo;
+
     @Autowired
-    PlanITHolidays holidays;
+    PlanITHolidaysWrapper holidays;
+
     @Value("${holidays_api_key}")
     private String holidaysApiKey;
+
     public static Logger logger = LogManager.getLogger(AdminEngine.class);
+
     @Autowired
     private HolidayRepository holidayRepo;
-
 
     public DTOcoursesResponseToController getAllCoursesFromDB(String sub) {
 
@@ -105,7 +112,6 @@ public class AdminEngine {
             return new DTOcoursesResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 
     public DTOcoursesResponseToController updateCourseInDB(Course course, String sub) {
         try {
@@ -262,17 +268,17 @@ public class AdminEngine {
             holidayRepo.deleteAll();
 
             // save Holidays current year
-            holidays = HolidaysEngine.getDatesOfHolidays(holidaysApiKey, ISRAEL_HOLIDAYS_CODE, Year.now().getValue());
+            holidays = holidaysEngine.getDatesOfHolidays(holidaysApiKey, ISRAEL_HOLIDAYS_CODE, Year.now().getValue());
             holidayRepo.saveAll(holidays);
             // save Holidays next year
-            holidays = HolidaysEngine.getDatesOfHolidays(holidaysApiKey, ISRAEL_HOLIDAYS_CODE, Year.now().getValue() + 1);
+            holidays = holidaysEngine.getDatesOfHolidays(holidaysApiKey, ISRAEL_HOLIDAYS_CODE, Year.now().getValue() + 1);
             holidayRepo.saveAll(holidays);
 
             this.holidays.setHolidays(holidayRepo.findAll());
 
             return new DTOholidaysResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
 
-        } catch (URISyntaxException | UnirestException e) {
+        } catch (IOException e) {
             // e.g. when there was problem with the url parsing or the response parsing in getDatesOfHolidays
             logger.error(buildExceptionMessage(e));
             holidayRepo.saveAll(oldHolidays);

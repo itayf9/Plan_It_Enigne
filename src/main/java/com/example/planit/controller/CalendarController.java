@@ -1,16 +1,13 @@
 package com.example.planit.controller;
 
 import com.example.planit.engine.CalendarEngine;
-import com.example.planit.holidays.PlanITHolidays;
-import com.example.planit.model.mongo.course.CoursesRepository;
+import com.example.planit.holidays.PlanITHolidaysWrapper;
 import com.example.planit.model.mongo.holiday.HolidayRepository;
-import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.dto.*;
 import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,32 +20,19 @@ import java.util.Map;
 public class CalendarController {
 
     @Autowired
-    private CoursesRepository courseRepo;
-
-    @Autowired
-    private UserRepository userRepo;
-
-    @Autowired
     private HolidayRepository holidayRepo;
 
     public static Logger logger = LogManager.getLogger(CalendarController.class);
 
     @Autowired
-    PlanITHolidays holidays;
+    PlanITHolidaysWrapper holidays;
 
-    @Value("${spring.security.oauth2.client.registration.google.client-id}")
-    String CLIENT_ID;
-
-    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
-    String CLIENT_SECRET;
+    @Autowired
     private CalendarEngine calendarEngine;
 
     @PostConstruct
     private void init() {
         holidays.setHolidays(holidayRepo.findAll());
-
-        // initialize CalendarEngine
-        this.calendarEngine = new CalendarEngine(CLIENT_ID, CLIENT_SECRET, userRepo, courseRepo, holidays);
     }
 
     /**

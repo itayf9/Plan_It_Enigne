@@ -3,24 +3,20 @@ package com.example.planit.engine;
 import com.example.planit.holidays.Holiday;
 import com.example.planit.holidays.HolidaysResponse;
 import com.google.gson.Gson;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
-import org.apache.http.client.utils.URIBuilder;
+import com.squareup.okhttp.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
-import java.net.URISyntaxException;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-
+@Service
 public class HolidaysEngine {
 
     public static Logger logger = LogManager.getLogger(HolidaysEngine.class);
 
     public static Gson gson = new Gson();
-
-    //static final String apiKey = env.get //"c2c659ee-3ac3-4699-b5fa-ff45ea405d7e";
     private static final String UrlRequest = "https://calendarific.com/api/v2/holidays";
 
     /**
@@ -31,27 +27,27 @@ public class HolidaysEngine {
      * @param year           the requested year
      * @return set of string that present the dates of the holidays.
      */
-    public static Set<com.example.planit.model.mongo.holiday.Holiday> getDatesOfHolidays(String holidaysApiKey, String country, int year) throws URISyntaxException, UnirestException {
-
-        Unirest.setTimeouts(0, 0);
-
+    public Set<com.example.planit.model.mongo.holiday.Holiday> getDatesOfHolidays(String holidaysApiKey, String country, int year) throws IOException {
         Set<com.example.planit.model.mongo.holiday.Holiday> allHolidays = new HashSet<>();
 
-        // create the url with query parameters
-        URIBuilder uriBuilder = new URIBuilder("https://calendarific.com/api/v2/holidays");
-        uriBuilder.addParameter("api_key", holidaysApiKey);
-        uriBuilder.addParameter("country", country);
-        uriBuilder.addParameter("year", Integer.toString(year));
-        uriBuilder.build();
+        OkHttpClient client = new OkHttpClient();
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(UrlRequest).newBuilder();
+        urlBuilder.addQueryParameter("api_key", holidaysApiKey);
+        urlBuilder.addQueryParameter("country", country);
+        urlBuilder.addQueryParameter("year", Integer.toString(year));
+        String url = urlBuilder.build().toString();
 
-        // send get request to "calendarific" server with the url that require to get all jews holidays
-        HttpResponse<String> response = Unirest.get(uriBuilder.toString()).asString();
+        Request request = new Request.Builder().url(url).build();
 
-        if (response.getStatus() != 200) {
-            throw new RuntimeException("code: " + response.getStatus());
+        Call call = client.newCall(request);
+        Response response = call.execute();
+
+        if (response.code() != 200) {
+            throw new RuntimeException("code: " + response.code());
         } else {
+
             // parse the response to holidaysResponse object
-            HolidaysResponse holidaysResponse = gson.fromJson(response.getBody(), HolidaysResponse.class);
+            HolidaysResponse holidaysResponse = gson.fromJson(response.body().string(), HolidaysResponse.class);
 
             // extract the holidays in array to convert them to map
             Holiday[] holidaysArray = holidaysResponse.getResponse().getHolidays();
@@ -62,20 +58,6 @@ public class HolidaysEngine {
                 allHolidays.add(new com.example.planit.model.mongo.holiday.Holiday(holiday.getName(), holiday.getDate().getIso()));
             }
         }
-
-
         return allHolidays;
     }
-
-    /**
-     * get the country and the year and return in url the full url to get request form "calendarific" server.
-     *
-     * @param country the country we want the holidays from (e.g. il is all the jewish and national holidays in israel)
-     * @param year    the year we want the date of the holidays
-     * @return string that return contain the full url to get request
-     */
-    public static String createUrlForCurrentCountryAndYear(String holidaysApiKey, String country, int year) {
-        return UrlRequest + "?" + "api_key=" + holidaysApiKey + "&country=" + country + "&year=" + year;
-    }
-
 }

@@ -5,7 +5,7 @@ import com.example.planit.model.mongo.holiday.Holiday;
 import java.util.List;
 
 @Service
-public class PlanITHolidays {
+public class PlanITHolidaysWrapper {
     private List<Holiday> holidays;
 
     public List<Holiday> getHolidays() {

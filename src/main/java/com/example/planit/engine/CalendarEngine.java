@@ -1,6 +1,6 @@
 package com.example.planit.engine;
 
-import com.example.planit.holidays.PlanITHolidays;
+import com.example.planit.holidays.PlanITHolidaysWrapper;
 import com.example.planit.model.exam.Exam;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
@@ -15,6 +15,8 @@ import com.example.planit.utill.EventComparator;
 import com.example.planit.utill.Utility;
 import com.example.planit.utill.dto.*;
 import com.example.planit.utill.exception.UserCalendarNotFoundException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.auth.oauth2.RefreshTokenRequest;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.auth.oauth2.TokenResponseException;
@@ -36,8 +38,10 @@ import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -50,33 +54,28 @@ import java.util.*;
 import static com.example.planit.utill.Constants.*;
 import static com.example.planit.utill.Utility.buildExceptionMessage;
 import static com.example.planit.utill.Utility.roundInstantMinutesTime;
-
+@Service
 public class CalendarEngine {
-
     public static Logger logger = LogManager.getLogger(CalendarEngine.class);
+    @Autowired
+    private CoursesRepository courseRepo;
 
-    private final CoursesRepository courseRepo;
+    @Autowired
+    private UserRepository userRepo;
 
-    private final UserRepository userRepo;
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    String CLIENT_ID;
 
-    private final String CLIENT_ID;
-    private final String CLIENT_SECRET;
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    String CLIENT_SECRET;
 
-    private final PlanITHolidays holidays;
+    @Autowired
+    private PlanITHolidaysWrapper holidays;
 
     /**
      * Global instance of the JSON factory.
      */
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-
-    public CalendarEngine(String CLIENT_ID, String CLIENT_SECRET, UserRepository userRepo, CoursesRepository courseRepo,
-                          PlanITHolidays holidays) {
-        this.CLIENT_ID = CLIENT_ID;
-        this.CLIENT_SECRET = CLIENT_SECRET;
-        this.userRepo = userRepo;
-        this.courseRepo = courseRepo;
-        this.holidays = holidays;
-    }
 
     /**
      * Extract all the events that are in the user calendars.
@@ -1379,19 +1378,21 @@ public class CalendarEngine {
     }
 
     public static boolean hasAuthorizeScopesStillValid(String access_token) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url("https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=" + access_token)
                 .build();
         Response response = client.newCall(request).execute();
         String responseBody = response.body().string();
-        JSONObject jsonObject = new JSONObject(responseBody);
+        JsonNode jsonNode = objectMapper.readTree(responseBody);
 
         // if response is >= 200 && < 300
         if (response.isSuccessful()) {
 
             // continue to check for required scope
-            String scopes = (String) jsonObject.get("scope");
+            String scopes = jsonNode.get("scope").asText();
             String[] scopesArray = scopes.split(" ");
 
             for (String scope : scopesArray) {
@@ -1420,67 +1421,3 @@ public class CalendarEngine {
     }
 
 }
-
-/*
-
-<string, int>
-<name, show>
-
-
-Priority Queue:    [           B   C           ]
-
-name      show     priority
-C          5       First
-
-
-[A][A][A][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]testA[C][B][B][B]testB[C][C][C][C]testC
-               {A,B,C}
-                1 2 3
-
-
-
-[ ][ ][ ][ ][ ]testA[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]testB
-
-after embed the exam's course names we know, for each course:
- numOfSessions
- numOfSubjects
-
- case1: numOfSessions > numOfSubjects
- - more than one subjects for each session.
-
- case2: numOfSubjects < numOfSessions
- - each subject for more than one session.
-
- case3: numOfSubjects = numOfSessions
- - each subject gets one session
-
-
-
-
-
- CCCBBAAAAAAA testA - testB CCCCC testC
-    {A,B,C}               {B,C}          {C}
-
-<<String, int>,       int>
-<<name,   difficult>, show>
-<-----------------------------------------------
-A   B   C
-3   3   5                Coman              OS &LINUX
-[A][A][A]testA[C][B][B][B]testB[C][C][C][C]testC
-
-A   B   C
-3   4   5
-[A][A][A]testA[B/C][B][B][B]testB[C][C][C][C]testC ?
-
-A   B   C
-4   2   6
-[A][A][A]testA[C][C][B][B]testB[C][C][C][C]testC
-
-A   B   C
-4   2   5
-[A][A][A]testA[ ][C][B][B]testB[C][C][C][C]testC ?
-
-A   B   C
-4   5   3
-[A][A][A]testA[B][B][B][B]testB[ ][C][C][C]testC
-* */
