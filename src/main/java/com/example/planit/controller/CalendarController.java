@@ -41,13 +41,14 @@ public class CalendarController {
      * @param sub user's sub value to search the User on DB & get preferences.
      * @return ResponseEntity<List < Event>> we return list of events in a case of full day events found, otherwise we generate the calendar.
      */
-    @PostMapping(value = "/scan")
-    public ResponseEntity<DTOscanResponseToClient> scanUserEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end) {
+    @PostMapping(value = "/scan", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<DTOscanResponseToClient> scanUserEvents(@RequestParam String sub, @RequestParam String start,
+                                                                  @RequestParam String end, @RequestBody(required = false) Map<Long, Boolean> decisions) {
 
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /scan with params: sub={0}, start={1}, end={2}", sub, start, end));
 
-        DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(sub, start, end);
+        DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(sub, start, end, decisions);
         long t = System.currentTimeMillis();
         long res = t - s;
         logger.info(MessageFormat.format("User {0}: scan time is {1} ms", sub, res));
@@ -56,33 +57,6 @@ public class CalendarController {
                 .body(new DTOscanResponseToClient(scanResponseToController.isSucceed(),
                         scanResponseToController.getDetails(),
                         scanResponseToController.getFullDayEvents(), scanResponseToController.getStudyPlan()));
-
-
-    }
-
-    /**
-     * this endpoint re-scan the user Calendar events, deals with the full days events that has been found and generates the plan it calendar.
-     *
-     * @param sub       user's sub value (as string), to search the User on DB & get preferences
-     * @param decisions array of boolean values representing the user's decisions for each of the full day events that were found
-     * @return ResponseEntity<String> this method not suppose to fail unless it's been called externally
-     */
-    @PostMapping(value = "/generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<DTOstatus> generateStudyEvents(@RequestParam String sub, @RequestParam String start, @RequestParam String end, @RequestBody Map<Long, Boolean> decisions) {
-
-        long s = System.currentTimeMillis();
-        logger.info(MessageFormat.format("User {0}: has requested POST /generate with params: sub={0}, start={1}, end={2}, decisions={3}", sub, start, end, decisions.toString()));
-
-        DTOgenerateResponseToController generateResponseToController = calendarEngine.generateStudyEvents(sub, start, end, decisions);
-        long t = System.currentTimeMillis();
-        long res = t - s;
-        logger.info(MessageFormat.format("User {0}: generate time is {1} ms", sub, res));
-
-        return ResponseEntity.status(generateResponseToController.getHttpStatus())
-                .body(new DTOgenerateResponseToClient(generateResponseToController.isSucceed(),
-                        generateResponseToController.getDetails(), generateResponseToController.getStudyPlan()));
-
-
     }
 
     @GetMapping(value = "/study-plan")

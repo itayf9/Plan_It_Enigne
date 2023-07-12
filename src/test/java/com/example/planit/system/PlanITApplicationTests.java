@@ -8,6 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @SpringBootTest
 class PlanITApplicationTests {
     @Autowired
@@ -15,13 +18,16 @@ class PlanITApplicationTests {
 
     private final String subjectIDForTestInput = "112510677559500692451";
 
+    private final Map<Long, Boolean> decisions = new HashMap<>();
+
     @Test
     void noExams() {
         String expectedOutput = Constants.ERROR_NO_EXAMS_FOUND;
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2022-12-31T22:00:00.000Z",
-                "2023-01-01T21:59:59.000Z").getDetails();
+                "2023-01-01T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -31,7 +37,8 @@ class PlanITApplicationTests {
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-01-04T22:00:00.000Z",
-                "2023-01-15T21:59:59.000Z").getDetails();
+                "2023-01-15T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -41,7 +48,8 @@ class PlanITApplicationTests {
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-01-15T22:00:00.000Z",
-                "2023-01-31T21:59:59.000Z").getDetails();
+                "2023-01-31T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -51,7 +59,8 @@ class PlanITApplicationTests {
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-02-01T22:00:00.000Z",
-                "2023-02-15T21:59:59.000Z").getDetails();
+                "2023-02-15T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -61,7 +70,8 @@ class PlanITApplicationTests {
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-02-16T22:00:00.000Z",
-                "2023-02-27T21:59:59.000Z").getDetails();
+                "2023-02-27T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -71,7 +81,8 @@ class PlanITApplicationTests {
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-02-26T22:00:00.000Z",
-                "2023-03-05T21:59:59.000Z").getDetails();
+                "2023-03-05T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -81,7 +92,8 @@ class PlanITApplicationTests {
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-03-16T22:00:00.000Z",
-                "2023-03-29T21:59:59.000Z").getDetails();
+                "2023-03-29T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -91,7 +103,8 @@ class PlanITApplicationTests {
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-05-01T22:00:00.000Z",
-                "2023-05-15T21:59:59.000Z").getDetails();
+                "2023-05-15T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -101,7 +114,8 @@ class PlanITApplicationTests {
         String actualOutput = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-05-16T22:00:00.000Z",
-                "2023-06-15T21:59:59.000Z").getDetails();
+                "2023-06-15T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -111,7 +125,8 @@ class PlanITApplicationTests {
         String actualOutput = calendarEngine.scanUserEvents(
                 "1",
                 "2022-12-31T22:00:00.000Z",
-                "2023-01-31T21:59:59.000Z").getDetails();
+                "2023-01-31T21:59:59.000Z",
+                decisions).getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
@@ -121,7 +136,8 @@ class PlanITApplicationTests {
         DTOscanResponseToController scanResponse = calendarEngine.scanUserEvents(
                 subjectIDForTestInput,
                 "2023-05-07T22:00:00.000Z",
-                "2023-05-28T21:59:59.000Z");
+                "2023-05-28T21:59:59.000Z",
+                decisions);
         String actualOutput = scanResponse.getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
         Assertions.assertEquals(actualOutput, expectedOutput);
