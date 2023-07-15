@@ -33,6 +33,7 @@ public class CalendarController {
     @PostConstruct
     private void init() {
         holidays.setHolidays(holidayRepo.findAll());
+        logger.info("System is up successfully");
     }
 
     /**
