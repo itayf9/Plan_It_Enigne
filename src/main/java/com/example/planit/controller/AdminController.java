@@ -82,7 +82,7 @@ public class AdminController {
     @PutMapping(value = "/update-holidays")
     public ResponseEntity<DTOstatus> updateHolidays(@RequestParam String sub) {
 
-        DTOholidaysResponseToController dtOholidaysResponseToController = adminEngine.updateHolidays(sub);
+        DTOResponseToController dtOholidaysResponseToController = adminEngine.updateHolidays(sub);
 
         return ResponseEntity.status(dtOholidaysResponseToController.getHttpStatus())
                 .body(new DTOstatus(dtOholidaysResponseToController.isSucceed(), dtOholidaysResponseToController.getDetails()));

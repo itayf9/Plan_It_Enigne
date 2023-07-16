@@ -6,24 +6,17 @@ import org.springframework.http.HttpStatus;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DTOusersResponseToController extends DTOstatus {
-    private final HttpStatus httpStatus;
+public class DTOusersResponseToController extends DTOResponseToController {
     private final List<UserClientRepresentation> users;
 
     public DTOusersResponseToController(boolean isSucceed, String details, HttpStatus httpStatus, List<UserClientRepresentation> users) {
-        super(isSucceed, details);
-        this.httpStatus = httpStatus;
+        super(isSucceed, details, httpStatus);
         this.users = users;
     }
 
     public DTOusersResponseToController(boolean isSucceed, String details, HttpStatus httpStatus) {
-        super(isSucceed, details);
-        this.httpStatus = httpStatus;
+        super(isSucceed, details, httpStatus);
         this.users = new ArrayList<>();
-    }
-
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
     }
 
     public List<UserClientRepresentation> getUsers() {

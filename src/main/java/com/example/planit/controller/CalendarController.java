@@ -55,9 +55,11 @@ public class CalendarController {
         logger.info(MessageFormat.format("User {0}: scan time is {1} ms", sub, res));
 
         return ResponseEntity.status(scanResponseToController.getHttpStatus())
-                .body(new DTOscanResponseToClient(scanResponseToController.isSucceed(),
+                .body(new DTOscanResponseToClient(
+                        scanResponseToController.isSucceed(),
                         scanResponseToController.getDetails(),
-                        scanResponseToController.getFullDayEvents(), scanResponseToController.getStudyPlan()));
+                        scanResponseToController.getFullDayEvents(),
+                        scanResponseToController.getStudyPlan()));
     }
 
     @GetMapping(value = "/study-plan")
@@ -73,7 +75,9 @@ public class CalendarController {
         logger.info(MessageFormat.format("User {0}: study-plan time is {1} ms", sub, res));
 
         return ResponseEntity.status(dtOstudyPlanResponseToController.getHttpStatus())
-                .body(new DTOstudyPlanResponseToClient(dtOstudyPlanResponseToController.isSucceed(),
-                        dtOstudyPlanResponseToController.getDetails(), dtOstudyPlanResponseToController.getStudyPlan()));
+                .body(new DTOstudyPlanResponseToClient(
+                        dtOstudyPlanResponseToController.isSucceed(),
+                        dtOstudyPlanResponseToController.getDetails(),
+                        dtOstudyPlanResponseToController.getStudyPlan()));
     }
 }
