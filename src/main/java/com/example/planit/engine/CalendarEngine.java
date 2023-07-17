@@ -1402,22 +1402,69 @@ public class CalendarEngine {
         return false; // scope was not found or response wasn't successful
     }
 
-    public DTOstudyPlanResponseToController getUserLatestStudyPlan(String sub) {
+    public DTOstudyPlanAndSessionResponseToController getUserLatestStudyPlan(String sub) {
 
         try {
 
             Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
             if (maybeUser.isEmpty()) {
-                return new DTOstudyPlanResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                return new DTOstudyPlanAndSessionResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
-            return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan());
+            User user = maybeUser.get();
+            // refresh access_token before making api call
+            validateAccessTokenExpireTime(user);
+
+            // check if access_token still have scope for Google calendar
+            if (!hasAuthorizeScopesStillValid(user.getAuth().getAccessToken())) {
+                return new DTOstudyPlanAndSessionResponseToController(false, Constants.ERROR_NO_VALID_ACCESS_TOKEN, HttpStatus.UNAUTHORIZED);
+            }
+
+            return new DTOstudyPlanAndSessionResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan(), getUpComingSessionForUser(user));
         } catch (Exception e) {
             logger.error(buildExceptionMessage(e));
-            return new DTOstudyPlanResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new DTOstudyPlanAndSessionResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
+    private StudySession getUpComingSessionForUser(User user) throws GeneralSecurityException, IOException {
+
+        Calendar calendarService = getCalendarService(user.getAuth().getAccessToken(), user.getAuth().getExpireTimeInMilliseconds());
+
+        List<CalendarListEntry> calendarList = getCalendarList(calendarService);
+
+        StudySession upComingSession = null;
+
+        Instant currentTime = Instant.now();
+        DateTime startTime = new DateTime(currentTime.toEpochMilli());
+
+        Events events = null;
+
+        for (CalendarListEntry calendar : calendarList) {
+            if (calendar.getId().equals(user.getPlanItCalendarID())) {
+                events = calendarService.events().list(calendar.getId())
+                        .setTimeMin(startTime)
+                        .setOrderBy("startTime")
+                        .setSingleEvents(true)
+                        .execute();
+                break;
+            }
+        }
+
+        // if the user have calendar. we return the upComing study session.
+        if (events != null) {
+            List<Event> ListOfEvent = events.getItems();
+            if (ListOfEvent.size() != 0)
+            {
+                Event event = ListOfEvent.get(0);
+                upComingSession = new StudySession(event.getStart().getDateTime(), event.getEnd().getDateTime());
+                upComingSession.setCourseName(event.getSummary());
+                upComingSession.setDescription(event.getDescription());
+            }
+        }
+
+        return upComingSession;
+    }
 }
 
 /*
