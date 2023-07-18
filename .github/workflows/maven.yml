@@ -21,21 +21,42 @@ jobs:
           cache: maven
 
       - name: Write value to Properties-file
-        uses: christian-draeger/write-properties@1.1.0
-        with:
-          path: './src/main/resources/application.properties'
-          property: |
-            'spring.data.mongodb.uri'
-            'spring.data.mongodb.database'
-            'spring.security.oauth2.client.registration.google.client-id'
-            'spring.security.oauth2.client.registration.google.client-secret'
-            'holidays_api_key'
-          value: |
-            ${{ secrets.MONGODB_URI }}
-            ${{ secrets.MONGODB_DATABASE }}
-            ${{ secrets.CLIENT_ID }}
-            ${{ secrets.CLIENT_SECRET }}
-            ${{ secrets.HOLIDAYS_API_KEY }}
+        run: |
+          cd src/main/resources
+          touch application.properties
+          echo spring.data.mongodb.uri=${{ secrets.MONGODB_URI }} >> application.properties
+          echo spring.data.mongodb.uri=${{ secrets.MONGODB_URI }} >> application.properties
+          echo spring.data.mongodb.database=${{ secrets.MONGODB_DATABASE }} >> application.properties
+          echo spring.security.oauth2.client.registration.google.client-id=${{ secrets.CLIENT_ID }} >> application.properties
+          echo spring.security.oauth2.client.registration.google.client-secret=${{ secrets.CLIENT_SECRET }} >> application.properties
+          echo holidays_api_key=${{ secrets.HOLIDAYS_API_KEY }} >> application.properties
 
-      - name: Build with Maven
-        run: mvn clean install
+      - name: Verify properties file exist
+        run: | 
+          cd src/main/resources
+          cat application.properties > properties.txt
+          cat application.properties
+
+#      - name: Build with Maven
+#        run: mvn clean install
+
+      - name: Upload response artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: UpdateHolidaysTest
+          path: /home/runner/work/Plan_IT_Engine/Plan_IT_Engine/target/surefire-reports/com.example.planit.mongo.UpdateHolidaysTest.txt
+
+      - name: Upload response artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: PlanITApplicationTests
+          path: /home/runner/work/Plan_IT_Engine/Plan_IT_Engine/target/surefire-reports/com.example.planit.system.PlanITApplicationTests.txt
+
+      - name: Upload response artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: properties
+          path: /home/runner/work/Plan_IT_Engine/Plan_IT_Engine/src/main/resources/properties.txt
