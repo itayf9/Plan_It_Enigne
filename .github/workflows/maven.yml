@@ -31,7 +31,7 @@ jobs:
           echo holidays_api_key=${{ secrets.HOLIDAYS_API_KEY }} >> application.properties
 
       - name: Verify properties file exist
-        run: | 
+        run: |
           cd src/main/resources
           cat application.properties > properties.txt
           cat application.properties
@@ -39,20 +39,20 @@ jobs:
       - name: Build with Maven
         run: mvn clean install
 
-      - name: Upload response artifact
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: UpdateHolidaysTest
-          path: /home/runner/work/Plan_IT_Engine/Plan_IT_Engine/target/surefire-reports/com.example.planit.mongo.UpdateHolidaysTest.txt
-
-      - name: Upload response artifact
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: PlanITApplicationTests
-          path: /home/runner/work/Plan_IT_Engine/Plan_IT_Engine/target/surefire-reports/com.example.planit.system.PlanITApplicationTests.txt
-
+#      - name: Upload response artifact
+#        if: always()
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: UpdateHolidaysTest
+#          path: /home/runner/work/Plan_IT_Engine/Plan_IT_Engine/target/surefire-reports/com.example.planit.mongo.UpdateHolidaysTest.txt
+#
+#      - name: Upload response artifact
+#        if: always()
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: PlanITApplicationTests
+#          path: /home/runner/work/Plan_IT_Engine/Plan_IT_Engine/target/surefire-reports/com.example.planit.system.PlanITApplicationTests.txt
+#
       - name: Upload response artifact
         if: always()
         uses: actions/upload-artifact@v3
