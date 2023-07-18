@@ -64,10 +64,10 @@ public class CalendarEngine {
     private UserRepository userRepo;
 
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
-    String CLIENT_ID;
+    private String CLIENT_ID;
 
     @Value("${spring.security.oauth2.client.registration.google.client-secret}")
-    String CLIENT_SECRET;
+    private String CLIENT_SECRET;
 
     @Autowired
     private PlanITHolidaysWrapper holidays;

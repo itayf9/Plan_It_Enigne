@@ -25,14 +25,14 @@ public class CalendarController {
     public static Logger logger = LogManager.getLogger(CalendarController.class);
 
     @Autowired
-    PlanITHolidaysWrapper holidays;
+    private PlanITHolidaysWrapper holidaysWrapper;
 
     @Autowired
     private CalendarEngine calendarEngine;
 
     @PostConstruct
     private void init() {
-        holidays.setHolidays(holidayRepo.findAll());
+        holidaysWrapper.setHolidays(holidayRepo.findAll());
         logger.info("System is up successfully");
     }
 
