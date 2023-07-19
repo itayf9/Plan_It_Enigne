@@ -10,11 +10,9 @@ import com.example.planit.utill.dto.DTOstatus;
 import com.example.planit.utill.dto.DTOuserClientRepresentation;
 import com.example.planit.utill.exception.UnauthorizedUserException;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
-import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,21 +30,14 @@ import static com.example.planit.utill.Utility.buildExceptionMessage;
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
 public class UserController {
-
     private static final Logger logger = LogManager.getLogger(UserController.class);
-
-    @Autowired
-    private Environment env;
 
     @Autowired
     UserRepository userRepo;
 
+    @Autowired
     private UserEngine userEngine;
 
-    @PostConstruct
-    private void init() {
-        this.userEngine = new UserEngine(userRepo, env);
-    }
 
     /**
      * login endpoint : this endpoint will check if user signed up before pressing the login

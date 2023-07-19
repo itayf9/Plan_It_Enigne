@@ -1,5 +1,6 @@
 package com.example.planit.engine;
 
+import com.example.planit.holidays.PlanITHolidaysWrapper;
 import com.example.planit.model.exam.Exam;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
@@ -14,6 +15,8 @@ import com.example.planit.utill.EventComparator;
 import com.example.planit.utill.Utility;
 import com.example.planit.utill.dto.*;
 import com.example.planit.utill.exception.UserCalendarNotFoundException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.auth.oauth2.RefreshTokenRequest;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.auth.oauth2.TokenResponseException;
@@ -35,8 +38,10 @@ import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -49,33 +54,28 @@ import java.util.*;
 import static com.example.planit.utill.Constants.*;
 import static com.example.planit.utill.Utility.buildExceptionMessage;
 import static com.example.planit.utill.Utility.roundInstantMinutesTime;
-
+@Service
 public class CalendarEngine {
-
     public static Logger logger = LogManager.getLogger(CalendarEngine.class);
+    @Autowired
+    private CoursesRepository courseRepo;
 
-    private final CoursesRepository courseRepo;
+    @Autowired
+    private UserRepository userRepo;
 
-    private final UserRepository userRepo;
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String CLIENT_ID;
 
-    private final String CLIENT_ID;
-    private final String CLIENT_SECRET;
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    private String CLIENT_SECRET;
 
-    private final List<Holiday> holidays;
+    @Autowired
+    private PlanITHolidaysWrapper holidays;
 
     /**
      * Global instance of the JSON factory.
      */
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-
-    public CalendarEngine(String CLIENT_ID, String CLIENT_SECRET, UserRepository userRepo, CoursesRepository courseRepo,
-                          List<Holiday> holidays) {
-        this.CLIENT_ID = CLIENT_ID;
-        this.CLIENT_SECRET = CLIENT_SECRET;
-        this.userRepo = userRepo;
-        this.courseRepo = courseRepo;
-        this.holidays = holidays;
-    }
 
     /**
      * Extract all the events that are in the user calendars.
@@ -1058,7 +1058,7 @@ public class CalendarEngine {
      * @param end       the user's preferred end time to generate to (in ISO format)
      * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
      */
-    public DTOscanResponseToController scanUserEvents(String subjectID, String start, String end) {
+    public DTOscanResponseToController scanUserEvents(String subjectID, String start, String end, Map<Long, Boolean> decisions) {
 
         Instant measureTimeInstant;
 
@@ -1111,12 +1111,26 @@ public class CalendarEngine {
             fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
 
             // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
-            if (fullDayEvents.size() != 0) {
+            if (fullDayEvents.size() != 0 && decisions.size() == 0) {
 
                 // return the user with the updated list of fullDayEvents.
                 return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents, new StudyPlan());
             }
 
+            // go through the list of full day events
+            for (Event fullDayEvent : fullDayEvents) {
+
+                boolean userWantToStudyAtCurrentFullDayEvent = decisions.get(fullDayEvent.getStart().getDate().getValue());
+
+                // check if user want to study at the current fullDayEvent
+                if (!userWantToStudyAtCurrentFullDayEvent) {
+                    // change the full day event to regular event and add it to the regularEvents
+                    Event convertedFullDayEvent = Utility.convertFullDayEventToRegularEvent(fullDayEvent);
+                    regularEvents.add(convertedFullDayEvent);
+                }
+            }
+
+            regularEvents.sort(new EventComparator());
 
             generatePlanItCalendar(regularEvents,
                     userCalendarsInformation.getExamsFound(),
@@ -1172,7 +1186,7 @@ public class CalendarEngine {
         List<Event> fullDayEventsWithHolidays = new ArrayList<>();
 
         // filters the holidays to be in range of 'start' and 'end'
-        List<Holiday> holidaysInRange = holidays.stream().filter(holiday -> DateTime.parseRfc3339(holiday.getHolidayStartDate()).getValue() >= DateTime.parseRfc3339(start).getValue()
+        List<Holiday> holidaysInRange = holidays.getHolidays().stream().filter(holiday -> DateTime.parseRfc3339(holiday.getHolidayStartDate()).getValue() >= DateTime.parseRfc3339(start).getValue()
                 && DateTime.parseRfc3339(holiday.getHolidayStartDate()).getValue() <= DateTime.parseRfc3339(end).getValue()).toList();
 
 
@@ -1279,118 +1293,22 @@ public class CalendarEngine {
         return modifiedFullDayEventsList;
     }
 
-    /**
-     * performs a scan on the user events and gather some information.
-     * then, performs generate PlanIt calendar after handling full days events' user's decisions
-     *
-     * @param sub           the user's sub value
-     * @param start         the user's preferred start time to generate from (in ISO format)
-     * @param end           the user's preferred end time to generate to (in ISO format)
-     * @param userDecisions an array of boolean that represents the full day events' user's decisions
-     * @return a {@link DTOgenerateResponseToController} represents the information that should be returned to the scan controller
-     */
-    public DTOgenerateResponseToController generateStudyEvents(String sub, String start, String end, Map<Long, Boolean> userDecisions) {
-
-        StudyPlan studyPlan = new StudyPlan();
-        studyPlan.setStartDateTimeOfPlan(start);
-        studyPlan.setEndDateTimeOfPlan(end);
-        try {
-            // check if user exist in DB
-            Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
-            if (maybeUser.isEmpty()) {
-                return new DTOgenerateResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
-            }
-
-            // get instance of the user
-            User user = maybeUser.get();
-
-            // 1# get List of user's events
-            // perform a scan on the user's Calendar to get all of his events at the time interval
-            DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
-            // fullDayEvents - a list of events that represents the user's full day events
-            List<Event> fullDayEvents = userCalendarsInformation.getFullDayEvents();
-            // planItCalendarOldEvents - a list of PlanIt calendar old events
-            List<Event> planItCalendarOldEvents = userCalendarsInformation.getPlanItCalendarOldEvents();
-            // events - a list of events that represents all the user's events
-            List<Event> regularEvents = userCalendarsInformation.getEvents();
-            List<Exam> examsFound = userCalendarsInformation.getExamsFound();
-            studyPlan.convertAndSetScannedExamsAsClientRepresentation(examsFound);
-
-            // remove duplications
-            fullDayEvents = removeDuplicationsByDate(fullDayEvents);
-
-            // add the holidays
-            fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
-
-            // check if fullDayEvents List is empty (which doesn't suppose to be)
-            if (fullDayEvents.size() != 0) {
-
-                // go through the list of full day events
-                for (Event fullDayEvent : fullDayEvents) {
-
-                    boolean userWantToStudyAtCurrentFullDayEvent = userDecisions.get(fullDayEvent.getStart().getDate().getValue());
-
-                    // check if user want to study at the current fullDayEvent
-                    if (!userWantToStudyAtCurrentFullDayEvent) {
-                        // change the full day event to regular event and add it to the regularEvents
-                        Event convertedFullDayEvent = Utility.convertFullDayEventToRegularEvent(fullDayEvent);
-                        regularEvents.add(convertedFullDayEvent);
-                    }
-                }
-
-                regularEvents.sort(new EventComparator());
-            }
-
-            // 2# 3# 4# 5#
-            generatePlanItCalendar(regularEvents, userCalendarsInformation.getExamsFound(), maybeUser.get(), userCalendarsInformation.getCalendarService(), start, planItCalendarOldEvents, studyPlan);
-
-            user.setLatestStudyPlan(studyPlan);
-            userRepo.save(user);
-
-        } catch (UserCalendarNotFoundException e) {
-            // e.g. when the user doesn't have Exams Calendar
-            logger.error(buildExceptionMessage(e));
-            return new DTOgenerateResponseToController(false, ERROR_COLLEGE_CALENDAR_NOT_FOUND, HttpStatus.NOT_ACCEPTABLE);
-        } catch (TokenResponseException e) {
-            logger.error(buildExceptionMessage(e));
-            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
-                // e.g. when the refresh token has expired
-                return new DTOgenerateResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
-            } else {
-                // e.g. an unknown error had happened
-                return new DTOgenerateResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        } catch (IOException e) {
-            // e.g. when we call Google API with execute() method
-            logger.error(buildExceptionMessage(e));
-            return new DTOgenerateResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (GeneralSecurityException e) {
-            // e.g. could not create HTTP secure connection
-            logger.error(buildExceptionMessage(e));
-            return new DTOgenerateResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
-            // e.g. an unknown error had happened
-            logger.error(buildExceptionMessage(e));
-            return new DTOgenerateResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-        return new DTOgenerateResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
-    }
-
     public static boolean hasAuthorizeScopesStillValid(String access_token) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url("https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=" + access_token)
                 .build();
         Response response = client.newCall(request).execute();
         String responseBody = response.body().string();
-        JSONObject jsonObject = new JSONObject(responseBody);
+        JsonNode jsonNode = objectMapper.readTree(responseBody);
 
         // if response is >= 200 && < 300
         if (response.isSuccessful()) {
 
             // continue to check for required scope
-            String scopes = (String) jsonObject.get("scope");
+            String scopes = jsonNode.get("scope").asText();
             String[] scopesArray = scopes.split(" ");
 
             for (String scope : scopesArray) {
@@ -1419,67 +1337,3 @@ public class CalendarEngine {
     }
 
 }
-
-/*
-
-<string, int>
-<name, show>
-
-
-Priority Queue:    [           B   C           ]
-
-name      show     priority
-C          5       First
-
-
-[A][A][A][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]testA[C][B][B][B]testB[C][C][C][C]testC
-               {A,B,C}
-                1 2 3
-
-
-
-[ ][ ][ ][ ][ ]testA[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]testB
-
-after embed the exam's course names we know, for each course:
- numOfSessions
- numOfSubjects
-
- case1: numOfSessions > numOfSubjects
- - more than one subjects for each session.
-
- case2: numOfSubjects < numOfSessions
- - each subject for more than one session.
-
- case3: numOfSubjects = numOfSessions
- - each subject gets one session
-
-
-
-
-
- CCCBBAAAAAAA testA - testB CCCCC testC
-    {A,B,C}               {B,C}          {C}
-
-<<String, int>,       int>
-<<name,   difficult>, show>
-<-----------------------------------------------
-A   B   C
-3   3   5                Coman              OS &LINUX
-[A][A][A]testA[C][B][B][B]testB[C][C][C][C]testC
-
-A   B   C
-3   4   5
-[A][A][A]testA[B/C][B][B][B]testB[C][C][C][C]testC ?
-
-A   B   C
-4   2   6
-[A][A][A]testA[C][C][B][B]testB[C][C][C][C]testC
-
-A   B   C
-4   2   5
-[A][A][A]testA[ ][C][B][B]testB[C][C][C][C]testC ?
-
-A   B   C
-4   5   3
-[A][A][A]testA[B][B][B][B]testB[ ][C][C][C]testC
-* */

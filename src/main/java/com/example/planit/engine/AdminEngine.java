@@ -1,5 +1,6 @@
 package com.example.planit.engine;
 
+import com.example.planit.holidays.PlanITHolidaysWrapper;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
 import com.example.planit.model.mongo.holiday.Holiday;
@@ -8,16 +9,17 @@ import com.example.planit.model.mongo.user.User;
 import com.example.planit.model.mongo.user.UserClientRepresentation;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
+import com.example.planit.utill.dto.DTOresponseToController;
 import com.example.planit.utill.dto.DTOcoursesResponseToController;
-import com.example.planit.utill.dto.DTOholidaysResponseToController;
 import com.example.planit.utill.dto.DTOusersResponseToController;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 
-import java.net.URISyntaxException;
+import java.io.IOException;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,25 +30,28 @@ import static com.example.planit.model.mongo.user.UserClientRepresentation.build
 import static com.example.planit.utill.Constants.ERROR_DEFAULT;
 import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
 import static com.example.planit.utill.Utility.buildExceptionMessage;
-
+@Service
 public class AdminEngine {
 
-    private final Environment env;
+    @Autowired
+    private HolidaysEngine holidaysEngine;
 
-    private final CoursesRepository courseRepo;
+    @Autowired
+    private CoursesRepository courseRepo;
 
-    private final UserRepository userRepo;
+    @Autowired
+    private UserRepository userRepo;
+
+    @Autowired
+    PlanITHolidaysWrapper holidays;
+
+    @Value("${holidays_api_key}")
+    private String holidaysApiKey;
 
     public static Logger logger = LogManager.getLogger(AdminEngine.class);
 
-    private final HolidayRepository holidayRepo;
-
-    public AdminEngine(CoursesRepository courseRepo, UserRepository userRepo, HolidayRepository holidayRepo, Environment env) {
-        this.courseRepo = courseRepo;
-        this.userRepo = userRepo;
-        this.holidayRepo = holidayRepo;
-        this.env = env;
-    }
+    @Autowired
+    private HolidayRepository holidayRepo;
 
     public DTOcoursesResponseToController getAllCoursesFromDB(String sub) {
 
@@ -107,7 +112,6 @@ public class AdminEngine {
             return new DTOcoursesResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 
     public DTOcoursesResponseToController updateCourseInDB(Course course, String sub) {
         try {
@@ -242,42 +246,48 @@ public class AdminEngine {
 
     }
 
-    public DTOholidaysResponseToController updateHolidays(String sub) {
-        List<Holiday> oldHolidays = holidayRepo.findAll();
-        Set<Holiday> holidays;
-        try {
+    public DTOresponseToController updateHolidays(String sub) {
 
+        List<Holiday> oldHolidays = holidayRepo.findAll();
+
+        try {
             Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
             if (maybeUser.isEmpty()) {
-                return new DTOholidaysResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                return new DTOresponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
             User maybeAdminUser = maybeUser.get();
 
             if (!maybeAdminUser.isAdmin()) {
-                return new DTOholidaysResponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
+                return new DTOresponseToController(false, Constants.ERROR_UNAUTHORIZED_USER, HttpStatus.UNAUTHORIZED);
             }
 
-            // save Holidays current year
-            holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue());
-            holidayRepo.saveAll(holidays);
-            // save Holidays next year
-            holidays = HolidaysEngine.getDatesOfHolidays(env.getProperty("holidays_api_key"), ISRAEL_HOLIDAYS_CODE, Year.now().getValue() + 1);
-            holidayRepo.saveAll(holidays);
+            Set<Holiday> holidays;
 
             // remove old values to avoid duplication
-            holidayRepo.deleteAll(oldHolidays);
+            holidayRepo.deleteAll();
 
-            return new DTOholidaysResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
+            // save Holidays current year
+            holidays = holidaysEngine.getDatesOfHolidays(holidaysApiKey, ISRAEL_HOLIDAYS_CODE, Year.now().getValue());
+            holidayRepo.saveAll(holidays);
+            // save Holidays next year
+            holidays = holidaysEngine.getDatesOfHolidays(holidaysApiKey, ISRAEL_HOLIDAYS_CODE, Year.now().getValue() + 1);
+            holidayRepo.saveAll(holidays);
 
-        } catch (URISyntaxException | UnirestException e) {
+            this.holidays.setHolidays(holidayRepo.findAll());
+
+            return new DTOresponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
+
+        } catch (IOException e) {
             // e.g. when there was problem with the url parsing or the response parsing in getDatesOfHolidays
             logger.error(buildExceptionMessage(e));
-            return new DTOholidaysResponseToController(false, Constants.ERROR_CALENDRIFIC_EXCEPTION, HttpStatus.INTERNAL_SERVER_ERROR);
+            holidayRepo.saveAll(oldHolidays);
+            return new DTOresponseToController(false, Constants.ERROR_CALENDRIFIC_EXCEPTION, HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             // e.g. an unknown error had happened
+            holidayRepo.saveAll(oldHolidays);
             logger.error(buildExceptionMessage(e));
-            return new DTOholidaysResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new DTOresponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
