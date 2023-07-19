@@ -13,25 +13,27 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
-
+@Service
 public class UserEngine {
 
-    private final UserRepository userRepo;
-    private final Environment env;
+    @Autowired
+    private UserRepository userRepo;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    String CLIENT_ID;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    String CLIENT_SECRET;
 
     public static Logger logger = LogManager.getLogger(UserEngine.class);
-
-    public UserEngine(UserRepository userRepo, Environment env) {
-        this.userRepo = userRepo;
-        this.env = env;
-    }
 
     /**
      * update the access and refresh token in the DB for the user we get by the subject id in the googleTokenResponse
@@ -128,8 +130,7 @@ public class UserEngine {
         HttpTransport httpTransport = new NetHttpTransport();
         JsonFactory jsonFactory = GsonFactory.getDefaultInstance();
         String REDIRECT_URI = "http://localhost:3000";
-        String CLIENT_ID = Objects.requireNonNull(env.getProperty("spring.security.oauth2.client.registration.google.client-id"));
-        String CLIENT_SECRET = env.getProperty("spring.security.oauth2.client.registration.google.client-secret");
+
 
         return new GoogleAuthorizationCodeTokenRequest(
                 httpTransport,
