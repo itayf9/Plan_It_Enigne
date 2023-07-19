@@ -18,6 +18,19 @@ public class Preferences {
         this.userStudyEndTime = DEFAULT_USER_STUDY_END_TIME;
     }
 
+    /*@JsonCreator
+    public Preferences(@JsonProperty("userStudyStartTime") int userStudyStartTime,
+                       @JsonProperty("userStudyEndTime") int userStudyEndTime,
+                       @JsonProperty("userBreakTime") int userBreakTime,
+                       @JsonProperty("studySessionTime") int studySessionTime,
+                       @JsonProperty("studyOnWeekends") boolean isStudyOnWeekends) {
+        this.userStudyStartTime = userStudyStartTime;
+        this.userStudyEndTime = userStudyEndTime;
+        this.userBreakTime = userBreakTime;
+        this.studySessionTime = studySessionTime;
+        this.isStudyOnWeekends = isStudyOnWeekends;
+    }*/
+
     public int getUserStudyStartTime() {
         return userStudyStartTime;
     }
