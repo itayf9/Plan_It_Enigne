@@ -52,8 +52,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static com.example.planit.utill.Constants.*;
-import static com.example.planit.utill.Utility.buildExceptionMessage;
-import static com.example.planit.utill.Utility.roundInstantMinutesTime;
+import static com.example.planit.utill.Utility.*;
+
 @Service
 public class CalendarEngine {
     public static Logger logger = LogManager.getLogger(CalendarEngine.class);
@@ -1320,7 +1320,7 @@ public class CalendarEngine {
         return false; // scope was not found or response wasn't successful
     }
 
-    public DTOstudyPlanAndSessionResponseToController getUserLatestStudyPlan(String sub) {
+    public DTOstudyPlanAndSessionResponseToController getUserLatestStudyPlanAndUpComingSession(String sub) {
 
         try {
 
@@ -1351,17 +1351,15 @@ public class CalendarEngine {
 
         List<CalendarListEntry> calendarList = getCalendarList(calendarService);
 
-        StudySession upComingSession = null;
-
         Instant currentTime = Instant.now();
-        DateTime startTime = new DateTime(currentTime.toEpochMilli());
+        DateTime currentTimeInMilli = new DateTime(currentTime.toEpochMilli());
 
         Events events = null;
 
         for (CalendarListEntry calendar : calendarList) {
             if (calendar.getId().equals(user.getPlanItCalendarID())) {
                 events = calendarService.events().list(calendar.getId())
-                        .setTimeMin(startTime)
+                        .setTimeMin(currentTimeInMilli)
                         .setOrderBy("startTime")
                         .setSingleEvents(true)
                         .execute();
@@ -1369,18 +1367,15 @@ public class CalendarEngine {
             }
         }
 
-        // if the user have calendar. we return the upComing study session.
+        // if the user have PlanIt calendar. we return the upComing study session.
         if (events != null) {
-            List<Event> ListOfEvent = events.getItems();
-            if (ListOfEvent.size() != 0)
+            List<Event> listOfEvents = events.getItems();
+            if (listOfEvents.size() != 0)
             {
-                Event event = ListOfEvent.get(0);
-                upComingSession = new StudySession(event.getStart().getDateTime(), event.getEnd().getDateTime());
-                upComingSession.setCourseName(event.getSummary());
-                upComingSession.setDescription(event.getDescription());
+                return convertEventToUpcomingStudySession(listOfEvents.get(0));
             }
         }
-
-        return upComingSession;
+        return null;
     }
+
 }

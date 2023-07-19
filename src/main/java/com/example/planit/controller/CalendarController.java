@@ -67,18 +67,18 @@ public class CalendarController {
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /study-plan with params: sub={0}", sub));
 
-        DTOstudyPlanAndSessionResponseToController dtOstudyPlanAndUpComingSessionResponseToController = calendarEngine.getUserLatestStudyPlan(sub);
+        DTOstudyPlanAndSessionResponseToController dtOstudyPlanAndSessionResponseToController = calendarEngine.getUserLatestStudyPlanAndUpComingSession(sub);
 
         long t = System.currentTimeMillis();
         long res = t - s;
         logger.info(MessageFormat.format("User {0}: study-plan time is {1} ms", sub, res));
 
 
-        return ResponseEntity.status(dtOstudyPlanAndUpComingSessionResponseToController.getHttpStatus())
+        return ResponseEntity.status(dtOstudyPlanAndSessionResponseToController.getHttpStatus())
                 .body(new DTOstudyPlanAndSessionResponseToClient(
-                        dtOstudyPlanAndUpComingSessionResponseToController.isSucceed(),
-                        dtOstudyPlanAndUpComingSessionResponseToController.getDetails(),
-                        dtOstudyPlanAndUpComingSessionResponseToController.getStudyPlan(),
-                        dtOstudyPlanAndUpComingSessionResponseToController.getUpComingSession()));
+                        dtOstudyPlanAndSessionResponseToController.isSucceed(),
+                        dtOstudyPlanAndSessionResponseToController.getDetails(),
+                        dtOstudyPlanAndSessionResponseToController.getStudyPlan(),
+                        dtOstudyPlanAndSessionResponseToController.getUpComingSession()));
     }
 }
