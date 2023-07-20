@@ -226,14 +226,15 @@ public class Utility {
 
     /**
      * convert event to study session (without examToStudyFor member).
+     *
      * @param event event that convert to study session
      * @return study session after extract the information from the event
      */
-    public static StudySession convertEventToUpcomingStudySession(Event event){
+    public static StudySession convertEventToUpcomingStudySession(Event event) {
 
         return new StudySession(event.getStart().getDateTime(),
                 event.getEnd().getDateTime(),
-                event.getDescription(),
-                event.getSummary());
+                event.getSummary(),
+                event.getDescription());
     }
 }
