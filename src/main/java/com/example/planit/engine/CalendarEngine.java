@@ -132,7 +132,7 @@ public class CalendarEngine {
         embedCoursesInSessions(exams2numberOfSessions, sessionsList, exams);
 
         // #5 - updates the planIt calendar
-        updatePlanItCalendar(sessionsList, service, planItCalendarID, planItCalendarOldEvents, user, studyPlan);
+        updatePlanItCalendar(sessionsList, service, planItCalendarID, exams, planItCalendarOldEvents, user, studyPlan);
     }
 
     /**
@@ -951,11 +951,35 @@ public class CalendarEngine {
      * updates the PlanIt calendar with the new sessions list.
      * clears the calendar and create new Google {@link Event} for each study session
      *
-     * @param sessionsList     a list of {@link StudySession} that represents the user's study sessions
-     * @param service          the Google's {@link Calendar} service
-     * @param planItCalendarID the calendar ID of the PlanIt calendar in the user's calendar list
+     * @param sessionsList            a list of {@link StudySession} that represents the user's study sessions
+     * @param service                 the Google's {@link Calendar} service
+     * @param planItCalendarID        the calendar ID of the PlanIt calendar in the user's calendar list
+     * @param exams                   a list of {@link Exam} that the user have
+     * @param planItCalendarOldEvents a list of {@link Event} of the previous PlanIt calendar
+     * @param user                    the {@link User} that representing the user requesting the update
+     * @param studyPlan               a {@link StudyPlan} representing the study plan of the user
+     * @throws GeneralSecurityException in case of a problem in creating a secured http connection when refreshing a token
+     * @throws IOException              in case of a problem in google API calls
      */
-    private void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Event> planItCalendarOldEvents, User user, StudyPlan studyPlan) throws GeneralSecurityException, IOException {
+    private void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Exam> exams, List<Event> planItCalendarOldEvents, User user, StudyPlan studyPlan) throws GeneralSecurityException, IOException {
+
+        Map<String, String> courseName2ColorId = new HashMap<>();
+
+        try {
+            Colors colors = service.colors().get().execute();
+
+            // assigns each course name to a color id
+            int currentColorIndex = 0;
+            List<Map.Entry<String, ColorDefinition>> listOfColorIdAndValues = new ArrayList<>(colors.getEvent().entrySet());
+            int numberOfColors = listOfColorIdAndValues.size();
+            for (Exam exam : exams) {
+                courseName2ColorId.put(exam.getCourse().getCourseName(), listOfColorIdAndValues.get(currentColorIndex).getKey());
+                currentColorIndex = (currentColorIndex + 1) % numberOfColors;
+            }
+
+        } catch (IOException ignored) { // even though ignored, essential
+        }
+
         studyPlan.setTotalNumberOfStudySessions(sessionsList.size());
 
         List<Event> overlapsOldEvents = getOverlapOldEventsPlanItCalendar(sessionsList, planItCalendarOldEvents);
@@ -985,6 +1009,14 @@ public class CalendarEngine {
                     .setEnd(new EventDateTime()
                             .setDateTime(session.getEnd())
                             .setTimeZone(ISRAEL_TIME_ZONE));
+
+            // adds the color matching the course of the session, to the event
+            if (!courseName2ColorId.isEmpty()) {
+                // in that case there was no problem with the execution of the colors.get() command previously.
+                // so, there are values in the courseName2ColorId map.
+                // in other case, a custom color won't be added to the events.
+                event.setColorId(courseName2ColorId.get(session.getCourseName()));
+            }
 
             // inserts the new Google Event to the PlanIt calendar
             try {
@@ -1370,8 +1402,7 @@ public class CalendarEngine {
         // if the user have PlanIt calendar. we return the upComing study session.
         if (events != null) {
             List<Event> listOfEvents = events.getItems();
-            if (listOfEvents.size() != 0)
-            {
+            if (listOfEvents.size() != 0) {
                 return convertEventToUpcomingStudySession(listOfEvents.get(0));
             }
         }
