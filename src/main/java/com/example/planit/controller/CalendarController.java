@@ -63,21 +63,22 @@ public class CalendarController {
     }
 
     @GetMapping(value = "/study-plan")
-    public ResponseEntity<DTOstudyPlanResponseToClient> getLatestStudyPlan(@RequestParam String sub) {
-
+    public ResponseEntity<DTOstudyPlanAndSessionResponseToClient> getLatestStudyPlan(@RequestParam String sub) {
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /study-plan with params: sub={0}", sub));
 
-        DTOstudyPlanResponseToController dtOstudyPlanResponseToController = calendarEngine.getUserLatestStudyPlan(sub);
+        DTOstudyPlanAndSessionResponseToController dtOstudyPlanAndSessionResponseToController = calendarEngine.getUserLatestStudyPlanAndUpComingSession(sub);
 
         long t = System.currentTimeMillis();
         long res = t - s;
         logger.info(MessageFormat.format("User {0}: study-plan time is {1} ms", sub, res));
 
-        return ResponseEntity.status(dtOstudyPlanResponseToController.getHttpStatus())
-                .body(new DTOstudyPlanResponseToClient(
-                        dtOstudyPlanResponseToController.isSucceed(),
-                        dtOstudyPlanResponseToController.getDetails(),
-                        dtOstudyPlanResponseToController.getStudyPlan()));
+
+        return ResponseEntity.status(dtOstudyPlanAndSessionResponseToController.getHttpStatus())
+                .body(new DTOstudyPlanAndSessionResponseToClient(
+                        dtOstudyPlanAndSessionResponseToController.isSucceed(),
+                        dtOstudyPlanAndSessionResponseToController.getDetails(),
+                        dtOstudyPlanAndSessionResponseToController.getStudyPlan(),
+                        dtOstudyPlanAndSessionResponseToController.getUpComingSession()));
     }
 }

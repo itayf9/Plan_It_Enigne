@@ -52,8 +52,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static com.example.planit.utill.Constants.*;
-import static com.example.planit.utill.Utility.buildExceptionMessage;
-import static com.example.planit.utill.Utility.roundInstantMinutesTime;
+import static com.example.planit.utill.Utility.*;
+
 @Service
 public class CalendarEngine {
     public static Logger logger = LogManager.getLogger(CalendarEngine.class);
@@ -1320,20 +1320,62 @@ public class CalendarEngine {
         return false; // scope was not found or response wasn't successful
     }
 
-    public DTOstudyPlanResponseToController getUserLatestStudyPlan(String sub) {
+    public DTOstudyPlanAndSessionResponseToController getUserLatestStudyPlanAndUpComingSession(String sub) {
 
         try {
 
             Optional<User> maybeUser = userRepo.findUserBySubjectID(sub);
 
             if (maybeUser.isEmpty()) {
-                return new DTOstudyPlanResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                return new DTOstudyPlanAndSessionResponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
-            return new DTOstudyPlanResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan());
+            User user = maybeUser.get();
+            // refresh access_token before making api call
+            validateAccessTokenExpireTime(user);
+
+            // check if access_token still have scope for Google calendar
+            if (!hasAuthorizeScopesStillValid(user.getAuth().getAccessToken())) {
+                return new DTOstudyPlanAndSessionResponseToController(false, Constants.ERROR_NO_VALID_ACCESS_TOKEN, HttpStatus.UNAUTHORIZED);
+            }
+
+            return new DTOstudyPlanAndSessionResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan(), getUpComingSessionForUser(user));
         } catch (Exception e) {
             logger.error(buildExceptionMessage(e));
-            return new DTOstudyPlanResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new DTOstudyPlanAndSessionResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private StudySession getUpComingSessionForUser(User user) throws GeneralSecurityException, IOException {
+
+        Calendar calendarService = getCalendarService(user.getAuth().getAccessToken(), user.getAuth().getExpireTimeInMilliseconds());
+
+        List<CalendarListEntry> calendarList = getCalendarList(calendarService);
+
+        Instant currentTime = Instant.now();
+        DateTime currentTimeInMilli = new DateTime(currentTime.toEpochMilli());
+
+        Events events = null;
+
+        for (CalendarListEntry calendar : calendarList) {
+            if (calendar.getId().equals(user.getPlanItCalendarID())) {
+                events = calendarService.events().list(calendar.getId())
+                        .setTimeMin(currentTimeInMilli)
+                        .setOrderBy("startTime")
+                        .setSingleEvents(true)
+                        .execute();
+                break;
+            }
+        }
+
+        // if the user have PlanIt calendar. we return the upComing study session.
+        if (events != null) {
+            List<Event> listOfEvents = events.getItems();
+            if (listOfEvents.size() != 0)
+            {
+                return convertEventToUpcomingStudySession(listOfEvents.get(0));
+            }
+        }
+        return null;
     }
 
 }
