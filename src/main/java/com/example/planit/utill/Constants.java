@@ -10,6 +10,10 @@ public class Constants {
 
     public static final long MINUTES_TO_MILLIS = 60000;
 
+    public static final int HOUR_IN_MINUTES = 60;
+
+    public static final int SPACE_LIMIT_BETWEEN_EVENTS = 60;
+
     /**
      * Application name.
      */

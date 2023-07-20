@@ -396,6 +396,8 @@ public class CalendarEngine {
         long startTimeOfLastExam = lastExam.getDateTime().getValue();
         List<TimeSlot> userFreeTimeSlots = new ArrayList<>();
 
+        // add to the end of each user event a break
+        addBreakTimeInEndOfEachUserEvent(userEvents, user.getUserPreferences().getUserBreakTime());
         // get the free slot before the first event
         if (userEvents.size() > 0) {
             long startOfFirstEvent = userEvents.get(0).getStart().getDateTime().getValue();
@@ -1370,12 +1372,28 @@ public class CalendarEngine {
         // if the user have PlanIt calendar. we return the upComing study session.
         if (events != null) {
             List<Event> listOfEvents = events.getItems();
-            if (listOfEvents.size() != 0)
-            {
+            if (listOfEvents.size() != 0) {
                 return convertEventToUpcomingStudySession(listOfEvents.get(0));
             }
         }
         return null;
+    }
+
+    /**
+     * add break in the end of each user event in the list
+     *
+     * @param userEvents    list of all the {@link Event} the user have in the calendars
+     * @param userBreakTime the break time in user preferences in minutes
+     */
+    private static void addBreakTimeInEndOfEachUserEvent(List<Event> userEvents, int userBreakTime) {
+
+        for (Event currntUserEvent : userEvents) {
+            Instant oldEndOfUserEvent = Instant.ofEpochMilli(currntUserEvent.getEnd().getDateTime().getValue());
+            Instant newEndOfUserEvent = oldEndOfUserEvent.plus(Math.min(2 * userBreakTime, SPACE_LIMIT_BETWEEN_EVENTS), ChronoUnit.MINUTES);
+            currntUserEvent.setEnd(new EventDateTime()
+                    .setDateTime(new DateTime(newEndOfUserEvent.toEpochMilli()))
+                    .setTimeZone(ISRAEL_TIME_ZONE));
+        }
     }
 
 }
