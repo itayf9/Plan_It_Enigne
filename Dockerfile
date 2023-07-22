@@ -1,7 +1,16 @@
-FROM maven:3.8.2-jdk-11 AS build
-COPY . .
+FROM maven:latest AS build
 
-FROM openjdk:17
-COPY --from=build /target/PlanIT-0.0.1.jar PlanIT.jar
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline
+
+COPY src/ /app/src/
+RUN mvn package -DskipTests
+
+FROM openjdk:17-jdk-slim
+
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","PlanIT.jar"]
+
+COPY --from=build /app/target/PlanIT-1.0.jar app.jar
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
