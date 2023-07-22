@@ -1,17 +1,20 @@
-package com.example.planit.system;
+package com.example.planit.engine.calendar;
 
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOscanResponseToController;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@SpringBootTest
+@ExtendWith(SpringExtension.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class PlanITApplicationTests {
     @Autowired
     private CalendarEngine calendarEngine;
@@ -137,6 +140,20 @@ class PlanITApplicationTests {
                 subjectIDForTestInput,
                 "2023-05-07T22:00:00.000Z",
                 "2023-05-28T21:59:59.000Z",
+                decisions);
+        String actualOutput = scanResponse.getDetails();
+        Assertions.assertEquals(expectedOutput, actualOutput);
+        Assertions.assertEquals(actualOutput, expectedOutput);
+    }
+
+    @Test
+    void scanWithDecisions() {
+        decisions.put(1686009600000L, true);
+        String expectedOutput = Constants.NO_PROBLEM;
+        DTOscanResponseToController scanResponse = calendarEngine.scanUserEvents(
+                subjectIDForTestInput,
+                "2023-06-01T22:00:00.000Z",
+                "2023-06-09T21:59:59.000Z",
                 decisions);
         String actualOutput = scanResponse.getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);

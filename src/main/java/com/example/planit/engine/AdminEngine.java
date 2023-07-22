@@ -9,8 +9,8 @@ import com.example.planit.model.mongo.user.User;
 import com.example.planit.model.mongo.user.UserClientRepresentation;
 import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.utill.Constants;
-import com.example.planit.utill.dto.DTOresponseToController;
 import com.example.planit.utill.dto.DTOcoursesResponseToController;
+import com.example.planit.utill.dto.DTOresponseToController;
 import com.example.planit.utill.dto.DTOusersResponseToController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +29,7 @@ import static com.example.planit.model.mongo.user.UserClientRepresentation.build
 import static com.example.planit.utill.Constants.ERROR_DEFAULT;
 import static com.example.planit.utill.Constants.ISRAEL_HOLIDAYS_CODE;
 import static com.example.planit.utill.Utility.buildExceptionMessage;
+
 @Service
 public class AdminEngine {
 
@@ -169,11 +169,9 @@ public class AdminEngine {
 
             Optional<Course> maybeCourse = courseRepo.findCourseById(courseId);
 
-            if (maybeCourse.isEmpty()) {
-                return new DTOcoursesResponseToController(false, Constants.ERROR_COURSE_NOT_FOUND, HttpStatus.BAD_REQUEST);
-            }
+            return maybeCourse.map(course -> new DTOcoursesResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK, List.of(course)))
+                    .orElseGet(() -> new DTOcoursesResponseToController(false, Constants.ERROR_COURSE_NOT_FOUND, HttpStatus.BAD_REQUEST));
             // return list of single Course because I am tired, and it's 04:44
-            return new DTOcoursesResponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK, List.of(maybeCourse.get()));
 
         } catch (Exception e) {
             logger.error(buildExceptionMessage(e));
@@ -278,11 +276,6 @@ public class AdminEngine {
 
             return new DTOresponseToController(true, Constants.NO_PROBLEM, HttpStatus.OK);
 
-        } catch (IOException e) {
-            // e.g. when there was problem with the url parsing or the response parsing in getDatesOfHolidays
-            logger.error(buildExceptionMessage(e));
-            holidayRepo.saveAll(oldHolidays);
-            return new DTOresponseToController(false, Constants.ERROR_CALENDRIFIC_EXCEPTION, HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             // e.g. an unknown error had happened
             holidayRepo.saveAll(oldHolidays);
