@@ -1,35 +1,46 @@
-
 ![Logo](readme_objects/Plan.png)
-
 
 # PlanIT
 
-A full-stack application that prepares study schedules for students during exam periods
-This project involved implementing RESTful API and collaborating on GitHub to ensure efficient teamwork. 
-The application is designed using the MVC architecture, with the server side written in Java using the Spring framework and connected to a MongoDB database. 
-The website is developed using ReactJS. 
-PlanIT's key features include the ability to scan student calendars using Google Calendar API, recognizing exams and courses, and creating a study plan. 
-for a personalized and optimized study schedule, PlanIT considers the student's preferences and the courses' reputation.
-Utillizes Google's Authorization and Authentication APIs.
+An application that prepares smart study schedules for students during exam periods.
 
-
-## Screenshots of the site
-Home screen before connecting
-![App Screenshot](readme_objects/home.png)
-
-Home screen after connection
-![App Screenshot](readme_objects/after.png)
-
-User profile
-![App Screenshot](readme_objects/user.png)
-
-The calendar creation screen and generate it 
-![App Screenshot](readme_objects/generate.png)
-
-## The project programmers
+## Contributors:
 
 - [Danielsio](https://github.com/Danielsio)
-
 - [itayf9](https://github.com/itayf9)
-
 - [oshriFadlon1](https://github.com/oshriFadlon1)
+
+#### Related Repositories: [Plan-IT-Web](https://github.com/Danielsio/Plan-IT-Web)
+
+## Features:
+
+- Generate a formulated study plan, based on various parameters:
+    - The student's available time, gathered from its Google calendar (via Google Calendar API).
+    - The student's study preferences, gathered using the Plan-IT website.
+    - Information about the required preparations for the various courses, gathered from PlanIT's database.
+- In the case of a new event being added to your calendar, regenerate the study plan to get an updated and relevant
+  plan.
+- Sign in to PlanIT website using your Google account (sign in with Google).
+- The study plan will be shown directly in Google Calendar.
+- An Administrator website, which allows modifying the PlanIT database and managing the system.
+
+## Screenshots:
+
+Home page
+![App Screenshot](readme_objects/home.png)
+
+User's profile & preferences page
+![App Screenshot](readme_objects/user.png)
+
+Plan Page
+![App Screenshot](readme_objects/generate.png)
+
+## Google Calendar
+
+Before using PlanIT:
+![Google Calendar before](readme_objects/googleCalendarBefore.png)
+After using PlanIT:
+![Google Calendar after](readme_objects/googleCalendarAfter.png)
+
+
+
