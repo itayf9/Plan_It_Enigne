@@ -1,4 +1,4 @@
-![Logo](readme_objects/Plan.png)
+<img src="readme_objects/Plan.png" data-canonical-src="" width="330" height="185" />
 
 # PlanIT
 
