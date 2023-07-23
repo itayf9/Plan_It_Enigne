@@ -1,4 +1,4 @@
-package com.example.planit.mongo;
+package com.example.planit.engine.admin;
 
 import com.example.planit.engine.AdminEngine;
 import com.example.planit.engine.HolidaysEngine;

@@ -1122,7 +1122,7 @@ public class CalendarEngine {
             logger.debug("user " + subjectID + ": before getting calendar information.");
             measureTimeInstant = Instant.now();
             DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
-            logger.debug("user " + subjectID + ": after getting calendar information. " + measureTimeInstant.until(Instant.now(), ChronoUnit.MILLIS));
+            logger.debug("user " + subjectID + ": after getting calendar information. " + measureTimeInstant.until(Instant.now(), ChronoUnit.SECONDS) + "s");
 
             // fullDayEvents - a list of events that represents the user's full day events
             List<Event> fullDayEvents = userCalendarsInformation.getFullDayEvents();
