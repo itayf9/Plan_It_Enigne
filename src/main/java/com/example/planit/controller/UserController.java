@@ -25,9 +25,10 @@ import java.text.MessageFormat;
 import java.util.Optional;
 
 import static com.example.planit.model.mongo.user.UserClientRepresentation.buildUserClientRepresentationFromUser;
+import static com.example.planit.utill.Constants.PLAN_IT_WEB_PRODUCTION_URI;
 import static com.example.planit.utill.Utility.buildExceptionMessage;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", PLAN_IT_WEB_PRODUCTION_URI})
 @RestController
 public class UserController {
     private static final Logger logger = LogManager.getLogger(UserController.class);
@@ -42,7 +43,6 @@ public class UserController {
     /**
      * login endpoint : this endpoint will check if user signed up before pressing the login
      */
-    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/login")
     public ResponseEntity<DTOloginResponseToClient> signUpOrLogin(@RequestParam(value = "code") String authCode) {
 
@@ -117,7 +117,6 @@ public class UserController {
      * @param sub the sub value of the user
      * @return User object with preferences.
      */
-    @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(value = "/profile", produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<DTOuserClientRepresentation> getUserPreferencesFromDB(@RequestParam String sub) {
 
@@ -151,7 +150,6 @@ public class UserController {
     /**
      *
      */
-    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/profile", consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<DTOstatus> updateUserPreferencesInDB(@RequestBody Preferences preferences, @RequestParam String sub) {
 

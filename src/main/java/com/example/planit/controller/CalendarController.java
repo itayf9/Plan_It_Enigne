@@ -3,7 +3,10 @@ package com.example.planit.controller;
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.holidays.PlanITHolidaysWrapper;
 import com.example.planit.model.mongo.holiday.HolidayRepository;
-import com.example.planit.utill.dto.*;
+import com.example.planit.utill.dto.DTOscanResponseToClient;
+import com.example.planit.utill.dto.DTOscanResponseToController;
+import com.example.planit.utill.dto.DTOstudyPlanAndSessionResponseToClient;
+import com.example.planit.utill.dto.DTOstudyPlanAndSessionResponseToController;
 import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,11 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import static com.example.planit.utill.Constants.PLAN_IT_WEB_PRODUCTION_URI;
 import java.text.MessageFormat;
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", PLAN_IT_WEB_PRODUCTION_URI})
 @RestController
 public class CalendarController {
 
