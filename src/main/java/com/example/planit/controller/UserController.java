@@ -44,7 +44,7 @@ public class UserController {
      * login endpoint : this endpoint will check if user signed up before pressing the login
      */
     @PostMapping(value = "/login")
-    public ResponseEntity<DTOloginResponseToClient> signUpOrLogin(@RequestParam(value = "code") String authCode) {
+    public ResponseEntity<DTOloginResponseToClient> signUpOrLogin(@RequestParam(value = "code") String authCode, @RequestParam boolean isDev) {
 
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("New login: user has requested POST /login with params: code={0}", authCode));
@@ -58,7 +58,7 @@ public class UserController {
             GoogleTokenResponse googleTokenResponse;
 
 
-            googleTokenResponse = userEngine.getGoogleTokensFromAuthCode(authCode);
+            googleTokenResponse = userEngine.getGoogleTokensFromAuthCode(authCode, isDev);
 
             // check if user subjectId exist in the DB
             String subjectId = googleTokenResponse.parseIdToken().getPayload().getSubject();
