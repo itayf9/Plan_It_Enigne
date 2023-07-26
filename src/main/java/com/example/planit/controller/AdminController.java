@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(origins = "http://localhost:3000")
+import static com.example.planit.utill.Constants.PLAN_IT_WEB_PRODUCTION_URI;
+
+@CrossOrigin(origins = {"http://localhost:3000", PLAN_IT_WEB_PRODUCTION_URI})
 @RestController
 @RequestMapping("/admin")
 public class AdminController {
@@ -18,7 +20,6 @@ public class AdminController {
     @Autowired
     private AdminEngine adminEngine;
 
-    @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(value = "/courses")
     public ResponseEntity<DTOcoursesResponseToClient> getAllCourses(@RequestParam String sub) {
         DTOcoursesResponseToController dtOcoursesResponseToController = adminEngine.getAllCoursesFromDB(sub);
@@ -28,7 +29,6 @@ public class AdminController {
                         dtOcoursesResponseToController.getDetails(), dtOcoursesResponseToController.getCourses()));
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(value = "/courses/{courseId}")
     public ResponseEntity<DTOcoursesResponseToClient> getCourse(@PathVariable String courseId, @RequestParam String sub) {
         DTOcoursesResponseToController dtOcoursesResponseToController = adminEngine.getCourseFromDB(courseId, sub);
@@ -38,7 +38,6 @@ public class AdminController {
                         dtOcoursesResponseToController.getDetails(), dtOcoursesResponseToController.getCourses()));
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/courses")
     public ResponseEntity<DTOstatus> addCourse(@RequestBody Course course, @RequestParam String sub) {
         DTOcoursesResponseToController dtOcoursesResponseToController = adminEngine.addCourseToDB(course, sub);
@@ -48,7 +47,6 @@ public class AdminController {
                         dtOcoursesResponseToController.getDetails()));
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
     @PutMapping(value = "/courses")
     public ResponseEntity<DTOstatus> updateCourse(@RequestBody Course course, @RequestParam String sub) {
         DTOcoursesResponseToController dtOcoursesResponseToController = adminEngine.updateCourseInDB(course, sub);
@@ -58,7 +56,6 @@ public class AdminController {
                         dtOcoursesResponseToController.getDetails()));
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(value = "/users")
     public ResponseEntity<DTOstatus> getAllUsers(@RequestParam String sub) {
         DTOusersResponseToController dtOusersResponseToController = adminEngine.getAllUsersFromDB(sub);
@@ -68,7 +65,6 @@ public class AdminController {
                         dtOusersResponseToController.getDetails(), dtOusersResponseToController.getUsers()));
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
     @PutMapping(value = "/make-user-admin")
     public ResponseEntity<DTOstatus> makeUserAdmin(@RequestParam String sub, @RequestParam String userSubId) {
         DTOusersResponseToController dtOusersResponseToController = adminEngine.makeUserAdminInDB(sub, userSubId);
@@ -78,7 +74,6 @@ public class AdminController {
                         dtOusersResponseToController.getDetails()));
     }
 
-    @CrossOrigin(origins = "http://localhost:3000")
     @PutMapping(value = "/update-holidays")
     public ResponseEntity<DTOstatus> updateHolidays(@RequestParam String sub) {
 
@@ -87,6 +82,5 @@ public class AdminController {
         return ResponseEntity.status(dtoResponseToController.getHttpStatus())
                 .body(new DTOstatus(dtoResponseToController.isSucceed(), dtoResponseToController.getDetails()));
     }
-
 }
 
