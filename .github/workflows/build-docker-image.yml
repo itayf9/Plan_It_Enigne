@@ -1,0 +1,103 @@
+name: Build Docker Image And Push To DockerHub
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  maven:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Write value to Properties-file
+        run: |
+          cd src/main/resources
+          touch application.properties
+          echo "spring.data.mongodb.uri=${{ secrets.MONGODB_URI }}" >> application.properties
+          echo spring.data.mongodb.database=${{ secrets.MONGODB_DATABASE }} >> application.properties
+          echo spring.security.oauth2.client.registration.google.client-id=${{ secrets.CLIENT_ID }} >> application.properties
+          echo spring.security.oauth2.client.registration.google.client-secret=${{ secrets.CLIENT_SECRET }} >> application.properties
+          echo holidays_api_key=${{ secrets.HOLIDAYS_API_KEY }} >> application.properties
+
+
+      - name: Verify properties file exist
+        run: |
+          cd src/main/resources
+          cat application.properties > properties.txt
+          cat application.properties
+
+      - name: Build with Maven
+        run: mvn clean install
+
+      - name: Print Working Directory
+        if: always()
+        run: pwd
+
+      - name: Upload response artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: properties
+          path: src/main/resources/properties.txt
+
+
+  build:
+    needs: maven
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and export
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: plan-it-engine:latest, ${{ secrets.DOCKER_USERNAME }}/plan-it-engine:latest
+          outputs: type=docker,dest=/tmp/image.tar
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: plan-it-engine
+          path: /tmp/image.tar
+
+  upload:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      #    1. download image and run it in a container
+      - name: Download artifact
+        uses: actions/download-artifact@v3 # downloads all artifacts
+
+      - name: Load Docker images from previous workflows
+        run: docker load --input plan-it-engine/image.tar
+
+      - name: check plan-it-engine image is loaded
+        run: docker image ls
+
+      - name: Set DATE
+        run: echo "DATE=$(date -I)" >> $GITHUB_ENV
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: push image with "latest" and date tags to DH
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/plan-it-engine
+          docker tag ${{ secrets.DOCKER_USERNAME }}/plan-it-engine \
+          ${{ secrets.DOCKER_USERNAME }}/plan-it-engine:${{ env.DATE }}
+          docker push \
+          ${{ secrets.DOCKER_USERNAME }}/plan-it-engine:${{ env.DATE }}
