@@ -2,6 +2,7 @@ package com.example.planit.engine;
 
 import com.example.planit.model.mongo.user.User;
 import com.example.planit.model.mongo.user.UserRepository;
+import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOtokens;
 import com.example.planit.utill.exception.UnauthorizedUserException;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
@@ -21,6 +22,9 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+
+import static com.example.planit.utill.Constants.PLAN_IT_WEB_PRODUCTION_URI;
+
 @Service
 public class UserEngine {
 
@@ -123,13 +127,14 @@ public class UserEngine {
      * extract the user's email and access tokens, from the auth code sent by the front-end.
      *
      * @param code Auth-Code from Frontend OAuth process.
+     * @param isDev is the Front-End sent request in Developer mode
      * @return DTO contains access tokens, Refresh token & user Email
      * @throws IOException exception
      */
-    public GoogleTokenResponse getGoogleTokensFromAuthCode(String code) throws IOException {
+    public GoogleTokenResponse getGoogleTokensFromAuthCode(String code, boolean isDev) throws IOException {
         HttpTransport httpTransport = new NetHttpTransport();
         JsonFactory jsonFactory = GsonFactory.getDefaultInstance();
-        String REDIRECT_URI = "http://localhost:3000";
+        String REDIRECT_URI = isDev ? "http://localhost:3000" : PLAN_IT_WEB_PRODUCTION_URI;
 
 
         return new GoogleAuthorizationCodeTokenRequest(
