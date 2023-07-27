@@ -56,6 +56,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Write value to Properties-file
+        run: |
+          cd src/main/resources
+          touch application.properties
+          echo "spring.data.mongodb.uri=${{ secrets.MONGODB_URI }}" >> application.properties
+          echo spring.data.mongodb.database=${{ secrets.MONGODB_DATABASE }} >> application.properties
+          echo spring.security.oauth2.client.registration.google.client-id=${{ secrets.CLIENT_ID }} >> application.properties
+          echo spring.security.oauth2.client.registration.google.client-secret=${{ secrets.CLIENT_SECRET }} >> application.properties
+          echo holidays_api_key=${{ secrets.HOLIDAYS_API_KEY }} >> application.properties
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Build and export
