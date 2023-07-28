@@ -1099,8 +1099,8 @@ public class CalendarEngine {
         studyPlan.setStartDateTimeOfPlan(start);
         studyPlan.setEndDateTimeOfPlan(end);
 
-            // fullDayEvents - a list of events that represents the user's full day events
-            List<Event> fullDayEvents = userCalendarsInformation.getFullDayEvents();
+        // fullDayEvents - a list of events that represents the user's full day events
+        List<Event> fullDayEvents = userCalendarsInformation.getFullDayEvents();
 
         // events - a list of events that represents all the user's events
         // planItCalendarOldEvents - a list of PlanIt calendar old events
@@ -1115,18 +1115,18 @@ public class CalendarEngine {
             return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
         }
 
-            // remove duplications
-            fullDayEvents = removeDuplicationsByDate(fullDayEvents);
+        // remove duplications
+        fullDayEvents = removeDuplicationsByDate(fullDayEvents);
 
-            // add the holidays
-            fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
+        // add the holidays
+        fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
 
-            // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
-            if (fullDayEvents.size() != 0 && decisions.size() == 0) {
+        // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
+        if (fullDayEvents.size() != 0 && decisions.size() == 0) {
 
-                // return the user with the updated list of fullDayEvents.
-                return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents, new StudyPlan());
-            }
+            // return the user with the updated list of fullDayEvents.
+            return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents, new StudyPlan());
+        }
 
         convertFullDayEventsToRegularGoogleEventsAccordingToDecisions(decisions, fullDayEvents, regularEvents);
 
