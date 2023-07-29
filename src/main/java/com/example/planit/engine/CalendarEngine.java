@@ -1471,8 +1471,21 @@ public class CalendarEngine {
                     userCalendarsInformation.getPlanItCalendarOldEvents());
 
             //original scan()
-            return scanUserEvents(sub, currentUser, start, end, userCalendarsInformation, decisions);
-
+            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(sub,
+                    currentUser,
+                    start, end,
+                    userCalendarsInformation, decisions);
+            if (dtOscanResponseToController.isSucceed()) {
+                dtOscanResponseToController.getStudyPlan().setStartDateTimeOfPlan(
+                        currentUser.getLatestStudyPlan().getStartDateTimeOfPlan());
+//                dtOscanResponseToController.getStudyPlan().setEndDateTimeOfPlan(
+//                        currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
+                dtOscanResponseToController.getStudyPlan().setTotalNumberOfStudySessions(
+                        numberOfOldEvent + dtOscanResponseToController.getStudyPlan().getTotalNumberOfStudySessions());
+                currentUser.setLatestStudyPlan(dtOscanResponseToController.getStudyPlan());
+                userRepo.save(currentUser);
+            }
+            return dtOscanResponseToController;
         } catch (GeneralErrorInEngineException e) {
             // e.g. when the user has an error in getting User object or authenticating
             logger.error(buildExceptionMessage(e));
@@ -1528,22 +1541,25 @@ public class CalendarEngine {
         }
     }
 
-    private void updateSubjcetForEachExams(List<Exam> exams, String start, String end, List<Event> oldEvent) {
-        java.util.Date startDay = new Date(DateTime.parseRfc3339(start).getValue());
-        java.util.Date endDay = new Date(DateTime.parseRfc3339(end).getValue());
-        Map<String, Set<String>> courseName2UpdateSubject = new HashMap<>();
+    private int updateSubjectForEachExams(List<Exam> exams, String start, String end, List<Event> oldEvent) {
+        Date dayOfStartTheGenerate = new Date(DateTime.parseRfc3339(start).getValue());
+        Date dayOfEndTheGenerate = new Date(DateTime.parseRfc3339(end).getValue());
+        Map<String, Set<String>> courseName2UpdatedSubjects = new HashMap<>();
+        int countOldEventNotInTheNewGenerate = 0;
         for (Event event : oldEvent) {
             String courseName = event.getSummary().substring(7); // get the course name from the event without the "למידה ל"
             if (!courseName2UpdatedSubjects.containsKey(courseName)) {
                 courseName2UpdatedSubjects.put(courseName, new HashSet<>());
             }
-            java.util.Date eventDay = new Date(event.getStart().getDate().getValue());
+            Date currentDayOfTheEvent = new Date(event.getStart().getDateTime().getValue());
             // check if the day of the event is after the start day
             if (currentDayOfTheEvent.after(dayOfStartTheGenerate) && currentDayOfTheEvent.before(dayOfEndTheGenerate)) {
                 String[] allSubjectFromCurrentEvent = event.getDescription().split(" , ");
                 for (String nameOfTheCurrentSubject : allSubjectFromCurrentEvent) {
                     courseName2UpdatedSubjects.get(courseName).add(nameOfTheCurrentSubject);
                 }
+            } else {
+                countOldEventNotInTheNewGenerate++;
             }
         }
 
@@ -1553,5 +1569,7 @@ public class CalendarEngine {
                     courseName2UpdatedSubjects.get(examName).size(),
                     String[].class));
         }
+
+        return countOldEventNotInTheNewGenerate;
     }
 }
