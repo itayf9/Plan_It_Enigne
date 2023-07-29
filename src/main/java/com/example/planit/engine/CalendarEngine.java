@@ -1138,9 +1138,6 @@ public class CalendarEngine {
                 planItCalendarOldEvents,
                 studyPlan);
 
-        user.setLatestStudyPlan(studyPlan);
-        userRepo.save(user);
-
         return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
     }
 
@@ -1419,7 +1416,14 @@ public class CalendarEngine {
             DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
             logger.debug("user " + subjectID + ": after getting calendar information. " + measureTimeInstant.until(Instant.now(), ChronoUnit.SECONDS) + "s");
 
-            return scanUserEvents(subjectID, user, start, end, userCalendarsInformation, decisions);
+            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(subjectID, user, start, end, userCalendarsInformation, decisions);
+
+            if (dtOscanResponseToController.isSucceed()) {
+                user.setLatestStudyPlan(dtOscanResponseToController.getStudyPlan());
+                userRepo.save(user);
+            }
+
+            return dtOscanResponseToController;
 
         } catch (GeneralErrorInEngineException e) {
             // e.g. when the user has an error in getting User object or authenticating
@@ -1463,7 +1467,7 @@ public class CalendarEngine {
             String end = currentUser.getLatestStudyPlan().getEndDateTimeOfPlan();
             DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(currentUser, start, currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
             // remove subjcet already learned
-            updateSubjcetForEachExams(userCalendarsInformation.getExamsFound(), start, end,
+            int numberOfOldEvent = updateSubjectForEachExams(userCalendarsInformation.getExamsFound(), start, end,
                     userCalendarsInformation.getPlanItCalendarOldEvents());
 
             //original scan()
@@ -1529,24 +1533,24 @@ public class CalendarEngine {
         java.util.Date endDay = new Date(DateTime.parseRfc3339(end).getValue());
         Map<String, Set<String>> courseName2UpdateSubject = new HashMap<>();
         for (Event event : oldEvent) {
-            String coursName = event.getSummary().substring(7);
-            if (!courseName2UpdateSubject.containsKey(coursName)) {
-                courseName2UpdateSubject.put(coursName, new HashSet<>());
+            String courseName = event.getSummary().substring(7); // get the course name from the event without the "למידה ל"
+            if (!courseName2UpdatedSubjects.containsKey(courseName)) {
+                courseName2UpdatedSubjects.put(courseName, new HashSet<>());
             }
             java.util.Date eventDay = new Date(event.getStart().getDate().getValue());
             // check if the day of the event is after the start day
-            if (eventDay.after(startDay) && eventDay.before(endDay)) {
-                String[] allSubjectFromCurrentCourse = event.getDescription().split(" , ");
-                for (String Str : allSubjectFromCurrentCourse) {
-                    courseName2UpdateSubject.get(coursName).add(Str);
+            if (currentDayOfTheEvent.after(dayOfStartTheGenerate) && currentDayOfTheEvent.before(dayOfEndTheGenerate)) {
+                String[] allSubjectFromCurrentEvent = event.getDescription().split(" , ");
+                for (String nameOfTheCurrentSubject : allSubjectFromCurrentEvent) {
+                    courseName2UpdatedSubjects.get(courseName).add(nameOfTheCurrentSubject);
                 }
             }
         }
 
         for (Exam exam : exams) {
             String examName = exam.getCourse().getCourseName();
-            exam.getCourse().setCourseSubjects(Arrays.copyOf(courseName2UpdateSubject.get(examName).toArray(),
-                    courseName2UpdateSubject.get(examName).size(),
+            exam.getCourse().setCourseSubjects(Arrays.copyOf(courseName2UpdatedSubjects.get(examName).toArray(),
+                    courseName2UpdatedSubjects.get(examName).size(),
                     String[].class));
         }
     }
