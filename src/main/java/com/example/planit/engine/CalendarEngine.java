@@ -1088,12 +1088,11 @@ public class CalendarEngine {
      * performs a scan on the user events and gather some information.
      * if no full day events found, performs generate PlanIt calendar
      *
-     * @param subjectID the user's sub value
      * @param start     the user's preferred start time to generate from (in ISO format)
      * @param end       the user's preferred end time to generate to (in ISO format)
      * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
      */
-    public DTOscanResponseToController scanUserEvents(String subjectID, User user, String start, String end, DTOuserCalendarsInformation userCalendarsInformation, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
+    public DTOscanResponseToController scanUserEvents(User user, String start, String end, DTOuserCalendarsInformation userCalendarsInformation, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
 
         StudyPlan studyPlan = new StudyPlan();
         studyPlan.setStartDateTimeOfPlan(start);
@@ -1416,7 +1415,7 @@ public class CalendarEngine {
             DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
             logger.debug("user " + subjectID + ": after getting calendar information. " + measureTimeInstant.until(Instant.now(), ChronoUnit.SECONDS) + "s");
 
-            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(subjectID, user, start, end, userCalendarsInformation, decisions);
+            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(user, start, end, userCalendarsInformation, decisions);
 
             if (dtOscanResponseToController.isSucceed()) {
                 user.setLatestStudyPlan(dtOscanResponseToController.getStudyPlan());
@@ -1466,22 +1465,30 @@ public class CalendarEngine {
             String start = getActualRegenerateStartTime(currentUser);
             String end = currentUser.getLatestStudyPlan().getEndDateTimeOfPlan();
             DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(currentUser, start, currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
-            // remove subjcet already learned
+            // remove subject already learned
             int numberOfOldEvent = updateSubjectForEachExams(userCalendarsInformation.getExamsFound(), start, end,
                     userCalendarsInformation.getPlanItCalendarOldEvents());
 
-            //original scan()
-            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(sub,
+            // original scan()
+            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(
                     currentUser,
-                    start, end,
-                    userCalendarsInformation, decisions);
-            if (dtOscanResponseToController.isSucceed()) {
-                dtOscanResponseToController.getStudyPlan().setStartDateTimeOfPlan(
-                        currentUser.getLatestStudyPlan().getStartDateTimeOfPlan());
+                    start,
+                    end,
+                    userCalendarsInformation,
+                    decisions);
+
+            boolean isScanSucceed = dtOscanResponseToController.isSucceed();
+
+            if (isScanSucceed) {
+                String newStartDateOfStudyPlan = currentUser.getLatestStudyPlan().getStartDateTimeOfPlan();
+                dtOscanResponseToController.getStudyPlan().setStartDateTimeOfPlan(newStartDateOfStudyPlan);
+
 //                dtOscanResponseToController.getStudyPlan().setEndDateTimeOfPlan(
 //                        currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
+
                 dtOscanResponseToController.getStudyPlan().setTotalNumberOfStudySessions(
                         numberOfOldEvent + dtOscanResponseToController.getStudyPlan().getTotalNumberOfStudySessions());
+
                 currentUser.setLatestStudyPlan(dtOscanResponseToController.getStudyPlan());
                 userRepo.save(currentUser);
             }
