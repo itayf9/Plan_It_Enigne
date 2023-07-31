@@ -143,7 +143,6 @@ class PlanITApplicationTests {
                 decisions);
         String actualOutput = scanResponse.getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
-        Assertions.assertEquals(actualOutput, expectedOutput);
     }
 
     @Test
@@ -157,6 +156,5 @@ class PlanITApplicationTests {
                 decisions);
         String actualOutput = scanResponse.getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
-        Assertions.assertEquals(actualOutput, expectedOutput);
     }
 }
