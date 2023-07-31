@@ -1058,6 +1058,8 @@ public class CalendarEngine {
                 newSessionIndex++;
             } else if (newSession.getStart().getValue() > (oldEvent.getEnd().getDateTime().getValue())) {
                 // new event starts after old event ends, move to next old event
+                // and add old event to list of overlapping events
+                overlappingEvents.add(oldEvent);
                 oldEventIndex++;
             } else if (newSession.getStart().equals(oldEvent.getStart().getDateTime())
                     && newSession.getEnd().equals(oldEvent.getEnd().getDateTime())
@@ -1076,6 +1078,14 @@ public class CalendarEngine {
             }
 
         }
+
+        // remove plan-it events that are after the last session
+        while (oldEventIndex < planItCalendarOldEvents.size()) {
+            Event oldEvent = planItCalendarOldEvents.get(oldEventIndex);
+            overlappingEvents.add(oldEvent);
+            oldEventIndex++;
+        }
+
         // removes all the events that are duplicates from the sessions list
         for (int i = newSessionsIndicesToBeRemoved.size() - 1; i >= 0; i--) {
             sessionsList.remove(newSessionsIndicesToBeRemoved.get(i).intValue());
@@ -1088,8 +1098,8 @@ public class CalendarEngine {
      * performs a scan on the user events and gather some information.
      * if no full day events found, performs generate PlanIt calendar
      *
-     * @param start     the user's preferred start time to generate from (in ISO format)
-     * @param end       the user's preferred end time to generate to (in ISO format)
+     * @param start the user's preferred start time to generate from (in ISO format)
+     * @param end   the user's preferred end time to generate to (in ISO format)
      * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
      */
     public DTOscanResponseToController scanUserEvents(User user, String start, String end, DTOuserCalendarsInformation userCalendarsInformation, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
