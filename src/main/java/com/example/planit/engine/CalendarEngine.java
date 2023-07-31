@@ -1138,11 +1138,11 @@ public class CalendarEngine {
                 return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
             }
 
-            // remove duplications
-            fullDayEvents = removeDuplicationsByDate(fullDayEvents);
-
             // add the holidays
             fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
+
+            // remove duplications
+            fullDayEvents = removeDuplicationsByDate(fullDayEvents);
 
             // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
             if (fullDayEvents.size() != 0 && decisions.size() == 0) {
@@ -1298,6 +1298,8 @@ public class CalendarEngine {
             currentFullDayEventIndex++;
         }
 
+        fullDayEventsWithHolidays.sort(new EventComparator());
+
         return fullDayEventsWithHolidays;
     }
 
@@ -1318,10 +1320,11 @@ public class CalendarEngine {
             if (lastEventInModifiedList == null || lastEventInModifiedList.getStart().getDate().getValue() != fullDayEvent.getStart().getDate().getValue()) {
                 lastEventInModifiedList = fullDayEvent;
                 modifiedFullDayEventsList.add(lastEventInModifiedList);
-            } else {
+                // case for 2 full-day-events that don't have same summery-name
+            } else if (!lastEventInModifiedList.getSummary().equals(fullDayEvent.getSummary())) {
                 lastEventInModifiedList.setSummary(lastEventInModifiedList.getSummary() + " | " + fullDayEvent.getSummary());
             }
-
+            // else case will be ignored since we don't want to display the same dull-day-event twice
         }
 
         return modifiedFullDayEventsList;
