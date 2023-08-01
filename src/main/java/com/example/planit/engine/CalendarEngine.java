@@ -1027,7 +1027,7 @@ public class CalendarEngine {
                 service.events().insert(planItCalendarID, event).execute();
 
             } catch (GoogleJsonResponseException e) {
-                logger.error(MessageFormat.format("planitcalender id:{0}, google message:{1}", planItCalendarID, e.getMessage()));
+                logger.error(MessageFormat.format("plan_it_calendar id:{0}, google message:{1}", planItCalendarID, e.getMessage()));
                 throw e;
             }
         }
@@ -1401,10 +1401,10 @@ public class CalendarEngine {
      */
     private static void addBreakTimeInEndOfEachUserEvent(List<Event> userEvents, int userBreakTime) {
 
-        for (Event currntUserEvent : userEvents) {
-            Instant oldEndOfUserEvent = Instant.ofEpochMilli(currntUserEvent.getEnd().getDateTime().getValue());
+        for (Event currentUserEvent : userEvents) {
+            Instant oldEndOfUserEvent = Instant.ofEpochMilli(currentUserEvent.getEnd().getDateTime().getValue());
             Instant newEndOfUserEvent = oldEndOfUserEvent.plus(Math.min(2 * userBreakTime, SPACE_LIMIT_BETWEEN_EVENTS), ChronoUnit.MINUTES);
-            currntUserEvent.setEnd(new EventDateTime()
+            currentUserEvent.setEnd(new EventDateTime()
                     .setDateTime(new DateTime(newEndOfUserEvent.toEpochMilli()))
                     .setTimeZone(ISRAEL_TIME_ZONE));
         }
@@ -1425,9 +1425,16 @@ public class CalendarEngine {
             DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
             logger.debug("user " + subjectID + ": after getting calendar information. " + measureTimeInstant.until(Instant.now(), ChronoUnit.SECONDS) + "s");
 
-            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(user, start, end, userCalendarsInformation, decisions);
+            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(
+                    user,
+                    start,
+                    end,
+                    userCalendarsInformation,
+                    decisions);
 
-            if (dtOscanResponseToController.isSucceed()) {
+            boolean isScanSucceed = dtOscanResponseToController.isSucceed();
+
+            if (isScanSucceed) {
                 user.setLatestStudyPlan(dtOscanResponseToController.getStudyPlan());
                 userRepo.save(user);
             }
@@ -1492,9 +1499,6 @@ public class CalendarEngine {
             if (isScanSucceed) {
                 String newStartDateOfStudyPlan = currentUser.getLatestStudyPlan().getStartDateTimeOfPlan();
                 dtOscanResponseToController.getStudyPlan().setStartDateTimeOfPlan(newStartDateOfStudyPlan);
-
-//                dtOscanResponseToController.getStudyPlan().setEndDateTimeOfPlan(
-//                        currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
 
                 dtOscanResponseToController.getStudyPlan().setTotalNumberOfStudySessions(
                         numberOfOldEvent + dtOscanResponseToController.getStudyPlan().getTotalNumberOfStudySessions());
