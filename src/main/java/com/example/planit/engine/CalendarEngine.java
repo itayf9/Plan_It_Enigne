@@ -111,7 +111,7 @@ public class CalendarEngine {
      * @param allEvents list of the user events we found during the initial scan
      * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
      */
-    public void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, String start, List<Event> planItCalendarOldEvents, StudyPlan studyPlan)
+    public void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, String start, List<Event> planItCalendarOldEvents, Map<Exam, Double> exam2Proportions, StudyPlan studyPlan)
             throws GeneralSecurityException, IOException {
 
         // gets the list of free slots
@@ -120,8 +120,8 @@ public class CalendarEngine {
         // creates PlanIt calendar if not yet exists
         String planItCalendarID = createPlanItCalendar(service, user);
 
-        // finds the proportions of each exam from 100% study time
-        Map<Exam, Double> exam2Proportions = getExamsProportions(exams);
+//        // finds the proportions of each exam from 100% study time
+//        Map<Exam, Double> exam2Proportions = getExamsProportions(exams);
 
         // separates each slot in the free slots list, to a few study sessions and inserts breaks
         List<StudySession> sessionsList = separateSlotsToSessions(user, dtofreetime.getFreeTimeSlots());
@@ -1102,7 +1102,7 @@ public class CalendarEngine {
      * @param end   the user's preferred end time to generate to (in ISO format)
      * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
      */
-    public DTOscanResponseToController scanUserEvents(User user, String start, String end, DTOuserCalendarsInformation userCalendarsInformation, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
+    public DTOscanResponseToController scanUserEvents(User user, String start, String end, DTOuserCalendarsInformation userCalendarsInformation, Map<Exam, Double> exam2Proportions, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
 
         StudyPlan studyPlan = new StudyPlan();
         studyPlan.setStartDateTimeOfPlan(start);
@@ -1145,6 +1145,7 @@ public class CalendarEngine {
                 userCalendarsInformation.getCalendarService(),
                 start,
                 planItCalendarOldEvents,
+                exam2Proportions,
                 studyPlan);
 
         return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
@@ -1425,12 +1426,18 @@ public class CalendarEngine {
             DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
             logger.debug("user " + subjectID + ": after getting calendar information. " + measureTimeInstant.until(Instant.now(), ChronoUnit.SECONDS) + "s");
 
+            // finds the proportions of each exam from 100% study time
+            Map<Exam, Double> exam2Proportions = getExamsProportions(userCalendarsInformation.getExamsFound());
+
+
             DTOscanResponseToController dtOscanResponseToController = scanUserEvents(
                     user,
                     start,
                     end,
                     userCalendarsInformation,
+                    exam2Proportions,
                     decisions);
+
 
             boolean isScanSucceed = dtOscanResponseToController.isSucceed();
 
@@ -1473,18 +1480,74 @@ public class CalendarEngine {
         }
     }
 
+    private void updateExamProportions(Map<Exam, Double> exam2Proportions, List<Event> planItCalendarOldEvents, Instant timeWhenUserPressedRegenerate) {
+        int oldSessionsCount = planItCalendarOldEvents.size();
+        double sunOfProportions = 0;
+
+        for (Exam exam : exam2Proportions.keySet()) {
+            int countOfLearnedSessions = 0;
+            for (Event studySessionEvent : planItCalendarOldEvents) {
+
+                String courseName = studySessionEvent.getSummary().substring(7); // get the course name from the event
+                long startTimeOfCurrentStudySessionEvent = studySessionEvent.getStart().getDateTime().getValue();
+
+                // Check if the studySessionEvent has already been learned or not
+                boolean startTimeOfCurrentStudySessionEventIsBeforeNow = Instant.ofEpochMilli(
+                        startTimeOfCurrentStudySessionEvent).isBefore(timeWhenUserPressedRegenerate); // notice timeWhenUserPressedRegenerate == Instant.now()
+
+                if (startTimeOfCurrentStudySessionEventIsBeforeNow && courseName.equals(exam.getCourse().getCourseName())) {
+                    countOfLearnedSessions++;
+                } else if (!startTimeOfCurrentStudySessionEventIsBeforeNow) { // this interprets to the current session hasn't been learned yet
+                    break;
+                }
+            }
+            double oldProportion = exam2Proportions.get(exam);
+            double newProportion = oldProportion - (double) countOfLearnedSessions / oldSessionsCount;
+            exam2Proportions.put(exam, newProportion);
+            sunOfProportions += newProportion;
+        }
+
+        double amountToUpScaleProportions = (1.0 / sunOfProportions); // the 'y' from the paint schema
+
+        // upscale the proportions to be equals to 1.0
+        for (Exam exam : exam2Proportions.keySet()) {
+            double upScaledProportion = amountToUpScaleProportions * exam2Proportions.get(exam);
+            exam2Proportions.put(exam, upScaledProportion);
+        }
+    }
+
     public DTOscanResponseToController regenerateStudyPlan(String sub, Map<Long, Boolean> decisions, Instant timeWhenUserPressedRegenerate) {
 
         try {
             // sub => start(now) end(from user DB)
             User currentUser = getAndAuthenticateUserBySubId(sub);
+
+            DTOuserCalendarsInformation userCalendarsOldInformation = getUserCalendarsInformation(
+                    currentUser, currentUser.getLatestStudyPlan().getStartDateTimeOfPlan(), currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
+
+            // finds the proportions of each exam from 100% study time
+            Map<Exam, Double> exam2Proportions = getExamsProportions(userCalendarsOldInformation.getExamsFound());
+
+            updateExamProportions(exam2Proportions, userCalendarsOldInformation.getPlanItCalendarOldEvents(), timeWhenUserPressedRegenerate);
+
             // here we have the time of the current generate
             String start = getActualRegenerateStartTime(currentUser, timeWhenUserPressedRegenerate);
             String end = currentUser.getLatestStudyPlan().getEndDateTimeOfPlan();
-            DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(currentUser, start, currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
+            DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(currentUser, start, end);
+
             // remove subject already learned
-            int numberOfOldEvent = updateSubjectForEachExams(userCalendarsInformation.getExamsFound(), start, end,
+            int numberOfOldEvent = updateSubjectsForEachExams(userCalendarsInformation.getExamsFound(), currentUser.getLatestStudyPlan().getStartDateTimeOfPlan(), end,
                     userCalendarsInformation.getPlanItCalendarOldEvents());
+
+            Map<Exam, Double> updatedExam2Proportions = new HashMap<>();
+
+            for (Exam currentExam : userCalendarsInformation.getExamsFound()) {
+                Exam examFromMapOfProportions = exam2Proportions.keySet().stream().filter(exam -> exam.getDateTime().equals(currentExam.getDateTime()) &&
+                        exam.getCourse().getCourseName().equals(currentExam.getCourse().getCourseName())).findFirst().get();
+
+                Double theUpdatedProportion = exam2Proportions.get(examFromMapOfProportions);
+                updatedExam2Proportions.put(currentExam, theUpdatedProportion);
+            }
 
             // original scan()
             DTOscanResponseToController dtOscanResponseToController = scanUserEvents(
@@ -1492,6 +1555,7 @@ public class CalendarEngine {
                     start,
                     end,
                     userCalendarsInformation,
+                    updatedExam2Proportions,
                     decisions);
 
             boolean isScanSucceed = dtOscanResponseToController.isSucceed();
@@ -1540,7 +1604,7 @@ public class CalendarEngine {
     }
 
     public DTOscanResponseToController regenerateStudyPlan(String sub, Map<Long, Boolean> decisions) {
-         return regenerateStudyPlan(sub, decisions, Instant.now());
+        return regenerateStudyPlan(sub, decisions, Instant.now());
     }
 
     private String getActualRegenerateStartTime(User currentUser, Instant timeWhenUserPressedRegenerate) throws GeneralErrorInEngineException {
@@ -1563,11 +1627,14 @@ public class CalendarEngine {
         }
     }
 
-    private int updateSubjectForEachExams(List<Exam> exams, String start, String end, List<Event> oldEvent) {
+    private int updateSubjectsForEachExams(List<Exam> exams, String start, String end, List<Event> oldEvent) {
+
         Date dayOfStartTheGenerate = new Date(DateTime.parseRfc3339(start).getValue());
         Date dayOfEndTheGenerate = new Date(DateTime.parseRfc3339(end).getValue());
+
         Map<String, Set<String>> courseName2UpdatedSubjects = new HashMap<>();
-        int countOldEventNotInTheNewGenerate = 0;
+        int countOldEventsNotInTheNewGenerate = 0;
+
         for (Event event : oldEvent) {
             String courseName = event.getSummary().substring(7); // get the course name from the event without the "למידה ל"
             if (!courseName2UpdatedSubjects.containsKey(courseName)) {
@@ -1581,7 +1648,7 @@ public class CalendarEngine {
                     courseName2UpdatedSubjects.get(courseName).add(nameOfTheCurrentSubject);
                 }
             } else {
-                countOldEventNotInTheNewGenerate++;
+                countOldEventsNotInTheNewGenerate++;
             }
         }
 
@@ -1592,6 +1659,6 @@ public class CalendarEngine {
                     String[].class));
         }
 
-        return countOldEventNotInTheNewGenerate;
+        return countOldEventsNotInTheNewGenerate;
     }
 }
