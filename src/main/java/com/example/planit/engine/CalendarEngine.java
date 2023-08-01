@@ -1473,13 +1473,13 @@ public class CalendarEngine {
         }
     }
 
-    public DTOscanResponseToController regenerateStudyPlan(String sub, Map<Long, Boolean> decisions) {
+    public DTOscanResponseToController regenerateStudyPlan(String sub, Map<Long, Boolean> decisions, Instant timeWhenUserPressedRegenerate) {
 
         try {
             // sub => start(now) end(from user DB)
             User currentUser = getAndAuthenticateUserBySubId(sub);
             // here we have the time of the current generate
-            String start = getActualRegenerateStartTime(currentUser);
+            String start = getActualRegenerateStartTime(currentUser, timeWhenUserPressedRegenerate);
             String end = currentUser.getLatestStudyPlan().getEndDateTimeOfPlan();
             DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(currentUser, start, currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
             // remove subject already learned
@@ -1537,12 +1537,13 @@ public class CalendarEngine {
             logger.error(buildExceptionMessage(e));
             return new DTOscanResponseToController(false, Constants.ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
-
     }
 
-    private String getActualRegenerateStartTime(User currentUser) throws GeneralErrorInEngineException {
-        Instant now = Instant.now();
+    public DTOscanResponseToController regenerateStudyPlan(String sub, Map<Long, Boolean> decisions) {
+         return regenerateStudyPlan(sub, decisions, Instant.now());
+    }
+
+    private String getActualRegenerateStartTime(User currentUser, Instant timeWhenUserPressedRegenerate) throws GeneralErrorInEngineException {
 
         // check if the user already generate study plan
         if (currentUser.getLatestStudyPlan().getEndDateTimeOfPlan() == null) {
@@ -1550,13 +1551,13 @@ public class CalendarEngine {
         }
         // check if the time(now) is after end
         long endTimeOfLastStudyPlan = DateTime.parseRfc3339(currentUser.getLatestStudyPlan().getEndDateTimeOfPlan()).getValue();
-        if (endTimeOfLastStudyPlan < now.toEpochMilli()) {
+        if (endTimeOfLastStudyPlan < timeWhenUserPressedRegenerate.toEpochMilli()) {
             throw new GeneralErrorInEngineException(false, Constants.ERROR_GENERATE_DAYS_NOT_VALID, HttpStatus.BAD_REQUEST);
         }
         long startTimeOfLastStudyPlan = DateTime.parseRfc3339(currentUser.getLatestStudyPlan().getStartDateTimeOfPlan()).getValue();
         // check if the time(now) is after start. start < now < end
-        if (startTimeOfLastStudyPlan < now.toEpochMilli()) {
-            return now.toString();
+        if (startTimeOfLastStudyPlan < timeWhenUserPressedRegenerate.toEpochMilli()) {
+            return timeWhenUserPressedRegenerate.toString();
         } else {
             return currentUser.getLatestStudyPlan().getStartDateTimeOfPlan();
         }

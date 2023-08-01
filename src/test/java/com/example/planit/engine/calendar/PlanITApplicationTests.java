@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -156,5 +158,25 @@ class PlanITApplicationTests {
                 decisions);
         String actualOutput = scanResponse.getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
+    }
+
+    @Test
+    void RegeneratePlan() {
+        String expectedOutput = Constants.NO_PROBLEM;
+        DTOscanResponseToController scanResponse = calendarEngine.generateNewStudyPlan(
+                subjectIDForTestInput,
+                "2023-08-30T22:00:00.000Z",
+                "2023-09-09T21:59:59.000Z",
+                decisions);
+
+        if (scanResponse.isSucceed()) {
+            DTOscanResponseToController regeneratePlanResponse = calendarEngine.regenerateStudyPlan(
+                    subjectIDForTestInput,
+                    decisions,
+                    Instant.parse("2023-09-01T22:00:00.000Z").plus(2, ChronoUnit.DAYS));
+
+            String actualOutput = regeneratePlanResponse.getDetails();
+            Assertions.assertEquals(expectedOutput, actualOutput);
+        }
     }
 }
