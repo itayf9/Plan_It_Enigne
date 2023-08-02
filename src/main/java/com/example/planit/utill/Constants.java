@@ -63,4 +63,7 @@ public class Constants {
     public static String ERROR_COLLEGE_CALENDAR_NOT_FOUND = "College calendar does not found";
 
     public static String ERROR_PLANIT_CALENDAR_NOT_FOUND = "PlanIT calendar does not found";
+
+    public static String ERROR_GENERATE_DAYS_NOT_VALID = "The generate days are no longer valid";
+    public static String ERROR_GENERATE_NOT_PERFORMED = "generate wasn't performed";
 }

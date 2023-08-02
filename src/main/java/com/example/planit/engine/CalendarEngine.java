@@ -14,6 +14,7 @@ import com.example.planit.utill.Constants;
 import com.example.planit.utill.EventComparator;
 import com.example.planit.utill.Utility;
 import com.example.planit.utill.dto.*;
+import com.example.planit.utill.exception.GeneralErrorInEngineException;
 import com.example.planit.utill.exception.UserCalendarNotFoundException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -110,7 +111,7 @@ public class CalendarEngine {
      * @param allEvents list of the user events we found during the initial scan
      * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
      */
-    public void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, String start, List<Event> planItCalendarOldEvents, StudyPlan studyPlan)
+    public void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, String start, List<Event> planItCalendarOldEvents, Map<Exam, Double> exam2Proportions, StudyPlan studyPlan)
             throws GeneralSecurityException, IOException {
 
         // gets the list of free slots
@@ -119,8 +120,8 @@ public class CalendarEngine {
         // creates PlanIt calendar if not yet exists
         String planItCalendarID = createPlanItCalendar(service, user);
 
-        // finds the proportions of each exam from 100% study time
-        Map<Exam, Double> exam2Proportions = getExamsProportions(exams);
+//        // finds the proportions of each exam from 100% study time
+//        Map<Exam, Double> exam2Proportions = getExamsProportions(exams);
 
         // separates each slot in the free slots list, to a few study sessions and inserts breaks
         List<StudySession> sessionsList = separateSlotsToSessions(user, dtofreetime.getFreeTimeSlots());
@@ -1026,7 +1027,7 @@ public class CalendarEngine {
                 service.events().insert(planItCalendarID, event).execute();
 
             } catch (GoogleJsonResponseException e) {
-                logger.error(MessageFormat.format("planitcalender id:{0}, google message:{1}", planItCalendarID, e.getMessage()));
+                logger.error(MessageFormat.format("plan_it_calendar id:{0}, google message:{1}", planItCalendarID, e.getMessage()));
                 throw e;
             }
         }
@@ -1057,6 +1058,8 @@ public class CalendarEngine {
                 newSessionIndex++;
             } else if (newSession.getStart().getValue() > (oldEvent.getEnd().getDateTime().getValue())) {
                 // new event starts after old event ends, move to next old event
+                // and add old event to list of overlapping events
+                overlappingEvents.add(oldEvent);
                 oldEventIndex++;
             } else if (newSession.getStart().equals(oldEvent.getStart().getDateTime())
                     && newSession.getEnd().equals(oldEvent.getEnd().getDateTime())
@@ -1075,6 +1078,14 @@ public class CalendarEngine {
             }
 
         }
+
+        // remove plan-it events that are after the last session
+        while (oldEventIndex < planItCalendarOldEvents.size()) {
+            Event oldEvent = planItCalendarOldEvents.get(oldEventIndex);
+            overlappingEvents.add(oldEvent);
+            oldEventIndex++;
+        }
+
         // removes all the events that are duplicates from the sessions list
         for (int i = newSessionsIndicesToBeRemoved.size() - 1; i >= 0; i--) {
             sessionsList.remove(newSessionsIndicesToBeRemoved.get(i).intValue());
@@ -1087,124 +1098,96 @@ public class CalendarEngine {
      * performs a scan on the user events and gather some information.
      * if no full day events found, performs generate PlanIt calendar
      *
-     * @param subjectID the user's sub value
-     * @param start     the user's preferred start time to generate from (in ISO format)
-     * @param end       the user's preferred end time to generate to (in ISO format)
+     * @param start the user's preferred start time to generate from (in ISO format)
+     * @param end   the user's preferred end time to generate to (in ISO format)
      * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
      */
-    public DTOscanResponseToController scanUserEvents(String subjectID, String start, String end, Map<Long, Boolean> decisions) {
-
-        Instant measureTimeInstant;
+    public DTOscanResponseToController scanUserEventsAndGeneratePlan(User user, String start, String end, DTOuserCalendarsInformation userCalendarsInformation, Map<Exam, Double> exam2Proportions, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
 
         StudyPlan studyPlan = new StudyPlan();
         studyPlan.setStartDateTimeOfPlan(start);
         studyPlan.setEndDateTimeOfPlan(end);
-        try {
 
-            // check if user exist in DB
-            Optional<User> maybeUser = userRepo.findUserBySubjectID(subjectID);
-            if (maybeUser.isEmpty()) {
-                return new DTOscanResponseToController(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
-            }
+        // fullDayEvents - a list of events that represents the user's full day events
+        List<Event> fullDayEvents = userCalendarsInformation.getFullDayEvents();
 
-            // get instance of the user
-            User user = maybeUser.get();
-            // refresh access_token before making api call
-            validateAccessTokenExpireTime(user);
+        // events - a list of events that represents all the user's events
+        // planItCalendarOldEvents - a list of PlanIt calendar old events
+        List<Event> regularEvents = userCalendarsInformation.getEvents();
+        List<Event> planItCalendarOldEvents = userCalendarsInformation.getPlanItCalendarOldEvents();
+        List<Exam> examsFound = userCalendarsInformation.getExamsFound();
 
-            // check if access_token still have scope for Google calendar
-            if (!hasAuthorizeScopesStillValid(user.getAuth().getAccessToken())) {
-                return new DTOscanResponseToController(false, Constants.ERROR_NO_VALID_ACCESS_TOKEN, HttpStatus.UNAUTHORIZED);
-            }
+        studyPlan.convertAndSetScannedExamsAsClientRepresentation(examsFound);
 
-            // 1# get List of user's events
-            // perform a scan on the user's Calendar to get all of his events at the time interval
-            logger.debug("user " + subjectID + ": before getting calendar information.");
-            measureTimeInstant = Instant.now();
-            DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
-            logger.debug("user " + subjectID + ": after getting calendar information. " + measureTimeInstant.until(Instant.now(), ChronoUnit.SECONDS) + "s");
-
-            // fullDayEvents - a list of events that represents the user's full day events
-            List<Event> fullDayEvents = userCalendarsInformation.getFullDayEvents();
-
-            // events - a list of events that represents all the user's events
-            // planItCalendarOldEvents - a list of PlanIt calendar old events
-            List<Event> regularEvents = userCalendarsInformation.getEvents();
-            List<Event> planItCalendarOldEvents = userCalendarsInformation.getPlanItCalendarOldEvents();
-            List<Exam> examsFound = userCalendarsInformation.getExamsFound();
-            studyPlan.convertAndSetScannedExamsAsClientRepresentation(examsFound);
-            // checks if no exams are
-            if (examsFound.size() == 0) {
-                return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
-            }
-
-            // add the holidays
-            fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
-
-            // remove duplications
-            fullDayEvents = removeDuplicationsByDate(fullDayEvents);
-
-            // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
-            if (fullDayEvents.size() != 0 && decisions.size() == 0) {
-
-                // return the user with the updated list of fullDayEvents.
-                return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents, new StudyPlan());
-            }
-
-            // go through the list of full day events
-            for (Event fullDayEvent : fullDayEvents) {
-
-                boolean userWantToStudyAtCurrentFullDayEvent = decisions.get(fullDayEvent.getStart().getDate().getValue());
-
-                // check if user want to study at the current fullDayEvent
-                if (!userWantToStudyAtCurrentFullDayEvent) {
-                    // change the full day event to regular event and add it to the regularEvents
-                    Event convertedFullDayEvent = Utility.convertFullDayEventToRegularEvent(fullDayEvent);
-                    regularEvents.add(convertedFullDayEvent);
-                }
-            }
-
-            regularEvents.sort(new EventComparator());
-
-            generatePlanItCalendar(regularEvents,
-                    userCalendarsInformation.getExamsFound(),
-                    maybeUser.get(),
-                    userCalendarsInformation.getCalendarService(),
-                    start,
-                    planItCalendarOldEvents,
-                    studyPlan);
-
-            user.setLatestStudyPlan(studyPlan);
-            userRepo.save(user);
-
-        } catch (UserCalendarNotFoundException e) {
-            // e.g. when the user doesn't have Exams Calendar
-            logger.error(buildExceptionMessage(e));
-            return new DTOscanResponseToController(false, e.getCalendarError(), HttpStatus.NOT_ACCEPTABLE);
-        } catch (TokenResponseException e) {
-            logger.error(buildExceptionMessage(e));
-            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
-                // e.g. when the refresh token has expired
-                return new DTOscanResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
-            } else {
-                // e.g. an unknown error had happened
-                return new DTOscanResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        } catch (IOException e) {
-            // e.g. when we call Google API with execute() method
-            logger.error(buildExceptionMessage(e));
-            return new DTOscanResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (GeneralSecurityException e) {
-            // e.g. could not create HTTP secure connection
-            logger.error(buildExceptionMessage(e));
-            return new DTOscanResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
-            // e.g. an unknown error had happened
-            logger.error(buildExceptionMessage(e));
-            return new DTOscanResponseToController(false, Constants.ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+        // checks if no exams are
+        if (examsFound.size() == 0) {
+            return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
         }
 
+        // remove duplications
+        fullDayEvents = removeDuplicationsByDate(fullDayEvents);
+
+        // add the holidays
+        fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
+
+        // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
+        if (fullDayEvents.size() != 0 && decisions.size() == 0) {
+
+            // return the user with the updated list of fullDayEvents.
+            return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents, new StudyPlan());
+        }
+
+        convertFullDayEventsToRegularGoogleEventsAccordingToDecisions(decisions, fullDayEvents, regularEvents);
+
+        generatePlanItCalendar(regularEvents,
+                examsFound,
+                user,
+                userCalendarsInformation.getCalendarService(),
+                start,
+                planItCalendarOldEvents,
+                exam2Proportions,
+                studyPlan);
+
         return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
+    }
+
+    private void convertFullDayEventsToRegularGoogleEventsAccordingToDecisions(Map<Long, Boolean> decisions, List<Event> fullDayEvents, List<Event> regularEvents) {
+
+        // go through the list of full day events
+        for (Event fullDayEvent : fullDayEvents) {
+
+            boolean userWantToStudyAtCurrentFullDayEvent = decisions.get(fullDayEvent.getStart().getDate().getValue());
+
+            // check if user want to study at the current fullDayEvent
+            if (!userWantToStudyAtCurrentFullDayEvent) {
+                // change the full day event to regular event and add it to the regularEvents
+                Event convertedFullDayEvent = Utility.convertFullDayEventToRegularEvent(fullDayEvent);
+                regularEvents.add(convertedFullDayEvent);
+            }
+        }
+
+        regularEvents.sort(new EventComparator());
+    }
+
+    private User getAndAuthenticateUserBySubId(String subjectID) throws GeneralErrorInEngineException, GeneralSecurityException, IOException {
+
+        // check if user exist in DB
+        Optional<User> maybeUser = userRepo.findUserBySubjectID(subjectID);
+        if (maybeUser.isEmpty()) {
+            throw new GeneralErrorInEngineException(false, Constants.ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        // get instance of the user
+        User user = maybeUser.get();
+        // refresh access_token before making api call
+        validateAccessTokenExpireTime(user);
+
+        // check if access_token still have scope for Google calendar
+        if (!hasAuthorizeScopesStillValid(user.getAuth().getAccessToken())) {
+            throw new GeneralErrorInEngineException(false, Constants.ERROR_NO_VALID_ACCESS_TOKEN, HttpStatus.UNAUTHORIZED);
+        }
+
+        return user;
     }
 
     /***
@@ -1422,13 +1405,266 @@ public class CalendarEngine {
      */
     private static void addBreakTimeInEndOfEachUserEvent(List<Event> userEvents, int userBreakTime) {
 
-        for (Event currntUserEvent : userEvents) {
-            Instant oldEndOfUserEvent = Instant.ofEpochMilli(currntUserEvent.getEnd().getDateTime().getValue());
+        for (Event currentUserEvent : userEvents) {
+            Instant oldEndOfUserEvent = Instant.ofEpochMilli(currentUserEvent.getEnd().getDateTime().getValue());
             Instant newEndOfUserEvent = oldEndOfUserEvent.plus(Math.min(2 * userBreakTime, SPACE_LIMIT_BETWEEN_EVENTS), ChronoUnit.MINUTES);
-            currntUserEvent.setEnd(new EventDateTime()
+            currentUserEvent.setEnd(new EventDateTime()
                     .setDateTime(new DateTime(newEndOfUserEvent.toEpochMilli()))
                     .setTimeZone(ISRAEL_TIME_ZONE));
         }
     }
 
+    public DTOscanResponseToController generateNewStudyPlan(String subjectID, String start, String end, Map<Long, Boolean> decisions) {
+
+        Instant measureTimeInstant;
+
+        try {
+            // get the user with that subjectID, if exists
+            User user = getAndAuthenticateUserBySubId(subjectID);
+
+            // 1# get List of user's events
+            // perform a scan on the user's Calendar to get all of his events at the time interval
+            logger.debug("user " + subjectID + ": before getting calendar information.");
+            measureTimeInstant = Instant.now();
+            DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(user, start, end);
+            logger.debug("user " + subjectID + ": after getting calendar information. " + measureTimeInstant.until(Instant.now(), ChronoUnit.SECONDS) + "s");
+
+            // finds the proportions of each exam from 100% study time
+            Map<Exam, Double> exam2Proportions = getExamsProportions(userCalendarsInformation.getExamsFound());
+
+
+            DTOscanResponseToController dtOscanResponseToController = scanUserEventsAndGeneratePlan(
+                    user,
+                    start,
+                    end,
+                    userCalendarsInformation,
+                    exam2Proportions,
+                    decisions);
+
+
+            boolean isScanSucceed = dtOscanResponseToController.isSucceed();
+
+            if (isScanSucceed) {
+                user.setLatestStudyPlan(dtOscanResponseToController.getStudyPlan());
+                userRepo.save(user);
+            }
+
+            return dtOscanResponseToController;
+
+        } catch (GeneralErrorInEngineException e) {
+            // e.g. when the user has an error in getting User object or authenticating
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(e.isSucceed(), e.getDetails(), e.getHttpStatus());
+        } catch (UserCalendarNotFoundException e) {
+            // e.g. when the user doesn't have Exams Calendar
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(false, e.getCalendarError(), HttpStatus.NOT_ACCEPTABLE);
+        } catch (TokenResponseException e) {
+            logger.error(buildExceptionMessage(e));
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
+                // e.g. when the refresh token has expired
+                return new DTOscanResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
+            } else {
+                // e.g. an unknown error had happened
+                return new DTOscanResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (IOException e) {
+            // e.g. when we call Google API with execute() method
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (GeneralSecurityException e) {
+            // e.g. could not create HTTP secure connection
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            // e.g. an unknown error had happened
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(false, Constants.ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void updateExamProportions(Map<Exam, Double> exam2Proportions, List<Event> planItCalendarOldEvents, Instant timeWhenUserPressedRegenerate) {
+        int oldSessionsCount = planItCalendarOldEvents.size();
+        double sunOfProportions = 0;
+
+        for (Exam exam : exam2Proportions.keySet()) {
+            int countOfLearnedSessions = 0;
+            for (Event studySessionEvent : planItCalendarOldEvents) {
+
+                String courseName = studySessionEvent.getSummary().substring(7); // get the course name from the event
+                long startTimeOfCurrentStudySessionEvent = studySessionEvent.getStart().getDateTime().getValue();
+
+                // Check if the studySessionEvent has already been learned or not
+                boolean startTimeOfCurrentStudySessionEventIsBeforeNow = Instant.ofEpochMilli(
+                        startTimeOfCurrentStudySessionEvent).isBefore(timeWhenUserPressedRegenerate); // notice timeWhenUserPressedRegenerate == Instant.now()
+
+                if (startTimeOfCurrentStudySessionEventIsBeforeNow && courseName.equals(exam.getCourse().getCourseName())) {
+                    countOfLearnedSessions++;
+                } else if (!startTimeOfCurrentStudySessionEventIsBeforeNow) { // this interprets to the current session hasn't been learned yet
+                    break;
+                }
+            }
+            double oldProportion = exam2Proportions.get(exam);
+            double newProportion = oldProportion - (double) countOfLearnedSessions / oldSessionsCount;
+            exam2Proportions.put(exam, newProportion);
+            sunOfProportions += newProportion;
+        }
+
+        double amountToUpScaleProportions = (1.0 / sunOfProportions); // the 'y' from the paint schema
+
+        // upscale the proportions to be equals to 1.0
+        for (Exam exam : exam2Proportions.keySet()) {
+            double upScaledProportion = amountToUpScaleProportions * exam2Proportions.get(exam);
+            exam2Proportions.put(exam, upScaledProportion);
+        }
+    }
+
+    public DTOscanResponseToController regenerateStudyPlan(String sub, Map<Long, Boolean> decisions, Instant timeWhenUserPressedRegenerate) {
+
+        try {
+            // sub => start(now) end(from user DB)
+            User currentUser = getAndAuthenticateUserBySubId(sub);
+
+            DTOuserCalendarsInformation userCalendarsOldInformation = getUserCalendarsInformation(
+                    currentUser, currentUser.getLatestStudyPlan().getStartDateTimeOfPlan(), currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
+
+            // finds the proportions of each exam from 100% study time
+            Map<Exam, Double> exam2Proportions = getExamsProportions(userCalendarsOldInformation.getExamsFound());
+
+            updateExamProportions(exam2Proportions, userCalendarsOldInformation.getPlanItCalendarOldEvents(), timeWhenUserPressedRegenerate);
+
+            // here we have the time of the current generate
+            String start = getActualRegenerateStartTime(currentUser, timeWhenUserPressedRegenerate);
+            String end = currentUser.getLatestStudyPlan().getEndDateTimeOfPlan();
+            DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(currentUser, start, end);
+
+            // remove subject already learned
+            int numberOfOldEvent = updateSubjectsForEachExams(userCalendarsInformation.getExamsFound(), currentUser.getLatestStudyPlan().getStartDateTimeOfPlan(), end,
+                    userCalendarsInformation.getPlanItCalendarOldEvents());
+
+            Map<Exam, Double> updatedExam2Proportions = new HashMap<>();
+
+            for (Exam currentExam : userCalendarsInformation.getExamsFound()) {
+                Optional<Exam> maybeExamFromMapOfProportions = exam2Proportions.keySet().stream().filter(exam -> exam.getDateTime().equals(currentExam.getDateTime()) &&
+                        exam.getCourse().getCourseName().equals(currentExam.getCourse().getCourseName())).findFirst();
+
+                if (maybeExamFromMapOfProportions.isPresent()) {
+                    Double theUpdatedProportion = exam2Proportions.get(maybeExamFromMapOfProportions.get());
+                    updatedExam2Proportions.put(currentExam, theUpdatedProportion);
+                }
+                
+            }
+
+            // original scan()
+            DTOscanResponseToController dtOscanResponseToController = scanUserEventsAndGeneratePlan(
+                    currentUser,
+                    start,
+                    end,
+                    userCalendarsInformation,
+                    updatedExam2Proportions,
+                    decisions);
+
+            boolean isScanSucceed = dtOscanResponseToController.isSucceed();
+
+            if (isScanSucceed) {
+                String newStartDateOfStudyPlan = currentUser.getLatestStudyPlan().getStartDateTimeOfPlan();
+                dtOscanResponseToController.getStudyPlan().setStartDateTimeOfPlan(newStartDateOfStudyPlan);
+
+                dtOscanResponseToController.getStudyPlan().setTotalNumberOfStudySessions(
+                        numberOfOldEvent + dtOscanResponseToController.getStudyPlan().getTotalNumberOfStudySessions());
+
+                currentUser.setLatestStudyPlan(dtOscanResponseToController.getStudyPlan());
+                userRepo.save(currentUser);
+            }
+            return dtOscanResponseToController;
+        } catch (GeneralErrorInEngineException e) {
+            // e.g. when the user has an error in getting User object or authenticating
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(e.isSucceed(), e.getDetails(), e.getHttpStatus());
+        } catch (UserCalendarNotFoundException e) {
+            // e.g. when the user doesn't have Exams Calendar
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(false, e.getCalendarError(), HttpStatus.NOT_ACCEPTABLE);
+        } catch (TokenResponseException e) {
+            logger.error(buildExceptionMessage(e));
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
+                // e.g. when the refresh token has expired
+                return new DTOscanResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
+            } else {
+                // e.g. an unknown error had happened
+                return new DTOscanResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (IOException e) {
+            // e.g. when we call Google API with execute() method
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(false, Constants.ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (GeneralSecurityException e) {
+            // e.g. could not create HTTP secure connection
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(false, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            // e.g. an unknown error had happened
+            logger.error(buildExceptionMessage(e));
+            return new DTOscanResponseToController(false, Constants.ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public DTOscanResponseToController regenerateStudyPlan(String sub, Map<Long, Boolean> decisions) {
+        return regenerateStudyPlan(sub, decisions, Instant.now());
+    }
+
+    private String getActualRegenerateStartTime(User currentUser, Instant timeWhenUserPressedRegenerate) throws GeneralErrorInEngineException {
+
+        // check if the user already generate study plan
+        if (currentUser.getLatestStudyPlan().getEndDateTimeOfPlan() == null) {
+            throw new GeneralErrorInEngineException(false, Constants.ERROR_GENERATE_NOT_PERFORMED, HttpStatus.BAD_REQUEST);
+        }
+        // check if the time(now) is after end
+        long endTimeOfLastStudyPlan = DateTime.parseRfc3339(currentUser.getLatestStudyPlan().getEndDateTimeOfPlan()).getValue();
+        if (endTimeOfLastStudyPlan < timeWhenUserPressedRegenerate.toEpochMilli()) {
+            throw new GeneralErrorInEngineException(false, Constants.ERROR_GENERATE_DAYS_NOT_VALID, HttpStatus.BAD_REQUEST);
+        }
+        long startTimeOfLastStudyPlan = DateTime.parseRfc3339(currentUser.getLatestStudyPlan().getStartDateTimeOfPlan()).getValue();
+        // check if the time(now) is after start. start < now < end
+        if (startTimeOfLastStudyPlan < timeWhenUserPressedRegenerate.toEpochMilli()) {
+            return timeWhenUserPressedRegenerate.toString();
+        } else {
+            return currentUser.getLatestStudyPlan().getStartDateTimeOfPlan();
+        }
+    }
+
+    private int updateSubjectsForEachExams(List<Exam> exams, String start, String end, List<Event> oldEvent) {
+
+        Date dayOfStartTheGenerate = new Date(DateTime.parseRfc3339(start).getValue());
+        Date dayOfEndTheGenerate = new Date(DateTime.parseRfc3339(end).getValue());
+
+        Map<String, Set<String>> courseName2UpdatedSubjects = new HashMap<>();
+        int countOldEventsNotInTheNewGenerate = 0;
+
+        for (Event event : oldEvent) {
+            String courseName = event.getSummary().substring(7); // get the course name from the event without the "למידה ל"
+            if (!courseName2UpdatedSubjects.containsKey(courseName)) {
+                courseName2UpdatedSubjects.put(courseName, new HashSet<>());
+            }
+            Date currentDayOfTheEvent = new Date(event.getStart().getDateTime().getValue());
+            // check if the day of the event is after the start day
+            if (currentDayOfTheEvent.after(dayOfStartTheGenerate) && currentDayOfTheEvent.before(dayOfEndTheGenerate)) {
+                String[] allSubjectFromCurrentEvent = event.getDescription().split(" , ");
+                for (String nameOfTheCurrentSubject : allSubjectFromCurrentEvent) {
+                    courseName2UpdatedSubjects.get(courseName).add(nameOfTheCurrentSubject);
+                }
+            } else {
+                countOldEventsNotInTheNewGenerate++;
+            }
+        }
+
+        for (Exam exam : exams) {
+            String examName = exam.getCourse().getCourseName();
+            exam.getCourse().setCourseSubjects(Arrays.copyOf(courseName2UpdatedSubjects.get(examName).toArray(),
+                    courseName2UpdatedSubjects.get(examName).size(),
+                    String[].class));
+        }
+
+        return countOldEventsNotInTheNewGenerate;
+    }
 }

@@ -14,9 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import static com.example.planit.utill.Constants.PLAN_IT_WEB_PRODUCTION_URI;
+
 import java.text.MessageFormat;
 import java.util.Map;
+
+import static com.example.planit.utill.Constants.PLAN_IT_WEB_PRODUCTION_URI;
 
 @CrossOrigin(origins = {"http://localhost:3000", PLAN_IT_WEB_PRODUCTION_URI})
 @RestController
@@ -52,10 +54,27 @@ public class CalendarController {
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /scan with params: sub={0}, start={1}, end={2}", sub, start, end));
 
-        DTOscanResponseToController scanResponseToController = calendarEngine.scanUserEvents(sub, start, end, decisions);
-        long t = System.currentTimeMillis();
-        long res = t - s;
-        logger.info(MessageFormat.format("User {0}: scan time is {1} ms", sub, res));
+        DTOscanResponseToController scanResponseToController = calendarEngine.generateNewStudyPlan(sub, start, end, decisions);
+
+        logger.info(MessageFormat.format("User {0}: scan time is {1} ms", sub, (System.currentTimeMillis() - s)));
+
+        return ResponseEntity.status(scanResponseToController.getHttpStatus())
+                .body(new DTOscanResponseToClient(
+                        scanResponseToController.isSucceed(),
+                        scanResponseToController.getDetails(),
+                        scanResponseToController.getFullDayEvents(),
+                        scanResponseToController.getStudyPlan()));
+    }
+
+    @PostMapping(value = "/re-generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<DTOscanResponseToClient> regenerateStudyPlan(@RequestParam String sub, @RequestBody(required = false) Map<Long, Boolean> decisions) {
+
+        long s = System.currentTimeMillis();
+        logger.info(MessageFormat.format("User {0}: has requested POST /re-generate with params: sub={0}", sub));
+
+        DTOscanResponseToController scanResponseToController = calendarEngine.regenerateStudyPlan(sub, decisions);
+
+        logger.info(MessageFormat.format("User {0}: scan time is {1} ms", sub, System.currentTimeMillis() - s));
 
         return ResponseEntity.status(scanResponseToController.getHttpStatus())
                 .body(new DTOscanResponseToClient(
@@ -67,14 +86,13 @@ public class CalendarController {
 
     @GetMapping(value = "/study-plan")
     public ResponseEntity<DTOstudyPlanAndSessionResponseToClient> getLatestStudyPlan(@RequestParam String sub) {
+
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /study-plan with params: sub={0}", sub));
 
         DTOstudyPlanAndSessionResponseToController dtOstudyPlanAndSessionResponseToController = calendarEngine.getUserLatestStudyPlanAndUpComingSession(sub);
 
-        long t = System.currentTimeMillis();
-        long res = t - s;
-        logger.info(MessageFormat.format("User {0}: study-plan time is {1} ms", sub, res));
+        logger.info(MessageFormat.format("User {0}: study-plan time is {1} ms", sub, System.currentTimeMillis() - s));
 
 
         return ResponseEntity.status(dtOstudyPlanAndSessionResponseToController.getHttpStatus())
