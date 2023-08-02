@@ -1102,7 +1102,7 @@ public class CalendarEngine {
      * @param end   the user's preferred end time to generate to (in ISO format)
      * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
      */
-    public DTOscanResponseToController scanUserEvents(User user, String start, String end, DTOuserCalendarsInformation userCalendarsInformation, Map<Exam, Double> exam2Proportions, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
+    public DTOscanResponseToController scanUserEventsAndGeneratePlan(User user, String start, String end, DTOuserCalendarsInformation userCalendarsInformation, Map<Exam, Double> exam2Proportions, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
 
         StudyPlan studyPlan = new StudyPlan();
         studyPlan.setStartDateTimeOfPlan(start);
@@ -1430,7 +1430,7 @@ public class CalendarEngine {
             Map<Exam, Double> exam2Proportions = getExamsProportions(userCalendarsInformation.getExamsFound());
 
 
-            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(
+            DTOscanResponseToController dtOscanResponseToController = scanUserEventsAndGeneratePlan(
                     user,
                     start,
                     end,
@@ -1542,15 +1542,18 @@ public class CalendarEngine {
             Map<Exam, Double> updatedExam2Proportions = new HashMap<>();
 
             for (Exam currentExam : userCalendarsInformation.getExamsFound()) {
-                Exam examFromMapOfProportions = exam2Proportions.keySet().stream().filter(exam -> exam.getDateTime().equals(currentExam.getDateTime()) &&
-                        exam.getCourse().getCourseName().equals(currentExam.getCourse().getCourseName())).findFirst().get();
+                Optional<Exam> maybeExamFromMapOfProportions = exam2Proportions.keySet().stream().filter(exam -> exam.getDateTime().equals(currentExam.getDateTime()) &&
+                        exam.getCourse().getCourseName().equals(currentExam.getCourse().getCourseName())).findFirst();
 
-                Double theUpdatedProportion = exam2Proportions.get(examFromMapOfProportions);
-                updatedExam2Proportions.put(currentExam, theUpdatedProportion);
+                if (maybeExamFromMapOfProportions.isPresent()) {
+                    Double theUpdatedProportion = exam2Proportions.get(maybeExamFromMapOfProportions.get());
+                    updatedExam2Proportions.put(currentExam, theUpdatedProportion);
+                }
+                
             }
 
             // original scan()
-            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(
+            DTOscanResponseToController dtOscanResponseToController = scanUserEventsAndGeneratePlan(
                     currentUser,
                     start,
                     end,

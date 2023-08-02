@@ -1,4 +1,4 @@
-package com.example.planit.engine.calendar;
+package com.example.planit.engine.calendar.regenerate;
 
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.utill.Constants;
@@ -10,13 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-class PlanITApplicationTests {
+public class RegenerateStudyPlanTests {
+
     @Autowired
     private CalendarEngine calendarEngine;
 
@@ -158,32 +158,4 @@ class PlanITApplicationTests {
         String actualOutput = scanResponse.getDetails();
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
-
-    @Test
-    void RegeneratePlan() {
-        String expectedOutput = Constants.NO_PROBLEM;
-        decisions.put(1690329600000L, true);
-        decisions.put(1690416000000L, true);
-        decisions.put(1690329600000L, true);
-        DTOscanResponseToController scanResponse = calendarEngine.generateNewStudyPlan(
-                subjectIDForTestInput,
-//                "2023-08-30T22:00:00.000Z",
-//                "2023-09-09T21:59:59.000Z",
-                "2023-07-23T10:00:00.000Z",
-                "2023-08-04T21:59:59.000Z",
-                decisions);
-
-        if (scanResponse.isSucceed()) {
-            DTOscanResponseToController regeneratePlanResponse = calendarEngine.regenerateStudyPlan(
-                    subjectIDForTestInput,
-                    decisions,
-                    Instant.parse("2023-07-31T22:00:00.000Z")/*.plus(2, ChronoUnit.DAYS)*/);
-
-            String actualOutput = regeneratePlanResponse.getDetails();
-            Assertions.assertEquals(expectedOutput, actualOutput);
-        }
-    }
 }
-// 1690329600000
-// 1690416000000
-// 1690329600000
