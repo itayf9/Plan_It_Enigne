@@ -1281,6 +1281,8 @@ public class CalendarEngine {
             currentFullDayEventIndex++;
         }
 
+        fullDayEventsWithHolidays.sort(new EventComparator());
+
         return fullDayEventsWithHolidays;
     }
 
@@ -1301,10 +1303,11 @@ public class CalendarEngine {
             if (lastEventInModifiedList == null || lastEventInModifiedList.getStart().getDate().getValue() != fullDayEvent.getStart().getDate().getValue()) {
                 lastEventInModifiedList = fullDayEvent;
                 modifiedFullDayEventsList.add(lastEventInModifiedList);
-            } else {
+                // case for 2 full-day-events that don't have same summery-name
+            } else if (!lastEventInModifiedList.getSummary().equals(fullDayEvent.getSummary())) {
                 lastEventInModifiedList.setSummary(lastEventInModifiedList.getSummary() + " | " + fullDayEvent.getSummary());
             }
-
+            // else case will be ignored since we don't want to display the same dull-day-event twice
         }
 
         return modifiedFullDayEventsList;
