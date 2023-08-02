@@ -1430,8 +1430,7 @@ public class CalendarEngine {
             Map<Exam, Double> exam2Proportions = getExamsProportions(userCalendarsInformation.getExamsFound());
 
 
-
-                    DTOscanResponseToController dtOscanResponseToController = scanUserEvents(
+            DTOscanResponseToController dtOscanResponseToController = scanUserEvents(
                     user,
                     start,
                     end,
@@ -1483,6 +1482,8 @@ public class CalendarEngine {
 
     private void updateExamProportions(Map<Exam, Double> exam2Proportions, List<Event> planItCalendarOldEvents, Instant timeWhenUserPressedRegenerate) {
         int oldSessionsCount = planItCalendarOldEvents.size();
+        double sunOfProportions = 0;
+
         for (Exam exam : exam2Proportions.keySet()) {
             int countOfLearnedSessions = 0;
             for (Event studySessionEvent : planItCalendarOldEvents) {
@@ -1503,6 +1504,15 @@ public class CalendarEngine {
             double oldProportion = exam2Proportions.get(exam);
             double newProportion = oldProportion - (double) countOfLearnedSessions / oldSessionsCount;
             exam2Proportions.put(exam, newProportion);
+            sunOfProportions += newProportion;
+        }
+
+        double amountToUpScaleProportions = (1.0 / sunOfProportions); // the 'y' from the paint schema
+
+        // upscale the proportions to be equals to 1.0
+        for (Exam exam : exam2Proportions.keySet()) {
+            double upScaledProportion = amountToUpScaleProportions * exam2Proportions.get(exam);
+            exam2Proportions.put(exam, upScaledProportion);
         }
     }
 
@@ -1511,20 +1521,33 @@ public class CalendarEngine {
         try {
             // sub => start(now) end(from user DB)
             User currentUser = getAndAuthenticateUserBySubId(sub);
+
+            DTOuserCalendarsInformation userCalendarsOldInformation = getUserCalendarsInformation(
+                    currentUser, currentUser.getLatestStudyPlan().getStartDateTimeOfPlan(), currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
+
+            // finds the proportions of each exam from 100% study time
+            Map<Exam, Double> exam2Proportions = getExamsProportions(userCalendarsOldInformation.getExamsFound());
+
+            updateExamProportions(exam2Proportions, userCalendarsOldInformation.getPlanItCalendarOldEvents(), timeWhenUserPressedRegenerate);
+
             // here we have the time of the current generate
             String start = getActualRegenerateStartTime(currentUser, timeWhenUserPressedRegenerate);
             String end = currentUser.getLatestStudyPlan().getEndDateTimeOfPlan();
-            DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(currentUser, start, currentUser.getLatestStudyPlan().getEndDateTimeOfPlan());
-
-            // finds the proportions of each exam from 100% study time
-            Map<Exam, Double> exam2Proportions = getExamsProportions(userCalendarsInformation.getExamsFound());
-
-            updateExamProportions(exam2Proportions, userCalendarsInformation.getPlanItCalendarOldEvents(), timeWhenUserPressedRegenerate);
-
+            DTOuserCalendarsInformation userCalendarsInformation = getUserCalendarsInformation(currentUser, start, end);
 
             // remove subject already learned
-            int numberOfOldEvent = updateSubjectForEachExams(userCalendarsInformation.getExamsFound(), start, end,
+            int numberOfOldEvent = updateSubjectsForEachExams(userCalendarsInformation.getExamsFound(), currentUser.getLatestStudyPlan().getStartDateTimeOfPlan(), end,
                     userCalendarsInformation.getPlanItCalendarOldEvents());
+
+            Map<Exam, Double> updatedExam2Proportions = new HashMap<>();
+
+            for (Exam currentExam : userCalendarsInformation.getExamsFound()) {
+                Exam examFromMapOfProportions = exam2Proportions.keySet().stream().filter(exam -> exam.getDateTime().equals(currentExam.getDateTime()) &&
+                        exam.getCourse().getCourseName().equals(currentExam.getCourse().getCourseName())).findFirst().get();
+
+                Double theUpdatedProportion = exam2Proportions.get(examFromMapOfProportions);
+                updatedExam2Proportions.put(currentExam, theUpdatedProportion);
+            }
 
             // original scan()
             DTOscanResponseToController dtOscanResponseToController = scanUserEvents(
@@ -1532,7 +1555,7 @@ public class CalendarEngine {
                     start,
                     end,
                     userCalendarsInformation,
-                    exam2Proportions,
+                    updatedExam2Proportions,
                     decisions);
 
             boolean isScanSucceed = dtOscanResponseToController.isSucceed();
@@ -1581,7 +1604,7 @@ public class CalendarEngine {
     }
 
     public DTOscanResponseToController regenerateStudyPlan(String sub, Map<Long, Boolean> decisions) {
-         return regenerateStudyPlan(sub, decisions, Instant.now());
+        return regenerateStudyPlan(sub, decisions, Instant.now());
     }
 
     private String getActualRegenerateStartTime(User currentUser, Instant timeWhenUserPressedRegenerate) throws GeneralErrorInEngineException {
@@ -1604,11 +1627,14 @@ public class CalendarEngine {
         }
     }
 
-    private int updateSubjectForEachExams(List<Exam> exams, String start, String end, List<Event> oldEvent) {
+    private int updateSubjectsForEachExams(List<Exam> exams, String start, String end, List<Event> oldEvent) {
+
         Date dayOfStartTheGenerate = new Date(DateTime.parseRfc3339(start).getValue());
         Date dayOfEndTheGenerate = new Date(DateTime.parseRfc3339(end).getValue());
+
         Map<String, Set<String>> courseName2UpdatedSubjects = new HashMap<>();
-        int countOldEventNotInTheNewGenerate = 0;
+        int countOldEventsNotInTheNewGenerate = 0;
+
         for (Event event : oldEvent) {
             String courseName = event.getSummary().substring(7); // get the course name from the event without the "למידה ל"
             if (!courseName2UpdatedSubjects.containsKey(courseName)) {
@@ -1622,7 +1648,7 @@ public class CalendarEngine {
                     courseName2UpdatedSubjects.get(courseName).add(nameOfTheCurrentSubject);
                 }
             } else {
-                countOldEventNotInTheNewGenerate++;
+                countOldEventsNotInTheNewGenerate++;
             }
         }
 
@@ -1633,6 +1659,6 @@ public class CalendarEngine {
                     String[].class));
         }
 
-        return countOldEventNotInTheNewGenerate;
+        return countOldEventsNotInTheNewGenerate;
     }
 }
