@@ -160,7 +160,7 @@ class PlanITApplicationTests {
     }
 
     @Test
-    void RegeneratePlan() {
+    void RegeneratePlanWithFullDaysEvent() {
         String expectedOutput = Constants.NO_PROBLEM;
         decisions.put(1690329600000L, true);
         decisions.put(1690416000000L, true);
@@ -178,6 +178,26 @@ class PlanITApplicationTests {
                     subjectIDForTestInput,
                     decisions,
                     Instant.parse("2023-07-31T22:00:00.000Z")/*.plus(2, ChronoUnit.DAYS)*/);
+
+            String actualOutput = regeneratePlanResponse.getDetails();
+            Assertions.assertEquals(expectedOutput, actualOutput);
+        }
+    }
+
+    @Test
+    void RegeneratePlanWithoutFullDaysEvent() {
+        String expectedOutput = Constants.NO_PROBLEM;
+        DTOscanResponseToController scanResponse = calendarEngine.generateNewStudyPlan(
+                subjectIDForTestInput,
+                "2023-08-06T00:00:00.000Z",
+                "2023-08-12T21:59:59.000Z",
+                decisions);
+
+        if (scanResponse.isSucceed()) {
+            DTOscanResponseToController regeneratePlanResponse = calendarEngine.regenerateStudyPlan(
+                    subjectIDForTestInput,
+                    decisions,
+                    Instant.parse("2023-08-07T22:00:00.000Z"));
 
             String actualOutput = regeneratePlanResponse.getDetails();
             Assertions.assertEquals(expectedOutput, actualOutput);
