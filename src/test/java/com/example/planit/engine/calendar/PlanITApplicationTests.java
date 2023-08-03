@@ -11,7 +11,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -163,17 +162,22 @@ class PlanITApplicationTests {
     @Test
     void RegeneratePlan() {
         String expectedOutput = Constants.NO_PROBLEM;
+        decisions.put(1690329600000L, true);
+        decisions.put(1690416000000L, true);
+        decisions.put(1690329600000L, true);
         DTOscanResponseToController scanResponse = calendarEngine.generateNewStudyPlan(
                 subjectIDForTestInput,
-                "2023-08-30T22:00:00.000Z",
-                "2023-09-09T21:59:59.000Z",
+//                "2023-08-30T22:00:00.000Z",
+//                "2023-09-09T21:59:59.000Z",
+                "2023-07-23T10:00:00.000Z",
+                "2023-08-04T21:59:59.000Z",
                 decisions);
 
         if (scanResponse.isSucceed()) {
             DTOscanResponseToController regeneratePlanResponse = calendarEngine.regenerateStudyPlan(
                     subjectIDForTestInput,
                     decisions,
-                    Instant.parse("2023-09-01T22:00:00.000Z").plus(2, ChronoUnit.DAYS));
+                    Instant.parse("2023-07-31T22:00:00.000Z")/*.plus(2, ChronoUnit.DAYS)*/);
 
             String actualOutput = regeneratePlanResponse.getDetails();
             Assertions.assertEquals(expectedOutput, actualOutput);
