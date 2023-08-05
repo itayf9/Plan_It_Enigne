@@ -18,9 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.text.MessageFormat;
 import java.util.Map;
 
-import static com.example.planit.utill.Constants.PLAN_IT_WEB_PRODUCTION_URI;
-
-@CrossOrigin(origins = {"http://localhost:3000", PLAN_IT_WEB_PRODUCTION_URI})
+@CrossOrigin
 @RestController
 public class CalendarController {
 
