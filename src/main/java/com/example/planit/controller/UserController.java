@@ -25,10 +25,9 @@ import java.text.MessageFormat;
 import java.util.Optional;
 
 import static com.example.planit.model.mongo.user.UserClientRepresentation.buildUserClientRepresentationFromUser;
-import static com.example.planit.utill.Constants.PLAN_IT_WEB_PRODUCTION_URI;
 import static com.example.planit.utill.Utility.buildExceptionMessage;
 
-@CrossOrigin(origins = {"http://localhost:3000", PLAN_IT_WEB_PRODUCTION_URI})
+@CrossOrigin
 @RestController
 public class UserController {
     private static final Logger logger = LogManager.getLogger(UserController.class);
