@@ -61,7 +61,8 @@ public class CalendarController {
                         scanResponseToController.isSucceed(),
                         scanResponseToController.getDetails(),
                         scanResponseToController.getFullDayEvents(),
-                        scanResponseToController.getStudyPlan()));
+                        scanResponseToController.getStudyPlan(),
+                        scanResponseToController.getUpComingSession()));
     }
 
     @PostMapping(value = "/re-generate", consumes = {MediaType.APPLICATION_JSON_VALUE})
@@ -79,7 +80,8 @@ public class CalendarController {
                         scanResponseToController.isSucceed(),
                         scanResponseToController.getDetails(),
                         scanResponseToController.getFullDayEvents(),
-                        scanResponseToController.getStudyPlan()));
+                        scanResponseToController.getStudyPlan(),
+                        scanResponseToController.getUpComingSession()));
     }
 
     @GetMapping(value = "/study-plan")
