@@ -397,8 +397,7 @@ public class CalendarEngine {
         long startTimeOfLastExam = lastExam.getDateTime().getValue();
         List<TimeSlot> userFreeTimeSlots = new ArrayList<>();
 
-        // add to the end of each user event a break
-        addBreakTimeInEndOfEachUserEvent(userEvents, user.getUserPreferences().getUserBreakTime());
+        addBreakTimeInStartAndEndOfEachUserEvent(userEvents, user.getUserPreferences().getUserBreakTime());
         // get the free slot before the first event
         if (userEvents.size() > 0) {
             long startOfFirstEvent = userEvents.get(0).getStart().getDateTime().getValue();
@@ -1398,18 +1397,26 @@ public class CalendarEngine {
     }
 
     /**
-     * add break in the end of each user event in the list
+     * add break in the start and end of each user event in the list
      *
      * @param userEvents    list of all the {@link Event} the user have in the calendars
      * @param userBreakTime the break time in user preferences in minutes
      */
-    private static void addBreakTimeInEndOfEachUserEvent(List<Event> userEvents, int userBreakTime) {
+    private static void addBreakTimeInStartAndEndOfEachUserEvent(List<Event> userEvents, int userBreakTime) {
 
         for (Event currentUserEvent : userEvents) {
+            // add break in the end of the current event
             Instant oldEndOfUserEvent = Instant.ofEpochMilli(currentUserEvent.getEnd().getDateTime().getValue());
-            Instant newEndOfUserEvent = oldEndOfUserEvent.plus(Math.min(2 * userBreakTime, SPACE_LIMIT_BETWEEN_EVENTS), ChronoUnit.MINUTES);
+            Instant newEndTimeOfUserEvent = oldEndOfUserEvent.plus(Math.min(2 * userBreakTime, SPACE_LIMIT_BETWEEN_EVENTS_IN_MINUTES), ChronoUnit.MINUTES);
+            // add break in the start of the current event
+            Instant oldStartOfUserEvent = Instant.ofEpochMilli(currentUserEvent.getStart().getDateTime().getValue());
+            Instant newStartTimeOfUserEvent = oldStartOfUserEvent.minusSeconds(Math.min(2L * userBreakTime * MINUTE_AS_SECONDS, SPACE_LIMIT_BETWEEN_EVENTS_IN_MINUTES * MINUTE_AS_SECONDS));
+
+            currentUserEvent.setStart(new EventDateTime()
+                    .setDateTime(new DateTime(newStartTimeOfUserEvent.toEpochMilli()))
+                    .setTimeZone(ISRAEL_TIME_ZONE));
             currentUserEvent.setEnd(new EventDateTime()
-                    .setDateTime(new DateTime(newEndOfUserEvent.toEpochMilli()))
+                    .setDateTime(new DateTime(newEndTimeOfUserEvent.toEpochMilli()))
                     .setTimeZone(ISRAEL_TIME_ZONE));
         }
     }
@@ -1552,7 +1559,7 @@ public class CalendarEngine {
                     Double theUpdatedProportion = exam2Proportions.get(maybeExamFromMapOfProportions.get());
                     updatedExam2Proportions.put(currentExam, theUpdatedProportion);
                 }
-                
+
             }
 
             // original scan()
