@@ -1,6 +1,7 @@
 package com.example.planit.utill.dto;
 
 import com.example.planit.model.mongo.user.StudyPlan;
+import com.example.planit.model.studysession.StudySession;
 import com.google.api.services.calendar.model.Event;
 import org.springframework.http.HttpStatus;
 
@@ -12,28 +13,28 @@ public class DTOscanResponseToController extends DTOresponseToController {
 
     private final StudyPlan studyPlan;
 
-    public DTOscanResponseToController(boolean isSucceed, String details, HttpStatus httpStatus, List<Event> fullDayEvents, StudyPlan studyPlan) {
-        super(isSucceed, details, httpStatus);
-        this.fullDayEvents = fullDayEvents;
-        this.studyPlan = studyPlan;
-    }
+    private final StudySession upComingSession;
+
 
     public DTOscanResponseToController(boolean isSucceed, String details, HttpStatus httpStatus) {
         super(isSucceed, details, httpStatus);
         this.fullDayEvents = new ArrayList<>();
         this.studyPlan = new StudyPlan();
+        this.upComingSession = new StudySession(null, null);
     }
 
     public DTOscanResponseToController(boolean isSucceed, String details, HttpStatus httpStatus, List<Event> fullDayEvents) {
         super(isSucceed, details, httpStatus);
         this.fullDayEvents = fullDayEvents;
         this.studyPlan = new StudyPlan();
+        this.upComingSession = new StudySession(null, null);
     }
 
-    public DTOscanResponseToController(boolean isSucceed, String details, HttpStatus httpStatus, StudyPlan studyPlan) {
+    public DTOscanResponseToController(boolean isSucceed, String details, HttpStatus httpStatus, StudyPlan studyPlan, StudySession upComingSession) {
         super(isSucceed, details, httpStatus);
         this.fullDayEvents = new ArrayList<>();
         this.studyPlan = studyPlan;
+        this.upComingSession = upComingSession;
     }
 
     public StudyPlan getStudyPlan() {
@@ -42,5 +43,9 @@ public class DTOscanResponseToController extends DTOresponseToController {
 
     public List<Event> getFullDayEvents() {
         return fullDayEvents;
+    }
+
+    public StudySession getUpComingSession() {
+        return upComingSession;
     }
 }

@@ -1133,7 +1133,7 @@ public class CalendarEngine {
         if (fullDayEvents.size() != 0 && decisions.size() == 0) {
 
             // return the user with the updated list of fullDayEvents.
-            return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents, new StudyPlan());
+            return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents);
         }
 
         convertFullDayEventsToRegularGoogleEventsAccordingToDecisions(decisions, fullDayEvents, regularEvents);
@@ -1147,7 +1147,9 @@ public class CalendarEngine {
                 exam2Proportions,
                 studyPlan);
 
-        return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan);
+        StudySession upcomingSession = getUpComingSessionForUser(user);
+
+        return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan, upcomingSession);
     }
 
     private void convertFullDayEventsToRegularGoogleEventsAccordingToDecisions(Map<Long, Boolean> decisions, List<Event> fullDayEvents, List<Event> regularEvents) {
