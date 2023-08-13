@@ -3,6 +3,7 @@ package com.example.planit.engine.calendar;
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.utill.Constants;
 import com.example.planit.utill.dto.DTOscanResponseToController;
+import com.google.api.services.calendar.model.Event;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,8 +12,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -177,7 +179,7 @@ class PlanITApplicationTests {
             DTOscanResponseToController regeneratePlanResponse = calendarEngine.regenerateStudyPlan(
                     subjectIDForTestInput,
                     decisions,
-                    Instant.parse("2023-07-31T22:00:00.000Z")/*.plus(2, ChronoUnit.DAYS)*/);
+                    Instant.parse("2023-07-31T22:00:00.000Z"));
 
             String actualOutput = regeneratePlanResponse.getDetails();
             Assertions.assertEquals(expectedOutput, actualOutput);
@@ -202,5 +204,29 @@ class PlanITApplicationTests {
             String actualOutput = regeneratePlanResponse.getDetails();
             Assertions.assertEquals(expectedOutput, actualOutput);
         }
+    }
+
+    @Test
+    void duplicateFullDayEventsDetection() {
+        // Generate study plan and get full-day events
+        DTOscanResponseToController scanResponse = calendarEngine.generateNewStudyPlan(
+                subjectIDForTestInput,
+                "2023-05-06T00:00:00.000Z",
+                "2023-08-12T21:59:59.000Z",
+                decisions);
+
+        List<Event> fullDayEvents = scanResponse.getFullDayEvents();
+
+        // Use Java streams to find duplicate events
+        boolean hasDuplicates = fullDayEvents.stream()
+                .anyMatch(event -> fullDayEvents.stream()
+                        .anyMatch(otherEvent ->
+                                event != otherEvent &&
+                                        event.getStart().getDate().getValue() == otherEvent.getStart().getDate().getValue() &&
+                                        event.getSummary().equals(otherEvent.getSummary())
+                        ));
+
+        // Assert that there are no duplicate events
+        assertFalse(hasDuplicates, "Duplicate full-day events found.");
     }
 }
