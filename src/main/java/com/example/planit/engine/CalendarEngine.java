@@ -1123,11 +1123,11 @@ public class CalendarEngine {
             return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
         }
 
-        // remove duplications
-        fullDayEvents = removeDuplicationsByDate(fullDayEvents);
-
         // add the holidays
         fullDayEvents = addHolidaysToFullDayEvents(fullDayEvents, start, end);
+
+        // remove duplications
+        fullDayEvents = removeDuplicationsByDate(fullDayEvents);
 
         // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
         if (fullDayEvents.size() != 0 && decisions.size() == 0) {
