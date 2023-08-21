@@ -1,6 +1,6 @@
 package com.example.planit.utill;
 
-import com.example.planit.model.studysession.StudySession;
+import com.example.planit.model.event.EventClientRepresentation;
 import com.example.planit.utill.dto.DTOstartAndEndOfInterval;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.model.Event;
@@ -230,9 +230,9 @@ public class Utility {
      * @param event event that convert to study session
      * @return study session after extract the information from the event
      */
-    public static StudySession convertEventToUpcomingStudySession(Event event) {
+    public static EventClientRepresentation convertEventToUpcomingStudySession(Event event) {
 
-        return new StudySession(event.getStart().getDateTime(),
+        return new EventClientRepresentation(event.getStart().getDateTime(),
                 event.getEnd().getDateTime(),
                 event.getSummary(),
                 event.getDescription());
