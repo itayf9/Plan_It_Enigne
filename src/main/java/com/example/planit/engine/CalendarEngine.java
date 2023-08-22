@@ -1,6 +1,8 @@
 package com.example.planit.engine;
 
 import com.example.planit.holidays.PlanITHolidaysWrapper;
+import com.example.planit.model.event.EventClientRepresentation;
+import com.example.planit.model.event.EventComparator;
 import com.example.planit.model.exam.Exam;
 import com.example.planit.model.mongo.course.Course;
 import com.example.planit.model.mongo.course.CoursesRepository;
@@ -11,7 +13,6 @@ import com.example.planit.model.mongo.user.UserRepository;
 import com.example.planit.model.studysession.StudySession;
 import com.example.planit.model.timeslot.TimeSlot;
 import com.example.planit.utill.Constants;
-import com.example.planit.utill.EventComparator;
 import com.example.planit.utill.Utility;
 import com.example.planit.utill.dto.*;
 import com.example.planit.utill.exception.GeneralErrorInEngineException;
@@ -1147,9 +1148,9 @@ public class CalendarEngine {
                 exam2Proportions,
                 studyPlan);
 
-        StudySession upcomingSession = getUpComingSessionForUser(user);
+        EventClientRepresentation upcomingStudySession = getUpComingSessionForUser(user);
 
-        return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan, upcomingSession);
+        return new DTOscanResponseToController(true, Constants.NO_PROBLEM, HttpStatus.CREATED, studyPlan, upcomingStudySession);
     }
 
     private void convertFullDayEventsToRegularGoogleEventsAccordingToDecisions(Map<Long, Boolean> decisions, List<Event> fullDayEvents, List<Event> regularEvents) {
@@ -1360,13 +1361,30 @@ public class CalendarEngine {
             }
 
             return new DTOstudyPlanAndSessionResponseToController(true, NO_PROBLEM, HttpStatus.OK, maybeUser.get().getLatestStudyPlan(), getUpComingSessionForUser(user));
+        } catch (TokenResponseException e) {
+            logger.error(buildExceptionMessage(e));
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
+                // e.g. when the refresh token has expired
+                return new DTOstudyPlanAndSessionResponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
+            } else {
+                // e.g. an unknown error had happened
+                return new DTOstudyPlanAndSessionResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         } catch (Exception e) {
             logger.error(buildExceptionMessage(e));
             return new DTOstudyPlanAndSessionResponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    private StudySession getUpComingSessionForUser(User user) throws GeneralSecurityException, IOException {
+    /**
+     * retrieves the upcoming study session for the user, ore null if there is no such study session
+     *
+     * @param user a {@link User} to retrieve the study session for
+     * @return a {@link EventClientRepresentation} representing the upcoming study session
+     * @throws GeneralSecurityException for secure connection errors
+     * @throws IOException              for http requests for Google Calendar API errors
+     */
+    private EventClientRepresentation getUpComingSessionForUser(User user) throws GeneralSecurityException, IOException {
 
         Calendar calendarService = getCalendarService(user.getAuth().getAccessToken(), user.getAuth().getExpireTimeInMilliseconds());
 

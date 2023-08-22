@@ -1,25 +1,25 @@
 package com.example.planit.utill.dto;
 
+import com.example.planit.model.event.EventClientRepresentation;
 import com.example.planit.model.mongo.user.StudyPlan;
-import com.example.planit.model.studysession.StudySession;
 
 public class DTOstudyPlanAndSessionResponseToClient extends DTOstatus {
 
     private final StudyPlan studyPlan;
 
-    private final StudySession upComingSession;
+    private final EventClientRepresentation upComingSession;
 
-    public DTOstudyPlanAndSessionResponseToClient(boolean isSucceed, String details, StudyPlan studyPlan, StudySession ucomingSession) {
+    public DTOstudyPlanAndSessionResponseToClient(boolean isSucceed, String details, StudyPlan studyPlan, EventClientRepresentation upComingSession) {
         super(isSucceed, details);
         this.studyPlan = studyPlan;
-        this.upComingSession = ucomingSession;
+        this.upComingSession = upComingSession;
     }
 
     public StudyPlan getStudyPlan() {
         return studyPlan;
     }
 
-    public StudySession getUpComingSession() {
+    public EventClientRepresentation getUpComingSession() {
         return upComingSession;
     }
 }

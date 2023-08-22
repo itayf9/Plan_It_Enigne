@@ -1,10 +1,11 @@
 package com.example.planit.engine.calendar.event;
 
+import com.example.planit.model.event.EventComparator;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventDateTime;
 import org.junit.jupiter.api.Test;
-import com.example.planit.utill.EventComparator;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

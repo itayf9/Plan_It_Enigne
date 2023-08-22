@@ -17,13 +17,6 @@ public class StudySession extends TimeSlot {
         this.examToStudyFor = null;
     }
 
-    public StudySession(DateTime start, DateTime end, String courseName, String description) {
-        super(start, end);
-        this.courseName = courseName;
-        this.description = description;
-        this.examToStudyFor = null;
-    }
-
     public String getCourseName() {
         return courseName;
     }

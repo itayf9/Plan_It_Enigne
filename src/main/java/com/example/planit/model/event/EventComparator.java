@@ -1,4 +1,4 @@
-package com.example.planit.utill;
+package com.example.planit.model.event;
 
 import com.google.api.services.calendar.model.Event;
 
