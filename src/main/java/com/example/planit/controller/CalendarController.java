@@ -3,10 +3,7 @@ package com.example.planit.controller;
 import com.example.planit.engine.CalendarEngine;
 import com.example.planit.holidays.PlanITHolidaysWrapper;
 import com.example.planit.model.mongo.holiday.HolidayRepository;
-import com.example.planit.utill.dto.DTOscanResponseToClient;
-import com.example.planit.utill.dto.DTOscanResponseToController;
-import com.example.planit.utill.dto.DTOstudyPlanAndSessionResponseToClient;
-import com.example.planit.utill.dto.DTOstudyPlanAndSessionResponseToController;
+import com.example.planit.utill.dto.*;
 import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -90,16 +87,33 @@ public class CalendarController {
         long s = System.currentTimeMillis();
         logger.info(MessageFormat.format("User {0}: has requested POST /study-plan with params: sub={0}", sub));
 
-        DTOstudyPlanAndSessionResponseToController dtOstudyPlanAndSessionResponseToController = calendarEngine.getUserLatestStudyPlanAndUpComingSession(sub);
+        DTOstudyPlanAndSessionResponseToController studyPlanAndSessionResponseToController = calendarEngine.getUserLatestStudyPlanAndUpComingSession(sub);
 
         logger.info(MessageFormat.format("User {0}: study-plan time is {1} ms", sub, System.currentTimeMillis() - s));
 
 
-        return ResponseEntity.status(dtOstudyPlanAndSessionResponseToController.getHttpStatus())
+        return ResponseEntity.status(studyPlanAndSessionResponseToController.getHttpStatus())
                 .body(new DTOstudyPlanAndSessionResponseToClient(
-                        dtOstudyPlanAndSessionResponseToController.isSucceed(),
-                        dtOstudyPlanAndSessionResponseToController.getDetails(),
-                        dtOstudyPlanAndSessionResponseToController.getStudyPlan(),
-                        dtOstudyPlanAndSessionResponseToController.getUpComingSession()));
+                        studyPlanAndSessionResponseToController.isSucceed(),
+                        studyPlanAndSessionResponseToController.getDetails(),
+                        studyPlanAndSessionResponseToController.getStudyPlan(),
+                        studyPlanAndSessionResponseToController.getUpComingSession()));
+    }
+
+    @DeleteMapping(value = "/study-plan")
+    public ResponseEntity<DTOstatus> removeLatestStudyPlan(@RequestParam String sub) {
+
+        long s = System.currentTimeMillis();
+        logger.info(MessageFormat.format("User {0}: has requested DELETE /study-plan with params: sub={0}", sub));
+
+        DTOresponseToController responseToController = calendarEngine.removeUserLatestStudyPlanAndUpComingSession(sub);
+
+        logger.info(MessageFormat.format("User {0}: remove study-plan time is {1} ms", sub, System.currentTimeMillis() - s));
+
+        return ResponseEntity.status(responseToController.getHttpStatus())
+                .body(new DTOstatus(
+                        responseToController.isSucceed(),
+                        responseToController.getDetails()
+                ));
     }
 }
