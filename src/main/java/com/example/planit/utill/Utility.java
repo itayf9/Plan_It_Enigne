@@ -6,6 +6,7 @@ import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.model.Event;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoField;
@@ -43,6 +44,19 @@ public class Utility {
         Instant fixedSecondInstant = secondInstant.with(ChronoField.HOUR_OF_DAY, 0);
 
         return fixedFirstInstant.until(fixedSecondInstant, ChronoUnit.HOURS) == 0;
+    }
+
+    /**
+     * determines if a local date is between two other local dates.
+     *
+     * @param localDateToLookFor     a {@link LocalDate} that is going to be determined
+     * @param localDateStartBoundary a {@link LocalDate} which is the start boundary of the range
+     * @param localDateEndBoundary   a {@link LocalDate} ehich is the end boundary of the range
+     * @return
+     */
+    public static boolean isLocalDateInRangeOfTwoOtherLocalDates(LocalDate localDateToLookFor, LocalDate localDateStartBoundary, LocalDate localDateEndBoundary) {
+        return (localDateToLookFor.isAfter(localDateStartBoundary) || localDateToLookFor.isEqual(localDateStartBoundary))
+                && (localDateToLookFor.isBefore(localDateEndBoundary) || localDateToLookFor.isEqual(localDateEndBoundary));
     }
 
     /**
