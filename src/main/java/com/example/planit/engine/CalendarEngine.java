@@ -113,7 +113,7 @@ public class CalendarEngine {
      * @param allEvents list of the user events we found during the initial scan
      * @param exams     list of the user exams to determine when to stop embed free slots and division of study time.
      */
-    public void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, String start, List<Event> planItCalendarOldEvents, Map<Exam, Double> exam2Proportions, StudyPlan studyPlan)
+    public void generatePlanItCalendar(List<Event> allEvents, List<Exam> exams, User user, Calendar service, String start, boolean isWantToRemoveOutOfRangeEvents, List<Event> planItCalendarOldEvents, Map<Exam, Double> exam2Proportions, StudyPlan studyPlan)
             throws GeneralSecurityException, IOException {
 
         // gets the list of free slots
@@ -135,7 +135,7 @@ public class CalendarEngine {
         embedCoursesInSessions(exams2numberOfSessions, sessionsList, exams);
 
         // #5 - updates the planIt calendar
-        updatePlanItCalendar(sessionsList, service, planItCalendarID, exams, planItCalendarOldEvents, user, studyPlan);
+        updatePlanItCalendar(sessionsList, isWantToRemoveOutOfRangeEvents, service, planItCalendarID, exams, planItCalendarOldEvents, user, studyPlan);
     }
 
     /**
@@ -965,7 +965,7 @@ public class CalendarEngine {
      * @throws GeneralSecurityException in case of a problem in creating a secured http connection when refreshing a token
      * @throws IOException              in case of a problem in google API calls
      */
-    private void updatePlanItCalendar(List<StudySession> sessionsList, Calendar service, String planItCalendarID, List<Exam> exams, List<Event> planItCalendarOldEvents, User user, StudyPlan studyPlan) throws GeneralSecurityException, IOException {
+    private void updatePlanItCalendar(List<StudySession> sessionsList, boolean isWantToRemoveOutOfRangeEvents, Calendar service, String planItCalendarID, List<Exam> exams, List<Event> planItCalendarOldEvents, User user, StudyPlan studyPlan) throws GeneralSecurityException, IOException {
 
         Map<String, String> courseName2ColorId = new HashMap<>();
 
@@ -987,7 +987,7 @@ public class CalendarEngine {
         studyPlan.setTotalNumberOfStudySessions(sessionsList.size());
 
         StudyPlan oldStudyPlan = user.getLatestStudyPlan();
-        if (oldStudyPlan != null) {
+        if (oldStudyPlan != null && isWantToRemoveOutOfRangeEvents) {
             DateTime oldStudyPlanStartDateTime = DateTime.parseRfc3339(oldStudyPlan.getStartDateTimeOfPlan());
             DateTime oldStudyPlanEndDateTime = DateTime.parseRfc3339(oldStudyPlan.getEndDateTimeOfPlan());
             List<CalendarListEntry> calendarList = getCalendarList(service);
@@ -1032,7 +1032,7 @@ public class CalendarEngine {
                         // removes out of range events in the PlanIt calendar
                         service.events().delete(planItCalendarID, eventToBeDeleted.getId()).execute();
 
-                    } catch (IOException ignored) {
+                    } catch (IOException ignored) { // even though ignored, essential
                     }
                 }
             }
@@ -1047,7 +1047,7 @@ public class CalendarEngine {
                 // removes overlap events in the PlanIt calendar
                 service.events().delete(planItCalendarID, eventToBeDeleted.getId()).execute();
 
-            } catch (IOException ignored) {
+            } catch (IOException ignored) { // even though ignored, essential
             }
         }
         //studyPlan.setTotalNumberOfStudySessions(sessionsList.size());
@@ -1156,7 +1156,7 @@ public class CalendarEngine {
      * @param end   the user's preferred end time to generate to (in ISO format)
      * @return a {@link DTOscanResponseToController} represents the information that should be returned to the scan controller
      */
-    public DTOscanResponseToController scanUserEventsAndGeneratePlan(User user, String start, String end, DTOuserCalendarsInformation userCalendarsInformation, Map<Exam, Double> exam2Proportions, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
+    public DTOscanResponseToController scanUserEventsAndGeneratePlan(User user, String start, String end, boolean isWantToRemoveOutOfRangeEvents, DTOuserCalendarsInformation userCalendarsInformation, Map<Exam, Double> exam2Proportions, Map<Long, Boolean> decisions) throws GeneralSecurityException, IOException {
 
         StudyPlan studyPlan = new StudyPlan();
         studyPlan.setStartDateTimeOfPlan(start);
@@ -1198,6 +1198,7 @@ public class CalendarEngine {
                 user,
                 userCalendarsInformation.getCalendarService(),
                 start,
+                isWantToRemoveOutOfRangeEvents,
                 planItCalendarOldEvents,
                 exam2Proportions,
                 studyPlan);
@@ -1498,6 +1499,7 @@ public class CalendarEngine {
     public DTOscanResponseToController generateNewStudyPlan(String subjectID, String start, String end, Map<Long, Boolean> decisions) {
 
         Instant measureTimeInstant;
+        final boolean isWantToRemoveOutOfRangeEvents = true;
 
         try {
             // get the user with that subjectID, if exists
@@ -1518,6 +1520,7 @@ public class CalendarEngine {
                     user,
                     start,
                     end,
+                    isWantToRemoveOutOfRangeEvents,
                     userCalendarsInformation,
                     exam2Proportions,
                     decisions);
@@ -1602,6 +1605,8 @@ public class CalendarEngine {
 
     public DTOscanResponseToController regenerateStudyPlan(String sub, Map<Long, Boolean> decisions, Instant timeWhenUserPressedRegenerate) {
 
+        final boolean isWantToRemoveOutOfRangeEvents = false;
+
         try {
             // sub => start(now) end(from user DB)
             User currentUser = getAndAuthenticateUserBySubId(sub);
@@ -1641,6 +1646,7 @@ public class CalendarEngine {
                     currentUser,
                     start,
                     end,
+                    isWantToRemoveOutOfRangeEvents,
                     userCalendarsInformation,
                     updatedExam2Proportions,
                     decisions);
