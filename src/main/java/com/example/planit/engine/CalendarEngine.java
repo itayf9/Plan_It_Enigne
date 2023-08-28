@@ -401,7 +401,7 @@ public class CalendarEngine {
 
         addBreakTimeInStartAndEndOfEachUserEvent(userEvents, user.getUserPreferences().getUserBreakTime());
         // get the free slot before the first event
-        if (userEvents.size() > 0) {
+        if (!userEvents.isEmpty()) {
             long startOfFirstEvent = userEvents.get(0).getStart().getDateTime().getValue();
             userFreeTimeSlots.add(new TimeSlot(new DateTime(start), new DateTime(startOfFirstEvent)));
         }
@@ -1174,7 +1174,7 @@ public class CalendarEngine {
         studyPlan.convertAndSetScannedExamsAsClientRepresentation(examsFound);
 
         // checks if no exams are
-        if (examsFound.size() == 0) {
+        if (examsFound.isEmpty()) {
             return new DTOscanResponseToController(false, Constants.ERROR_NO_EXAMS_FOUND, HttpStatus.CONFLICT, fullDayEvents);
         }
 
@@ -1185,7 +1185,7 @@ public class CalendarEngine {
         fullDayEvents = removeDuplicationsByDate(fullDayEvents);
 
         // after we delete all the event we can. we send the rest of the fullDayEvents we don`t know how to handle.
-        if (fullDayEvents.size() != 0 && decisions.size() == 0) {
+        if (!fullDayEvents.isEmpty() && decisions.isEmpty()) {
 
             // return the user with the updated list of fullDayEvents.
             return new DTOscanResponseToController(false, Constants.UNHANDLED_FULL_DAY_EVENTS, HttpStatus.OK, fullDayEvents);
@@ -1264,11 +1264,11 @@ public class CalendarEngine {
                 && DateTime.parseRfc3339(holiday.getHolidayStartDate()).getValue() <= DateTime.parseRfc3339(end).getValue()).toList();
 
 
-        if (holidaysInRange.size() == 0) {
+        if (holidaysInRange.isEmpty()) {
             return fullDayEvents;
         }
 
-        if (fullDayEvents.size() == 0) {
+        if (fullDayEvents.isEmpty()) {
             holidaysInRange.forEach(holiday -> fullDayEventsWithHolidays.add(new Event()
                     .setSummary(holiday.getHolidayName())
                     .setStart(new EventDateTime()
@@ -1464,7 +1464,7 @@ public class CalendarEngine {
         // if the user have PlanIt calendar. we return the upComing study session.
         if (events != null) {
             List<Event> listOfEvents = events.getItems();
-            if (listOfEvents.size() != 0) {
+            if (!listOfEvents.isEmpty()) {
                 return convertEventToUpcomingStudySession(listOfEvents.get(0));
             }
         }
@@ -1735,7 +1735,9 @@ public class CalendarEngine {
             }
             Date currentDayOfTheEvent = new Date(event.getStart().getDateTime().getValue());
             // check if the day of the event is after the start day
-            if (currentDayOfTheEvent.after(dayOfStartTheGenerate) && currentDayOfTheEvent.before(dayOfEndTheGenerate)) {
+            if (currentDayOfTheEvent.after(dayOfStartTheGenerate)
+                    && currentDayOfTheEvent.before(dayOfEndTheGenerate)
+                    && event.getDescription() != null) {
                 String[] allSubjectFromCurrentEvent = event.getDescription().split(" , ");
                 for (String nameOfTheCurrentSubject : allSubjectFromCurrentEvent) {
                     courseName2UpdatedSubjects.get(courseName).add(nameOfTheCurrentSubject);
