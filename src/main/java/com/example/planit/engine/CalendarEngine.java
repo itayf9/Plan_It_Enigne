@@ -50,6 +50,7 @@ import java.security.GeneralSecurityException;
 import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -987,6 +988,26 @@ public class CalendarEngine {
 
         List<Event> overlapsOldEvents = getOverlapOldEventsPlanItCalendar(sessionsList, planItCalendarOldEvents);
 
+        if (user.getLatestStudyPlan() != null) {
+            List<Event> outOfRangeEvents = planItCalendarOldEvents.stream().filter(event -> {
+                long eventStartValue = event.getStart().getDateTime().getValue();
+                long latestStudyPlanStartValue = DateTime.parseRfc3339(user.getLatestStudyPlan().getStartDateTimeOfPlan()).getValue();
+
+                ZonedDateTime.ofInstant(Instant.ofEpochMilli(latestStudyPlanStartValue), ZoneId.of(ISRAEL_TIME_ZONE)).toLocalDate();
+
+                boolean isOutOfRangeBeforeLatestStudyPlan = Instant.ofEpochMilli(eventStartValue)
+                        .isBefore(Instant.ofEpochMilli(latestStudyPlanStartValue));
+
+                long eventEndValue = event.getEnd().getDateTime().getValue();
+                long latestStudyPlanEndValue = DateTime.parseRfc3339(user.getLatestStudyPlan().getEndDateTimeOfPlan()).getValue();
+
+                boolean isOutOfRangeAfterLatestStudyPlan = Instant.ofEpochMilli(eventEndValue)
+                        .isAfter(Instant.ofEpochMilli(latestStudyPlanEndValue));
+
+                return isOutOfRangeBeforeLatestStudyPlan || isOutOfRangeAfterLatestStudyPlan;
+            }).toList();
+        }
+
         for (Event eventToBeDeleted : overlapsOldEvents) {
             try {
                 validateAccessTokenExpireTime(user);
@@ -1438,6 +1459,79 @@ public class CalendarEngine {
             currentUserEvent.setEnd(new EventDateTime()
                     .setDateTime(new DateTime(newEndTimeOfUserEvent.toEpochMilli()))
                     .setTimeZone(ISRAEL_TIME_ZONE));
+        }
+    }
+
+    public DTOresponseToController removeUserLatestStudyPlanAndUpComingSession(String subjectID) {
+        try {
+            Optional<User> maybeUser = userRepo.findUserBySubjectID(subjectID);
+
+            if (maybeUser.isEmpty()) {
+                return new DTOresponseToController(false, ERROR_USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+            User user = maybeUser.get();
+            // refresh access_token before making api call
+            validateAccessTokenExpireTime(user);
+
+            // check if access_token still have scope for Google calendar
+            if (!hasAuthorizeScopesStillValid(user.getAuth().getAccessToken())) {
+                return new DTOresponseToController(false, Constants.ERROR_NO_VALID_ACCESS_TOKEN, HttpStatus.UNAUTHORIZED);
+            }
+
+            if (user.getLatestStudyPlan() == null) {
+                return new DTOresponseToController(false, Constants.NO_STUDY_PLAN, HttpStatus.BAD_REQUEST);
+            }
+
+            Calendar calendarService = getCalendarService(user.getAuth().getAccessToken(), user.getAuth().getExpireTimeInMilliseconds());
+            List<CalendarListEntry> calendarList = getCalendarList(calendarService);
+
+            Events eventsToDelete = null;
+
+            for (CalendarListEntry calendar : calendarList) {
+                if (calendar.getId().equals(user.getPlanItCalendarID())) {
+                    eventsToDelete = calendarService.events().list(calendar.getId())
+                            .setTimeMin(
+                                    new DateTime(user.getLatestStudyPlan().getStartDateTimeOfPlan())
+                            )
+                            .setTimeMax(
+                                    new DateTime(user.getLatestStudyPlan().getEndDateTimeOfPlan())
+                            )
+                            .setOrderBy("startTime")
+                            .setSingleEvents(true)
+                            .execute();
+                    break;
+                }
+            }
+
+            if (eventsToDelete == null) {
+                return new DTOresponseToController(false, ERROR_PLANIT_CALENDAR_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            for (Event eventToBeDeleted : eventsToDelete.getItems()) {
+                validateAccessTokenExpireTime(user);
+                // removes latest study plan events in the PlanIt calendar
+                calendarService.events().delete(user.getPlanItCalendarID(), eventToBeDeleted.getId()).execute();
+            }
+
+            user.setLatestStudyPlan(null);
+            userRepo.save(user);
+
+            return new DTOresponseToController(true, NO_PROBLEM, HttpStatus.OK);
+        } catch (TokenResponseException e) {
+            logger.error(buildExceptionMessage(e));
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value() && e.getDetails().getError().equals("invalid_grant")) {
+                // e.g. when the refresh token has expired
+                return new DTOresponseToController(false, Constants.ERROR_INVALID_GRANT, HttpStatus.BAD_REQUEST);
+            } else {
+                // e.g. an unknown error had happened
+                return new DTOresponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (IOException e) {
+            // e.g. when there was an error deleting the events
+            return new DTOresponseToController(false, ERROR_FROM_GOOGLE_API_EXECUTE, HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            logger.error(buildExceptionMessage(e));
+            return new DTOresponseToController(false, ERROR_DEFAULT, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

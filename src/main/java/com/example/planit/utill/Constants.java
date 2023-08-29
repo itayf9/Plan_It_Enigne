@@ -56,6 +56,7 @@ public class Constants {
     public static final String ERROR_DEFAULT = "Some Internal Server Error";
     public static final String ERROR_ILLEGAL_CHARACTERS_IN_AUTH_CODE = "There are illegal characters in the auth code";
     public static final String ERROR_CALENDRIFIC_EXCEPTION = "Error From Callendrific";
+    public static final String NO_STUDY_PLAN = "No study plan";
     public static String ERROR_NO_VALID_ACCESS_TOKEN = "Access Token not valid anymore.";
     public static String ERROR_COURSE_ALREADY_EXIST = "Course already exists in database";
     public static String ERROR_COURSE_NOT_FOUND = "Course does not exist in database";
